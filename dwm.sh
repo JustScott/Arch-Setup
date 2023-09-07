@@ -20,10 +20,10 @@
 sudo -v # Enable sudo
 
 # Get the terminal and window manager from suckless
-mkdir -p ~/Git/Lab
-cd ~/Git/Lab # pwd -> $HOME/Git/Lab
-git clone https://www.gitlab.com/JustScott/st
-git clone https://www.gitlab.com/JustScott/dwm
+mkdir -p ~/Git/Hub
+cd ~/Git/Hub # pwd -> $HOME/Git/Hub
+git clone https://www.github.com/JustScott/st
+git clone https://www.github.com/JustScott/dwm
 
 cd st # pwd -> $HOME/Git/Lab/st
 sudo make install
