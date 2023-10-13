@@ -20,23 +20,23 @@
 sudo -v # Enable sudo
 
 # Get the terminal and window manager from suckless
-mkdir -p ~/Git/Hub
-cd ~/Git/Hub # pwd -> $HOME/Git/Hub
+mkdir -p ~/Git/Hub/ArchProjects
+cd ~/Git/Hub/ArchProjects # pwd -> $HOME/Git/Hub
 git clone https://www.github.com/JustScott/st
 git clone https://www.github.com/JustScott/dwm
 
-cd st # pwd -> $HOME/Git/Lab/st
+cd st # pwd -> $HOME/Git/Hub/ArchProjects/st
 sudo make install
 
-cd ../dwm # pwd -> $HOME/Git/Lab/dwm
+cd ../dwm # pwd -> $HOME/Git/Hub/ArchProjects/dwm
 sudo make install # Do the initial compilation
 
 # Edit .bash_profile and .xinitrc to start dwm on reboot
 echo "startx" >> ~/.bash_profile
 echo "exec dwm" >> ~/.xinitrc
 
-# pwd -> $HOME/Arch-Setup
-cd ~/Arch-Setup
+# pwd -> $HOME
+cd
 
 # Install all the base packages
 sudo pacman -Sy xorg-xrandr xorg-server xorg-xinit xorg-xsetroot libx11 libxinerama libxft pulseaudio pavucontrol webkit2gtk dmenu picom xscreensaver pamixer brightnessctl --noconfirm

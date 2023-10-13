@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# development.sh - part of the Arch-Setup project
+# primary_development.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,7 @@
 #  packages
 #
 
-sudo pacman -Sy caddy python python-pip docker docker-compose --noconfirm
+sudo pacman -Sy python python-pip docker docker-compose --noconfirm
 
 #
 # Configure docker

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# base.sh - part of the Arch-Setup project
+# host.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -29,7 +29,13 @@ makepkg -si PKGBUILD --noconfirm
 sleep 3
 cd ../Arch-Setup # pwd -> $HOME/Arch-Setup
 
-sudo pacman -Sy zip unzip vim neovim bat lf lynx calcurse newsboat --noconfirm
+sudo pacman -Sy \
+    spice-vdagent \
+    zip unzip \
+    vim neovim \
+    vimb lynx lf \
+    bat calcurse newsboat \
+    bitwarden keepassxc --noconfirm
 
 # Makes the changes above immediately accessible
 newgrp
