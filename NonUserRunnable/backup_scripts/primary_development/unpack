@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# unpack - part of the Arch-Setup project
+# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+# Automatically restores all my files
+#
+#   This file is meant to be verbose, not efficient 
+#
+
+# Decompress the encrypted archive file
+cp primary_dev_backup.tar.aes.gz primary_dev_backup.tar.aes.gz.bak
+gunzip primary_dev_backup.tar.aes.gz
+
+# Decrypt the backup
+openssl enc -d -a -aes-256-cbc -pbkdf2 --iter 1000000 -in primary_dev_backup.tar.aes -out primary_dev_backup.tar 2> /dev/null
+
+# Exit if the wrong decryption key is given
+if [[ $? != 0 ]]
+then
+    echo "Incorrect Decryption key"
+    # Rename the bak file to the origional file name
+    mv primary_dev_backup.tar.aes.gz.bak primary_dev_backup.tar.aes.gz
+    # Remove the incorrectly decrypted archive file
+    shred -uz primary_dev_backup.tar primary_dev_backup.tar.aes
+    exit
+fi
+
+# Unpack all my files into the current pwd
+tar -xf primary_dev_backup.tar
+
+# Remove the unencrypted .tar file
+shred -uz primary_dev_backup.tar primary_dev_backup.tar.aes
+
+# Create soft link to all my scripts in $PATH
+sudo ln -s $PWD/.scripts/{dwm/*,general/*} /usr/local/bin
+# Make them executable
+sudo chmod +x /usr/local/bin/*
+
+# Rename the bak file to the origional file name
+mv primary_dev_backup.tar.aes.gz.bak primary_dev_backup.tar.aes.gz

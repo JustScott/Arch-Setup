@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-yay -Sy flatpak librewolf-bin --noconfirm
+yay -Sy flatpak librewolf-bin newsboat calcurse vimb  --noconfirm
 
 flatpak install io.github.alainm23.planify \
     com.notesnook.Notesnook -y
@@ -27,3 +27,10 @@ sudo ln -s /var/lib/flatpak/exports/bin/io.github.alainm23.planify /usr/local/bi
 
 # Make them executable by all
 sudo chmod +x /usr/local/bin/{notesnook,planify}
+
+
+SCRIPT_DIR=../NonUserRunnable/backup_scripts/development_apps
+
+mkdir -p ~/.scripts/general
+sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
+sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack

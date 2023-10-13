@@ -39,3 +39,11 @@ sudo pacman -Sy \
 
 # Makes the changes above immediately accessible
 newgrp
+
+
+SCRIPT_DIR=NonUserRunnable/backup_scripts/host
+
+mkdir -p ~/.scripts/general
+sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
+sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
+

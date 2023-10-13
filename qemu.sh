@@ -19,12 +19,14 @@
 
 sudo -v
 
-sudo pacman -Sy gnome-boxes virt-manager qemu-emulators-full spice-vdagent
+sudo pacman -Sy \
+    gnomes-boxes virt-manager \
+    qemu-emulators-full spice-vdagent --noconfirm
 
-sudo echo -e "\nunix_sock_group = "libvirt"" >> /etc/libvirt/libvirtd.conf
-sudo echo "unix_sock_rw_perms = "0770"" >> /etc/libvirt/libvirtd.conf
+sudo bash -c 'echo -e "\nunix_sock_group = "libvirt"" >> /etc/libvirt/libvirtd.conf'
+sudo bash -c 'echo "unix_sock_rw_perms = "0770"" >> /etc/libvirt/libvirtd.conf'
 
-sudo usermod -aG libvirt administrator
+sudo usermod -aG libvirt $USER
 
-sudo echo "group="administrator"" >> /etc/libvirt/qemu.conf
+sudo bash -c 'echo "group="$USER"" >> /etc/libvirt/qemu.conf'
 

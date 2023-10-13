@@ -17,4 +17,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+SCRIPT_DIR=../NonUserRunnable/backup_scripts/flutter_development
 
+mkdir -p ~/.scripts/general
+sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
+sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack

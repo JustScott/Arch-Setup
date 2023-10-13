@@ -29,3 +29,10 @@ sudo pacman -Sy python python-pip docker docker-compose --noconfirm
 sudo systemctl enable --now docker # start the docker service
 
 sudo usermod -aG docker $USER # Add the current user to the docker group
+
+
+SCRIPT_DIR=../NonUserRunnable/backup_scripts/primary_development
+
+mkdir -p ~/.scripts/general
+sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
+sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
