@@ -20,7 +20,7 @@
 sudo -v
 
 sudo pacman -Sy \
-    gnomes-boxes virt-manager \
+    gnome-boxes virt-manager \
     qemu-emulators-full spice-vdagent --noconfirm
 
 sudo bash -c 'echo -e "\nunix_sock_group = "libvirt"" >> /etc/libvirt/libvirtd.conf'

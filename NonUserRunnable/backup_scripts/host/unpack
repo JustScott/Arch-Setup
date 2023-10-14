@@ -24,7 +24,7 @@
 #
 
 # Decompress the encrypted archive file
-cp host_backup.tar.aes.gz backup.tar.aes.gz.bak
+cp host_backup.tar.aes.gz host_backup.tar.aes.gz.bak
 gunzip host_backup.tar.aes.gz
 
 # Decrypt the backup
