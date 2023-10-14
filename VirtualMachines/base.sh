@@ -30,7 +30,7 @@ sudo pacman -Sy \
     spice-vdagent \
     zip unzip \
     vim neovim \
-    lf bat --noconfirm
+    lf bat feh --noconfirm
 
 # Start the process in the background
 spice-vdagent &

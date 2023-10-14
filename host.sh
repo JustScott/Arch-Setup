@@ -33,7 +33,7 @@ sudo pacman -Sy \
     spice-vdagent \
     zip unzip \
     vim neovim \
-    vimb lynx lf \
+    vimb lynx lf feh \
     bat calcurse newsboat \
     bitwarden keepassxc --noconfirm
 
