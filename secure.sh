@@ -21,17 +21,19 @@
 # Install and configure security tools to harden the system
 #
 
-sudo -v # Enable sudo
+# Disable root login
+sudo passwd --lock root
 
-ufw() {
-    sudo pacman -Sy ufw --noconfirm
+# Disable root login over ssh
+sudo bash -c "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config.d/*-archlinux.conf"
 
-    sudo systemctl enable --now ufw
+# Update the CPU microcode to avoid vulnerabilities
+sudo pacman -Sy intel-ucode
+sudo grub-mkconfig -o /boot/grub/grub.cfg
 
-    sudo ufw enable
-
-    sudo ufw default deny incoming
-}
-
-ufw
+# Enable the firewall and deny all incoming traffic
+sudo pacman -Sy ufw --noconfirm
+sudo systemctl enable --now ufw
+sudo ufw enable
+sudo ufw default deny incoming
 
