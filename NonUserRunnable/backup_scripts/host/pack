@@ -29,6 +29,7 @@ tar -czf $CURRENT_PWD/host_backup.tar \
     .config/{picom,lf,nvim} .scripts \
     .bashrc .bash_profile .xscreensaver \
     .xinitrc .vimrc \
+    Git \
     Pictures/Wallpapers Documents/{PasswordManagers,Apps}
 
 cd $CURRENT_PWD

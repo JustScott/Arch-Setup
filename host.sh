@@ -22,19 +22,14 @@ sudo -v
 
 #----------- Package Manager Setup -----------
 
-cd .. # pwd -> $HOME
-git clone https://aur.archlinux.org/yay.git
-cd yay # pwd -> $HOME/yay
-makepkg -si PKGBUILD --noconfirm
-sleep 3
 cd ../Arch-Setup # pwd -> $HOME/Arch-Setup
 
 sudo pacman -Sy \
-    spice-vdagent \
+    spice-vdagent xclip \
     zip unzip \
     vim neovim \
-    vimb lynx lf feh \
-    bat calcurse newsboat \
+    lf feh \
+    bat \
     bitwarden keepassxc --noconfirm
 
 # Makes the changes above immediately accessible

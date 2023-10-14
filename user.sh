@@ -17,7 +17,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-# ----------- Vim, Neovim, and Bash Configurations -----------
+#
+# Helpful aliased bash commands
+#
 
 echo -e 'export EDITOR=nvim\n' >> ~/.bashrc
 echo "alias batt='cat /sys/class/power_supply/BAT0/capacity'" >> ~/.bashrc

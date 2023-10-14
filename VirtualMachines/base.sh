@@ -27,7 +27,7 @@ cd ../Arch-Setup/VirtualMachines # pwd -> $HOME/Arch-Setup/VirtualMachines
 
 # Allow for copy and paste between the host and guest
 sudo pacman -Sy \
-    spice-vdagent \
+    spice-vdagent xclip \
     zip unzip \
     vim neovim \
     lf bat feh --noconfirm

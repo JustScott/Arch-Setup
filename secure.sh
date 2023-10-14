@@ -28,7 +28,7 @@ sudo passwd --lock root
 sudo bash -c "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config.d/*-archlinux.conf"
 
 # Update the CPU microcode to avoid vulnerabilities
-sudo pacman -Sy intel-ucode
+sudo pacman -Sy intel-ucode --noconfirm
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 
 # Enable the firewall and deny all incoming traffic
