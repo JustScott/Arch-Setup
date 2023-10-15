@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 sudo -v # Enable sudo
 
 # Get the terminal and window manager from suckless
@@ -33,9 +32,8 @@ sudo make install # Do the initial compilation
 
 # Edit .bash_profile and .xinitrc to start dwm on reboot
 echo "startx" >> ~/.bash_profile
-echo "exec dwm" >> ~/.xinitrc
+echo -e "xrandr --output Virtual-1 --mode 1920x1080\nspice-vdagent &\nexec dwm" >> ~/.xinitrc
 
-# pwd -> $HOME
 cd
 
 # Install all the base packages

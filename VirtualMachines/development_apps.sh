@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+bash ../user.sh
+bash ../secure.sh
+bash base.sh
+
 yay -Sy flatpak librewolf-bin newsboat calcurse vimb  --noconfirm
 
 flatpak install io.github.alainm23.planify \
@@ -34,3 +38,5 @@ SCRIPT_DIR=../NonUserRunnable/backup_scripts/development_apps
 mkdir -p ~/.scripts/general
 sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
 sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
+
+bash ../dwm.sh

@@ -21,6 +21,10 @@
 #  packages
 #
 
+bash ../user.sh
+bash ../secure.sh
+bash base.sh
+
 sudo pacman -Sy python python-pip docker docker-compose --noconfirm
 
 #
@@ -36,3 +40,5 @@ SCRIPT_DIR=../NonUserRunnable/backup_scripts/primary_development
 mkdir -p ~/.scripts/general
 sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
 sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
+
+bash ../dwm.sh

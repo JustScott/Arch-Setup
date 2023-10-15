@@ -13,3 +13,8 @@ All of my scripts for installing certain sets of software in arch linux.
 ### Environment Scripts
 * Run `dwm.sh` to configure the system for dwm
 * Run `gnome.sh` to configure the system for gnome
+
+### Virtual Machines
+If creating a virtual machine, don't run any scripts but the virtual machine
+script as it already calls the needed scripts. `flutter_development.sh` is an
+exception to that rule, you must run `dwm.sh` before running the flutter script.

@@ -32,9 +32,6 @@ sudo pacman -Sy \
     bat \
     bitwarden keepassxc --noconfirm
 
-# Makes the changes above immediately accessible
-newgrp
-
 
 SCRIPT_DIR=NonUserRunnable/backup_scripts/host
 

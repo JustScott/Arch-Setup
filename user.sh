@@ -27,6 +27,3 @@ echo "alias admin='su administrator -P -c'" >> ~/.bashrc
 echo "alias space='df -h /'" >> ~/.bashrc
 echo "alias up='ping quad9.net -c 4'" >> ~/.bashrc
 echo 'alias swapc='"'"'su - administrator -P -c "sudo swapoff -a;sleep 2;sudo swapon -a"'"'" >> ~/.bashrc
-
-# Makes the changes above immediately accessible
-newgrp

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# vault.sh - part of the Arch-Setup project
+# temp_search.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,15 +18,16 @@
 
 bash ../secure.sh
 
-sudo pacman -Sy keepassxc spice-vdagent --noconfirm
+cd # pwd -> $HOME
+git clone https://aur.archlinux.org/yay.git
+cd yay # pwd -> $HOME/yay
+makepkg -si PKGBUILD --noconfirm
+sleep 3
+cd ../Arch-Setup/VirtualMachines # pwd -> $HOME/Arch-Setup/VirtualMachines
+
+yay -Sy spice-vdagent librewolf-bin feh --noconfirm
 
 # Start the process in the background
 spice-vdagent &
-
-SCRIPT_DIR=../NonUserRunnable/backup_scripts/vault
-
-mkdir -p ~/.scripts/general
-sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
-sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
 
 bash ../dwm.sh
