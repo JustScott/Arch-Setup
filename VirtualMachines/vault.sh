@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pacman -Sy keepassxc spice-vdagent --noconfirm
+sudo pacman -Sy keepassxc spice-vdagent --noconfirm
 
 # Start the process in the background
 spice-vdagent &

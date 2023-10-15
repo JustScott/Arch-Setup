@@ -26,10 +26,10 @@ CURRENT_PWD="$PWD"
 cd ~
 
 tar -czf $CURRENT_PWD/vault_backup.tar \
-    .config/{picom} \
+    .config/picom \
     .bashrc .bash_profile .xscreensaver \
     .xinitrc \
-    Pictures/Wallpapers Documents/{PasswordManagers}
+    Documents/PasswordManagers
 
 cd $CURRENT_PWD
 
