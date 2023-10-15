@@ -39,10 +39,11 @@ echo "exec dwm" >> ~/.xinitrc
 cd
 
 # Install all the base packages
-sudo pacman -Sy xorg-xrandr xorg-server xorg-xinit xorg-xsetroot libx11 libxinerama libxft pulseaudio pavucontrol webkit2gtk dmenu picom xscreensaver pamixer brightnessctl --noconfirm
-
-# For the ytfzf youtube terminal tool
-sudo pacman -Sy ytfzf fzf mpv yt-dlp --noconfirm
+sudo pacman -Sy \
+    xorg-xrandr xorg-server xorg-xinit xorg-xsetroot \
+    libx11 libxinerama libxft \
+    pulseaudio pavucontrol brightnessctlpamixer \
+    webkit2gtk dmenu picom xscreensaver --noconfirm
 
 # Start dwm
 startx

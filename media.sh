@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# base.sh - part of the Arch-Setup project
+# media.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,21 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-sudo -v
+# Allows for playing videos and music from youtube using the terminal or dmenu
+sudo pacman -Sy ytfzf fzf mpv yt-dlp --noconfirm
 
-cd # pwd -> $HOME
-git clone https://aur.archlinux.org/yay.git
-cd yay # pwd -> $HOME/yay
-makepkg -si PKGBUILD --noconfirm
-sleep 3
-cd ../Arch-Setup/VirtualMachines # pwd -> $HOME/Arch-Setup/VirtualMachines
-
-sudo pacman -Sy \
-    # Allow for copy and paste between the host and guest
-    spice-vdagent \
-    zip unzip xclip \
-    vim neovim \
-    lf bat feh --noconfirm
-
-# Start the process in the background
-spice-vdagent &
