@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# base.sh - part of the Arch-Setup project
+# low_development.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,24 +16,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-sudo -v
+bash ../user.sh
+bash ../secure.sh
+bash base.sh
 
-cd # pwd -> $HOME
-git clone https://aur.archlinux.org/yay.git
-cd yay # pwd -> $HOME/yay
-makepkg -si PKGBUILD --noconfirm
-sleep 3
-cd ../Arch-Setup/VirtualMachines # pwd -> $HOME/Arch-Setup/VirtualMachines
+sudo pacman -Sy python python-pip --noconfirm
 
-sudo pacman -Sy \
-    spice-vdagent \
-    zip unzip xclip \
-    vim neovim \
-    lf bat feh --noconfirm
-    
-# Install Vim-Plug for adding pluggins to vim and neovim
-sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
-       https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+SCRIPT_DIR=../NonUserRunnable/backup_scripts/low_development
 
-# Start the process in the background
-spice-vdagent &
+mkdir -p ~/.scripts/general
+sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
+sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
+
+bash ../dwm.sh
