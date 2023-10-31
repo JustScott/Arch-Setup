@@ -21,6 +21,9 @@
 # Install and configure security tools to harden the system
 #
 
+# Deny access after 6 incorrect password attempts instead of 3 (because its annoying)
+sudo bash -c "echo 'deny = 6' >> /etc/security/faillock.conf"
+
 # Disable root login
 sudo passwd --lock root
 
