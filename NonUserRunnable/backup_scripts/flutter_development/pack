@@ -27,7 +27,8 @@ CURRENT_PWD="$PWD"
 cd ~
 
 tar -czf $CURRENT_PWD/flutter_backup.tar \
-    Git .config/{picom,vimb,lf,nvim} \
+    Git/Hub \
+    .config/{picom,vimb,lf,nvim} \
     .software_boilerplate .scripts .ssh \
     .bashrc .bash_profile .xscreensaver .xinitrc .vimrc \
     Pictures/Wallpapers 
