@@ -33,7 +33,6 @@ tar -czf $CURRENT_PWD/app_backup.tar \
     .scripts .ssh \
     .bashrc .bash_profile .xscreensaver .xinitrc .vimrc \
     Pictures/Wallpapers \
-    .var/app/io.github.alainm23.planify/data/io.github.alainm23.planify/database.db \
     .var/app/ca.hamaluik.Timecop/data/timecop.db \
     Documents/Notesnook
 

@@ -20,18 +20,7 @@ bash ../user.sh
 bash ../secure.sh
 bash base.sh
 
-yay -Sy flatpak librewolf-bin newsboat calcurse vimb  --noconfirm
-
-flatpak install io.github.alainm23.planify \
-    com.notesnook.Notesnook -y
-
-# Create links to the flatpak packages in a directory under $PATH
-sudo ln -s /var/lib/flatpak/exports/bin/com.notesnook.Notesnook /usr/local/bin/notesnook
-sudo ln -s /var/lib/flatpak/exports/bin/io.github.alainm23.planify /usr/local/bin/planify
-
-# Make them executable by all
-sudo chmod +x /usr/local/bin/{notesnook,planify}
-
+yay -Sy librewolf-bin newsboat calcurse vimb  --noconfirm
 
 SCRIPT_DIR=../NonUserRunnable/backup_scripts/development_apps
 

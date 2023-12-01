@@ -31,9 +31,5 @@ sudo pacman -Sy \
     vim neovim \
     lf bat feh --noconfirm
     
-# Install Vim-Plug for adding pluggins to vim and neovim
-sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
-       https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
-
 # Start the process in the background
 spice-vdagent &

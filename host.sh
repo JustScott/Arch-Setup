@@ -25,16 +25,13 @@ sudo -v
 cd ../Arch-Setup # pwd -> $HOME/Arch-Setup
 
 sudo pacman -Sy \
+    bluez bluez-utils pulseaudio-bluetooth \
     spice-vdagent xclip \
     zip unzip \
     vim neovim \
     lf feh \
     bat \
     bitwarden keepassxc --noconfirm
-
-# Install Vim-Plug for adding pluggins to vim and neovim
-sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
-       https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
 
 SCRIPT_DIR=NonUserRunnable/backup_scripts/host
 
