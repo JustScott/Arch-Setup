@@ -1,0 +1,88 @@
+#!/bin/python3
+#
+# net - part of the Arch-Setup project
+# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import subprocess
+from pprint import pprint
+import sys
+
+def network_to_dict() -> dict:
+    '''
+    Converts the output of 'nmcli d' to a dictionary
+
+    Args:
+        None
+
+    Returns:
+        dict: The column headers are converted to the keys
+            
+            Example:
+                {
+                    "wlpo1": {
+                        "type": "wifi",
+                        "state":"connected",
+                        "connection":"Spectrum_Hotspot"
+                    },
+                    "lo" : {
+                        "type": "loopback",
+                        "state":"connected",
+                        "connection":"lo"
+                    }
+                }
+    '''
+    raw_network_output = subprocess.Popen(["nmcli d"], shell=True, stdout=subprocess.PIPE)
+
+    network_output = [line.decode() for line in raw_network_output.stdout.read().splitlines()]
+
+    column_headers = network_output[0].lower().split()
+    network_dict = {}
+    # Loop through all device columns (skipping column headers)
+    for device_info in network_output[1:]:
+        device_info = [value for value in device_info.split('  ') if value]
+        device_name = device_info[0]
+        network_dict[device_name] = {}
+        # Loop through the header values and device info, pairing them up
+        for header,value in zip(column_headers,device_info):
+            value = " ".join([val for val in value.split()])
+            # Skip the device name since its this dicts key
+            if header != 'device':
+                network_dict[device_name][header] = value
+
+    return network_dict
+
+
+if __name__=="__main__":
+    network_dict = network_to_dict()
+    # If an argv wasn't passed
+    if len(sys.argv) == 1:
+        pprint(network_dict)
+    if len(sys.argv) > 1:
+        device_name = sys.argv[1]
+        device_info = network_dict.get(device_name)
+        if not device_info:
+            print(f"No network device with this name, your options are:\n{tuple(network_dict.keys())}")
+            quit(1)
+        if len(sys.argv) == 2:
+            pprint(device_info)
+    if len(sys.argv) > 2:
+        column_name = sys.argv[2].lower()
+        column_value = device_info.get(column_name)
+        if not column_value:
+            print(f"{device_name} has no value '{column_name}'")
+            quit(1)
+        print(column_value)
+

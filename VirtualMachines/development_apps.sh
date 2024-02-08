@@ -22,7 +22,7 @@ bash base.sh
 
 yay -Sy librewolf-bin newsboat calcurse vimb  --noconfirm
 
-SCRIPT_DIR=../NonUserRunnable/backup_scripts/development_apps
+SCRIPT_DIR=../DoNotRun/backup_scripts/development_apps
 
 mkdir -p ~/.scripts/general
 sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack

@@ -33,7 +33,7 @@ sudo pacman -Sy \
     bat \
     bitwarden keepassxc --noconfirm
 
-SCRIPT_DIR=NonUserRunnable/backup_scripts/host
+SCRIPT_DIR=DoNotRun/backup_scripts/host
 
 mkdir -p ~/.scripts/general
 sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack

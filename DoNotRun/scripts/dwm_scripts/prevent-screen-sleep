@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# low_development.sh - part of the Arch-Setup project
+# prevent-screen-sleep - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,16 +16,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-bash ../user.sh
-bash ../secure.sh
-bash base.sh
+#
+# If audio's playing, prevent xscreensaver from locking the screen
+#
 
-sudo pacman -Sy python python-pip --noconfirm
-
-SCRIPT_DIR=../DoNotRun/backup_scripts/low_development
-
-mkdir -p ~/.scripts/general
-sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
-sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
-
-bash ../dwm.sh
+while true; 
+do
+    sleep 4m # Wait 4 minutes in between loops
+    
+    # Check if there's any audio playing
+    pactl list short sinks | grep RUNNING >/dev/null
+    
+    # If the audio is running
+    if [[ $? == 0 ]];
+    then
+        # Reset the screen timeout timer
+        xscreensaver-command --deactivate > /dev/null
+    fi
+done

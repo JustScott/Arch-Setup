@@ -1,0 +1,67 @@
+#!/bin/bash
+#
+# liveglow - part of the Arch-Setup project
+# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+liveglow() {
+    clear
+
+    # Check that the filename argument is provided
+    if [ -z "$1" ]; then
+        echo "Error: No filename specified."
+        return 1
+    fi
+
+    SLEEP_FOR=.1
+
+    FILENAME="$1"
+  
+    OLD_HASH=''
+
+    # Loop until the user exits
+    while true; do
+        NEW_HASH=$(sha1sum "$FILENAME" | awk '{print $1}')
+
+        # Only display the new output if the file has changed
+        if [ "$NEW_HASH" != "$OLD_HASH" ];
+        then
+            clear
+            # Run the glow command on the file and pipe the output to less,
+            # starting at the last line displayed. The "-R" option tells less to
+            # display ANSI color codes.
+            glow "$FILENAME"
+
+            OLD_HASH=$(sha1sum "$FILENAME" | awk '{print $1}')
+            
+            # Wait for half a second before running glow again, to reduce
+            # the frequency of updates and avoid overwhelming the terminal.
+            sleep $SLEEP_FOR
+        else
+            OLD_HASH=$(sha1sum "$FILENAME" | awk '{print $1}')
+            sleep $SLEEP_FOR
+        fi
+
+        # Check if the user has typed "q" to exit
+        read -t $SLEEP_FOR -N 1 INPUT
+        if [[ $INPUT = "q" ]]; then
+          # Exit the loop and the function
+          break
+        fi
+
+    done
+}
+
+liveglow $1

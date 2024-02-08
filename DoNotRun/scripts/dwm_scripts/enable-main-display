@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# enable-main-display - part of the Arch-Setup project
+# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+
+# Gets the number of connected displays and if only one display is connected,
+#  then it turns that display on and shuts de-configures the others.
+#
+# This is helpful when activated through a keyboard shortcut, if you disconnect
+#  your external displays without first enabling your main laptop display.
+#
+
+PRIMARY_MONITOR=eDP-1
+EXTERNAL_MONITORS=(DP-2-1 DP-2-2)
+
+# Check the output status of connected monitors using xrandr
+output_status=$(xrandr --query | awk '/ connected/{print $1,$2}')
+
+# Extract the number of connected monitors
+num_monitors=$(echo "$output_status" | wc -l)
+
+# If only the laptop screen is active, turn it on
+if [ "$num_monitors" -eq 1 ]; then
+    # Get the name of the one connected monitor
+    laptop_screen=$(echo "$output_status" | awk '{print $1}')
+
+    # Configure the main monitor using my custom '/usr/local/bin/set-monitors' script
+    set-monitors "$PRIMARY_MONITOR";
+
+    # Turn off the now disconnected external monitors
+    for monitor in ${EXTERNAL_MONITORS[@]}
+    do
+        xrandr --output $monitor --off
+    done
+fi
+

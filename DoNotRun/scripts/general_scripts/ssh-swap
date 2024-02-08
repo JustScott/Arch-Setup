@@ -1,0 +1,64 @@
+#!/bin/bash
+#
+# ssh-swap - part of the Arch-Setup project
+# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+# Set the username and IP address of the remote Linux deviceecho -m "
+echo -n "Enter the remote username: "
+read USERNAME
+echo -n "Enter the remote IP Address: "
+read IP_ADDRESS
+
+# Generate a new SSH key pair
+generate_ssh_key() {
+while :
+    do
+        echo -n "Enter a random keyfile name: "
+        read KEY_FILE
+        if [[ -e ~/.ssh/$KEY_FILE ]]; then
+            ssh-keygen -t rsa -b 4096 -f ~/.ssh/"$KEY_FILE"
+            
+            if [[ $? == 0 ]];then
+                echo "SSH key pair generated."
+                break
+            # Returns 1 if the keyfile already exists. Loops so the
+            #   user can choose a new filename
+            else
+                clear
+            fi
+
+        else
+            ssh-keygen -t rsa -b 4096 -f ~/.ssh/"$KEY_FILE"
+            echo "SSH key pair generated."
+            break
+        fi
+    done
+}
+
+# Swap SSH keys with the remote device
+swap_ssh_keys() {
+    ssh-copy-id -i ~/.ssh/"$KEY_FILE".pub "$USERNAME@$IP_ADDRESS"
+    echo "SSH keys swapped."
+}
+
+main() {
+    generate_ssh_key
+    swap_ssh_keys
+}
+
+main
+

@@ -25,7 +25,7 @@ echo 'source /etc/profile.d/vte.sh' >> ~/.bashrc
 # Set the color theme to dark for the system
 gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
 
-python3 NonUserRunnable/set_keyboard_shortcuts.py
+python3 DoNotRun/set_keyboard_shortcuts.py
 
 # ----------- Configure terminal settings -----------
 

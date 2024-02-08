@@ -20,7 +20,7 @@ bash ../user.sh
 bash ../secure.sh
 bash base.sh
 
-SCRIPT_DIR=../NonUserRunnable/backup_scripts/flutter_development
+SCRIPT_DIR=../DoNotRun/backup_scripts/flutter_development
 
 mkdir -p ~/.scripts/general
 sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack

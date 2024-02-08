@@ -2,17 +2,21 @@
 All of my scripts for installing certain sets of software in arch linux.
 
 
-### Base Scripts
+### Base installation
 * Run `host.sh` to install the basic host system packages
 * Run `user.sh` to configure user specific settings ( without sudo )
 
-### Extended Scripts
+### Extended installation
 * Run `qemu.sh` to install and configure the necessary tools to run virtual machines
 * Run `secure.sh` to extend the system security
 
-### Environment Scripts
+### Environment setup
 * Run `dwm.sh` to configure the system for dwm
 * Run `gnome.sh` to configure the system for gnome
+
+### Install scripts to `/usr/local/bin` (won't overwrite existing files)
+* Run `dwm-scripts.sh` to install dwm specific scripts
+* Run `general-scripts.sh` to install general scripts
 
 ### Virtual Machines
 If creating a virtual machine, don't run any scripts but the virtual machine

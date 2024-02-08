@@ -23,7 +23,7 @@ sudo pacman -Sy keepassxc spice-vdagent --noconfirm
 # Start the process in the background
 spice-vdagent &
 
-SCRIPT_DIR=../NonUserRunnable/backup_scripts/vault
+SCRIPT_DIR=../DoNotRun/backup_scripts/vault
 
 mkdir -p ~/.scripts/general
 sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
