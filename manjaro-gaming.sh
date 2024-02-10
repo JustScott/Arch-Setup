@@ -28,15 +28,15 @@ cd yay
 makepkg -si
 cd ..
 
-sudo pacman -Sy base-devel vim neovim lf --noconfirm
+sudo pacman -Sy base-devel vim neovim lf flatpak --noconfirm
 
-yay -Sy optimus-manager-git --noconfirm
+yay -Sy optimus-manager-git r2modman-bin --noconfirm
 
 clear
 
 echo -e "\n\n -- Answer 'y' when asked to confirm replacing gdm related packages -- \n\n"
 
-yay -S libgdm-prime
+yay -Sy libgdm-prime gdm-prime
 
 
 echo 'optimus-manager --switch nvidia --noconfirm' >> ~/.bash_profile
@@ -48,6 +48,18 @@ flatpak install com.bitwarden.desktop \
     com.github.tchx84.Flatseal \
     com.valvesoftware.Steam \
     com.play0ad.zeroad -y
+
+sudo ln -s /var/lib/flatpak/exports/bin/com.bitwarden.desktop /usr/local/bin/bitwarden
+sudo ln -s /var/lib/flatpak/exports/bin/io.gitlab.librewolf-community /usr/local/bin/librewolf
+sudo ln -s /var/lib/flatpak/exports/bin/com.github.tchx84.Flatseal /usr/local/bin/flatseal
+sudo ln -s /var/lib/flatpak/exports/bin/com.valvesoftware.steam /usr/local/bin/steam
+sudo ln -s /var/lib/flatpak/exports/bin/com.play0ad.zeroad /usr/local/bin/zeroad
+
+#
+# Edit /usr/share/applications/r2modman.desktop, adding --no-sandbox to
+#  the exec command, before the %U
+#
+#
 
 # Might just leave this here for the user to run manually
 #  so they can have exact swapfile sizes
