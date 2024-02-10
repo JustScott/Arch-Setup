@@ -26,7 +26,11 @@ update-status-bar() {
         battery_percentage="?"
     fi
 
-    xsetroot -name "bri: $(brightness) | vol: $(volume)% | batt:$charging$battery_percentage | $(net wlo1 state):$(net wlo1 connection) |  $(date +"%B %e %H:%M")"
+    wifi_interface=$(nmcli d | grep 'wifi ' | awk '{print $1}')
+    connection_state=$(net $wifi_interface state)
+    ssid=$(net $wifi_interface connection)
+
+    xsetroot -name "bri: $(brightness) | vol: $(volume)% | batt:$charging$battery_percentage | $connection_state:$ssid |  $(date +"%B %e %H:%M")"
 }
 
 update-status-bar
