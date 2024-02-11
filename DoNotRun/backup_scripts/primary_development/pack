@@ -26,8 +26,8 @@ CURRENT_PWD="$PWD"
 cd ~
 
 tar -czf $CURRENT_PWD/primary_dev_backup.tar \
-    Git .config/{picom,vimb,lf,nvim} .docker \
-    .software_boilerplate .scripts .ssh .bashrc \
+    .config/{picom,vimb,lf,nvim} .docker \
+    .software_boilerplate .ssh .bashrc \
     .bash_profile .xscreensaver .xinitrc .vimrc \
     Pictures/Wallpapers
 

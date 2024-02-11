@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-bash ../secure.sh
+cd ..
+bash secure.sh
+cd VirtualMachines
 
 sudo pacman -Sy keepassxc spice-vdagent --noconfirm
 
@@ -25,8 +27,8 @@ spice-vdagent &
 
 SCRIPT_DIR=../DoNotRun/backup_scripts/vault
 
-mkdir -p ~/.scripts/general
 sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
 sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
 
-bash ../dwm.sh
+cd ..
+bash dwm.sh

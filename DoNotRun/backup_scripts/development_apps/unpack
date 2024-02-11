@@ -47,10 +47,5 @@ tar -xf app_backup.tar
 # Remove the unencrypted .tar file
 shred -uz app_backup.tar app_backup.tar.aes
 
-# Create soft link to all my scripts in $PATH
-sudo ln -s $PWD/.scripts/{dwm/*,general/*} /usr/local/bin
-# Make them executable
-sudo chmod +x /usr/local/bin/*
-
 # Rename the bak file to the origional file name
 mv app_backup.tar.aes.gz.bak app_backup.tar.aes.gz

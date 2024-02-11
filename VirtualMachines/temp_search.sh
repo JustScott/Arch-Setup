@@ -16,18 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-bash ../secure.sh
-
-cd # pwd -> $HOME
-git clone https://aur.archlinux.org/yay.git
-cd yay # pwd -> $HOME/yay
-makepkg -si PKGBUILD --noconfirm
-sleep 3
-cd ../Arch-Setup/VirtualMachines # pwd -> $HOME/Arch-Setup/VirtualMachines
+bash base.sh
+cd ..
+bash secure.sh
+cd VirtualMachines
 
 yay -Sy spice-vdagent librewolf-bin feh --noconfirm
 
 # Start the process in the background
 spice-vdagent &
 
-bash ../dwm.sh
+cd ..
+bash dwm.sh

@@ -46,10 +46,5 @@ tar -xf low_dev_backup.tar
 # Remove the unencrypted .tar file
 shred -uz low_dev_backup.tar low_dev_backup.tar.aes
 
-# Create soft link to all my scripts in $PATH
-sudo ln -s $PWD/.scripts/{dwm/*,general/*} /usr/local/bin
-# Make them executable
-sudo chmod +x /usr/local/bin/*
-
 # Rename the bak file to the origional file name
 mv low_dev_backup.tar.aes.gz.bak low_dev_backup.tar.aes.gz

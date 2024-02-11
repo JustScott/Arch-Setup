@@ -16,16 +16,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-bash ../user.sh
-bash ../secure.sh
+cd ..
+bash user.sh
+bash secure.sh
+cd VirtualMachines
 bash base.sh
 
-yay -Sy librewolf-bin newsboat calcurse vimb  --noconfirm
+yay -Sy librewolf-bin vimb  --noconfirm
 
 SCRIPT_DIR=../DoNotRun/backup_scripts/development_apps
 
-mkdir -p ~/.scripts/general
 sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
 sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
 
-bash ../dwm.sh
+cd ..
+bash dwm.sh

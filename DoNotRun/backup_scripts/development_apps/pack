@@ -23,14 +23,11 @@
 
 CURRENT_PWD="$PWD"
 
-calcurse --export > ~/.config/calcurse/calcurse.ical
-
 # cd into home for relative paths
 cd ~
 
 tar -czf $CURRENT_PWD/app_backup.tar \
-    .newsboat .config/{calcurse,picom,vimb,lf,nvim} \
-    .scripts .ssh \
+    .ssh .config/{picom,vimb,lf,nvim} \
     .bashrc .bash_profile .xscreensaver .xinitrc .vimrc \
     Pictures/Wallpapers \
     .var/app/ca.hamaluik.Timecop/data/timecop.db \

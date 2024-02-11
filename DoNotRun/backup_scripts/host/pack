@@ -25,11 +25,12 @@ CURRENT_PWD="$PWD"
 # cd into home for relative paths
 cd ~
 
+calcurse --export > ~/.config/calcurse/calcurse.ical
+
 tar -czf $CURRENT_PWD/host_backup.tar \
-    .config/{picom,lf,nvim} .scripts \
+    .newsboat .config/{calcurse,picom,lf,nvim} \
     .bashrc .bash_profile .xscreensaver \
     .xinitrc .vimrc \
-    Git \
     Pictures/Wallpapers Documents/{PasswordManagers,Apps}
 
 cd $CURRENT_PWD

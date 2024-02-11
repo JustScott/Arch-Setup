@@ -41,6 +41,7 @@ sudo pacman -Sy \
     xorg-xrandr xorg-server xorg-xinit xorg-xsetroot \
     libx11 libxinerama libxft \
     pulseaudio pavucontrol brightnessctl pamixer \
+    bluez bluez-utils pulseaudio-bluetooth \
     webkit2gtk dmenu picom xscreensaver --noconfirm
 
 # Start dwm

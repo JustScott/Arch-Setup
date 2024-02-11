@@ -48,10 +48,5 @@ tar -xf flutter_backup.tar
 # Remove the unencrypted .tar file
 shred -uz flutter_backup.tar flutter_backup.tar.aes
 
-# Create soft link to all my scripts in $PATH
-sudo ln -s $PWD/.scripts/{dwm/*,general/*} /usr/local/bin
-# Make them executable
-sudo chmod +x /usr/local/bin/*
-
 # Rename the bak file to the origional file name
 mv flutter_backup.tar.aes.gz.bak flutter_backup.tar.aes.gz

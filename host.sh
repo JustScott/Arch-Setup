@@ -25,17 +25,15 @@ sudo -v
 cd ../Arch-Setup # pwd -> $HOME/Arch-Setup
 
 sudo pacman -Sy \
-    bluez bluez-utils pulseaudio-bluetooth \
     spice-vdagent xclip \
     zip unzip \
     vim neovim \
-    lf feh \
-    bat \
-    bitwarden keepassxc --noconfirm
+    lf feh bat \
+    newsboat calcurse \
+    keepassxc --noconfirm
 
-SCRIPT_DIR=DoNotRun/backup_scripts/host
+BACKUP_SCRIPT_DIR=DoNotRun/backup_scripts/host
 
-mkdir -p ~/.scripts/general
-sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
-sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
+sudo ln -sf $PWD/$BACKUP_SCRIPT_DIR/pack /usr/local/bin/pack
+sudo ln -sf $PWD/$BACKUP_SCRIPT_DIR/unpack /usr/local/bin/unpack
 

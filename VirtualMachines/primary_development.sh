@@ -21,8 +21,10 @@
 #  packages
 #
 
-bash ../user.sh
-bash ../secure.sh
+cd ..
+bash user.sh
+bash secure.sh
+cd VirtualMachines
 bash base.sh
 
 sudo pacman -Sy python python-pip docker docker-compose --noconfirm
@@ -37,8 +39,8 @@ sudo usermod -aG docker $USER # Add the current user to the docker group
 
 SCRIPT_DIR=../DoNotRun/backup_scripts/primary_development
 
-mkdir -p ~/.scripts/general
 sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
 sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
 
-bash ../dwm.sh
+cd ..
+bash dwm.sh

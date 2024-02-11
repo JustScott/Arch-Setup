@@ -18,12 +18,14 @@
 
 sudo -v
 
+VIRTUAL_MACHINES_PWD=$(pwd)
+
 cd # pwd -> $HOME
 git clone https://aur.archlinux.org/yay.git
 cd yay # pwd -> $HOME/yay
 makepkg -si PKGBUILD --noconfirm
 sleep 3
-cd ../Arch-Setup/VirtualMachines # pwd -> $HOME/Arch-Setup/VirtualMachines
+cd $VIRTUAL_MACHINES_PWD # pwd -> $HOME/Arch-Setup/VirtualMachines
 
 sudo pacman -Sy \
     spice-vdagent \
