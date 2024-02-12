@@ -30,8 +30,6 @@ tar -czf $CURRENT_PWD/app_backup.tar \
     .ssh .config/{picom,vimb,lf,nvim} \
     .bashrc .bash_profile .xscreensaver .xinitrc .vimrc \
     Pictures/Wallpapers \
-    .var/app/ca.hamaluik.Timecop/data/timecop.db \
-    Documents/Notesnook
 
 cd $CURRENT_PWD
 

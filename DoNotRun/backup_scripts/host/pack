@@ -28,10 +28,10 @@ cd ~
 calcurse --export > ~/.config/calcurse/calcurse.ical
 
 tar -czf $CURRENT_PWD/host_backup.tar \
-    .newsboat .config/{calcurse,picom,lf,nvim} \
+    .scripts/ssh_scripts .newsboat .config/{calcurse,picom,lf,nvim} \
     .bashrc .bash_profile .xscreensaver \
     .xinitrc .vimrc \
-    Pictures/Wallpapers Documents/{PasswordManagers,Apps}
+    Documents/PasswordManagers
 
 cd $CURRENT_PWD
 

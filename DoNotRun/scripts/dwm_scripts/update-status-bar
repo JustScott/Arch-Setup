@@ -18,19 +18,41 @@
 
 
 update-status-bar() {
-    if [ -f /sys/class/power_supply/BAT0/capacity ];
+    battery_display=""
+    # For loop ensure different battery names up to 5 aren't excluded
+    for batt_number in 0 1 2 3 4 5
+    do
+        [ -f /sys/class/power_supply/BAT$batt_number/capacity ] && batt_name=BAT$batt_number
+    done
+    if [ -n "$batt_name" ];
     then
-        battery_percentage="$(cat /sys/class/power_supply/BAT0/capacity 2> /dev/null)%"
-        [[ "$(cat /sys/class/power_supply/BAT0/status 2> /dev/null)" == "Charging" ]] && charging="+" || charging="-"
-    else
-        battery_percentage="?"
+        battery_percentage="$(cat /sys/class/power_supply/"$batt_name"/capacity 2> /dev/null)%"
+        [[ "$(cat /sys/class/power_supply/"$batt_name"/status 2> /dev/null)" == "Charging" ]] && charging="+" || charging="-"
+        battery_display=" batt: $charging$battery_percentage |"
     fi
 
-    wifi_interface=$(nmcli d | grep 'wifi ' | awk '{print $1}')
-    connection_state=$(net $wifi_interface state)
-    ssid=$(net $wifi_interface connection)
+    # 
+    # Yes, ethernet is suppose to only show if wifi isn't connected to a network
+    #
+    network_display=""
+    if [[ $(nmcli d) =~ "ethernet " ]];
+    then
+        ethernet_interface=$(nmcli d | grep 'ethernet ' | awk '{print $1}')
+        connection_state=$(net $ethernet_interface state)
+        ssid=$(net $ethernet_interface connection)
+        # If the ethernet interface is connected to a network
+        [[ $ssid =~ "--" ]] || network_display="eth:$connection_state:$ssid |"
+    fi
+    if [[ $(nmcli d) =~ "wifi " ]];
+    then
+        wifi_interface=$(nmcli d | grep 'wifi ' | awk '{print $1}')
+        connection_state=$(net $wifi_interface state)
+        ssid=$(net $wifi_interface connection)
+        # If the wifi interface is connected to a network
+        [[ $ssid =~ "--" ]] || network_display="wifi:$connection_state:$ssid |"
+    fi
 
-    xsetroot -name "bri: $(brightness) | vol: $(volume)% | batt:$charging$battery_percentage | $connection_state:$ssid |  $(date +"%B %e %H:%M")"
+    xsetroot -name "bri: $(brightness) | vol: $(volume)% |$battery_display $network_display $(date +"%B %e %H:%M")"
 }
 
 update-status-bar

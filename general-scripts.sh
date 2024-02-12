@@ -18,7 +18,7 @@
 
 if [ -d $PWD/DoNotRun/scripts/general_scripts ];
 then
-    sudo ln -s $PWD/DoNotRun/scripts/general_scripts/* /usr/local/bin
+    sudo ln -sf $PWD/DoNotRun/scripts/general_scripts/* /usr/local/bin
 else
     echo "Please run script from the Arch-Setup base directory"
     exit
