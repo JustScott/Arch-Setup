@@ -16,4 +16,5 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+sudo chmod a+rwx -R /dev/bus/usb
 sudo chown root:libvirt -R /dev/bus/usb

@@ -28,6 +28,7 @@ cd ~
 calcurse --export > ~/.config/calcurse/calcurse.ical
 
 tar -czf $CURRENT_PWD/host_backup.tar \
+    packed_notes.tar.aes \
     .scripts/ssh_scripts .newsboat .config/{calcurse,picom,lf,nvim} \
     .bashrc .bash_profile .xscreensaver \
     .xinitrc .vimrc \

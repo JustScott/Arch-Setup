@@ -1,0 +1,95 @@
+#!/bin/bash
+#
+# notes - part of the Arch-Setup project
+# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+case $1 in
+    "pack")
+        # If the notes directory exists
+        if [ -d ~/notes ];
+        then
+            STARTING_PWD=$PWD
+            cd $HOME
+        else
+            echo "A 'notes' directory must be place in your home directory, exiting..."
+            cd $STARTING_PWD
+            exit
+        fi
+
+        echo "Compressing Notes..."
+        tar -czf packed_notes.tar notes
+
+        echo "Encrypting Notes..."
+        # Encrypt the backup for transport
+        openssl enc -a -aes-256-cbc -pbkdf2 --iter 1000000 -in packed_notes.tar -out packed_notes.tar.aes 2> /dev/null
+
+        # Exit if the user provides two different encryption keys
+        if [[ $? != 0 ]]
+        then
+            echo "Encryption keys don't match, exiting..."
+            # Remove the unencrypted .tar file
+            shred -uz packed_notes.tar
+            cd $STARTING_PWD
+            exit
+        fi
+
+        # Remove the unencrypted .tar file
+        shred -uz packed_notes.tar
+
+        if [[ $2 = "clean" ]];
+        then
+            rm -rf notes
+        fi
+
+        cd $STARTING_PWD
+        ;;
+    "unpack")
+        if [ -f ~/packed_notes.tar.aes ];
+        then
+            STARTING_PWD=$PWD
+            cd $HOME
+        else
+            echo "packed_notes.tar.aes must be place in your home directory, exiting..."
+            cd $STARTING_PWD
+            exit
+        fi
+
+        echo "Decrypting Notes..."
+        # Decrypt the backup
+        openssl enc -d -a -aes-256-cbc -pbkdf2 --iter 1000000 -in packed_notes.tar.aes -out packed_notes.tar 2> /dev/null
+
+        # Exit if the wrong decryption key is given
+        if [[ $? != 0 ]]
+        then
+            echo "Incorrect Decryption key"
+            # Remove the incorrectly decrypted archive file
+            shred -uz packed_notes.tar
+            cd $STARTING_PWD
+            exit
+        fi
+
+        # Unpack all my files into the current pwd
+        tar -xf packed_notes.tar
+
+        # Remove the unencrypted .tar file
+        shred -uz packed_notes.tar
+
+        cd $STARTING_PWD
+        ;;
+    *)
+        lf ~/notes
+        ;;
+esac

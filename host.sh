@@ -22,8 +22,6 @@ sudo -v
 
 #----------- Package Manager Setup -----------
 
-cd ../Arch-Setup # pwd -> $HOME/Arch-Setup
-
 sudo pacman -Sy \
     spice-vdagent xclip \
     zip unzip \
