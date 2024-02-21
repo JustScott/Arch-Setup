@@ -90,6 +90,6 @@ case $1 in
         cd $STARTING_PWD
         ;;
     *)
-        lf ~/notes
+        [ -d ~/notes ] && lf ~/notes || echo -e "\n - couldn't find a 'notes' directory in $HOME - \n"
         ;;
 esac

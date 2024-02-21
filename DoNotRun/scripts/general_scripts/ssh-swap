@@ -23,6 +23,12 @@ read USERNAME
 echo -n "Enter the remote IP Address: "
 read IP_ADDRESS
 
+SSH_PORT=22
+echo -n "Enter SSH port if not 22: "
+read NEW_SSH_PORT
+# If the user entered a port, use that instead
+[[ -n NEW_SSH_PORT ]] && SSH_PORT=$NEW_SSH_PORT
+
 # Generate a new SSH key pair
 generate_ssh_key() {
 while :
@@ -51,8 +57,15 @@ while :
 
 # Swap SSH keys with the remote device
 swap_ssh_keys() {
-    ssh-copy-id -i ~/.ssh/"$KEY_FILE".pub "$USERNAME@$IP_ADDRESS"
-    echo "SSH keys swapped."
+    ssh-copy-id -p $SSH_PORT -i ~/.ssh/"$KEY_FILE".pub "$USERNAME@$IP_ADDRESS"
+    # if the command is successful
+    if [[ $? == 0 ]];
+    then
+        echo "SSH keys swapped, use this command to connect: "
+        echo "ssh -p $SSH_PORT -i ~/.ssh/$KEY_FILE $USERNAME@$IP_ADDRESS"
+    else
+        echo "Failed to swap SSH keys" 
+    fi 
 }
 
 main() {
@@ -61,4 +74,3 @@ main() {
 }
 
 main
-
