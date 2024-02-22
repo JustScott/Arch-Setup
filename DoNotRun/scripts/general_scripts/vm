@@ -1,0 +1,170 @@
+#!/bin/bash
+#
+# vm - part of the Arch-Setup project
+# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+#
+# Simple to use CLI tool combining some abilities from `virt-manager`
+#  and `virsh` to make managing VMs from the terminal easy
+#
+
+
+declare -A vm_states=()
+
+parse_vm_states() {
+    running=$(virsh list --state-running | awk 'NR > 2 { print $2 }')
+    paused=$(virsh list --state-paused | awk 'NR > 2 { print $2 }')
+    saved=$(virsh list --all --with-managed-save | awk 'NR > 2 { print $2 }' )
+    off=$(virsh list --inactive --without-managed-save | awk 'NR > 2 { print $2 }')
+}
+
+populate_vm_states() {
+    parse_vm_states
+
+    for vm_name in $running; do
+        vm_states[$vm_name]="running"
+    done
+
+    for vm_name in $paused; do
+        vm_states[$vm_name]="paused"
+    done
+
+    for vm_name in $saved; do
+        vm_states[$vm_name]="saved"
+    done
+
+    for vm_name in $off; do
+        vm_states[$vm_name]="off"
+    done
+}
+
+
+case $1 in
+    # List the running, paused, saved, and off VMs
+    "list")
+        parse_vm_states
+
+        # Print the header
+        printf "\n %-20s   %-10s\n" "Name" "State"
+        echo "--------------------------------"
+
+        # Print running VMs
+        for vm_name in $running; do
+            printf " %-20s   %-10s\n" "$vm_name" "running"
+        done
+
+        # Print running VMs
+        for vm_name in $paused; do
+            printf " %-20s   %-10s\n" "$vm_name" "paused"
+        done
+
+        # Print saved VMs
+        for vm_name in $saved; do
+            printf " %-20s   %-10s\n" "$vm_name" "saved"
+        done
+
+        # Print off VMs
+        for vm_name in $off; do
+            printf " %-20s   %-10s\n" "$vm_name" "off"
+        done
+        ;;
+
+    # Start and open the VM
+    "start")
+        populate_vm_states
+
+        VM_NAME=$2
+
+        if [ "${vm_states[$VM_NAME]}" = "saved" ];
+        then
+            virsh restore ~/.config/libvirt/qemu/save/$VM_NAME.save
+            # Don't remove the save if the restore fails
+            [ $? = 0 ] && virsh managedsave-remove $VM_NAME 
+            exit 0
+        else
+            if [ "${vm_states[$VM_NAME]}" = "off" ];
+            then
+                virsh start $VM_NAME
+            else
+                # If the VM exists
+                if [[ -n "${vm_states[$VM_NAME]}" ]];
+                then
+                    echo "VM not in saved state"
+                else
+                    echo "VM Doesn't exist"
+                fi
+                exit 1
+            fi
+        fi 
+        ;;
+
+    # Open the VM (domain) window
+    "open")
+        populate_vm_states
+
+        VM_NAME=$2
+
+        if [[ -n "${vm_states[$VM_NAME]}" ]];
+        then
+            virt-manager -c qemu:///session --show-domain-console $VM_NAME
+        else
+            echo "VM Doesn't exist"
+        fi
+        ;;
+
+    "save")
+        populate_vm_states
+
+        VM_NAME=$2
+        SAVE_DIRECTORY=~/.config/libvirt/qemu/save
+
+        if [[ "${vm_states[$VM_NAME]}" = "running" || "${vm_states[$VM_NAME]}" = "paused" ]];
+        then
+            virsh managedsave --verbose $VM_NAME
+        else
+            if [[ -n "${vm_states[$VM_NAME]}" ]];
+            then
+                echo "VM not running or paused"
+            else
+                echo "VM Doesn't exist"
+                exit 1
+            fi
+        fi
+        ;;
+
+    # Print the available commands and helpful exampleds
+    ""|"--help"|"-h")
+        echo -e "\nUsage: vm [COMMAND]"
+        echo -e "\nAbtracts commands from virsh and virt-manager, to more"
+        echo -e " easily manage Virtual Machines from the terminal.\n"
+
+        echo "Commands:"
+        printf "\t%-10s %-10s\n" "list" "List the VMs and their states"
+        printf "\t%-10s %-10s\n" "start" "Start an off or saved VM"
+        printf "\t%-10s %-10s\n" "open" "Open the VMs domain console"
+        printf "\t%-10s %-10s\n" "save" "Save a VMs state"
+
+        echo "Examples:"
+        echo -e "\t\`vm list\`"
+        echo -e "\t\`vm start test_vm\`"
+        #echo -e "\t\`vm start --open test_vm\`"
+        echo -e "\t\`vm open test_vm\`"
+        echo -e "\t\`vm save test_vm\`"
+
+        ;;
+    *) echo -e "\nInvalid Command... try \`vm --help\` for a list of commands\n";exit 1;;
+esac
