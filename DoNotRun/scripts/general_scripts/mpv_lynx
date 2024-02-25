@@ -19,9 +19,22 @@
 
 URL="$1"
 
-if [[ $URL =~ "youtube.com" ]] || [[ $URL =~ "odysee.com" ]];
-then
-    mpv "$URL" >/dev/null 2>&1 &
-else
-    lynx "$URL"
-fi
+VIDEO_URLS=("youtube.com" "odysee.com" "mp4")
+AUDIO_URLS=("mp3")
+
+for item in "${AUDIO_URLS[@]}"; do
+    [[ $URL =~ $item ]] && { 
+        st -e mpv --no-video "$URL" 
+        break
+    }
+done
+
+for item in "${VIDEO_URLS[@]}"; do
+    [[ $URL =~ $item ]] && { 
+        mpv "$URL" > /dev/null 2>&1 
+        break
+    }
+done
+
+which lynx 2> /dev/null \
+    && lynx $URL
