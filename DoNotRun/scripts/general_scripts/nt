@@ -18,4 +18,7 @@
 
 # Open a new st terminal window, then open a terminal in neovim,
 #  this allows for easier terminal interaction along with scrolling
-st nvim -c "set nonumber norelativenumber| set laststatus=0 | :startinsert | :term"
+
+which nvim 2> /dev/null \
+    && nvim -c "set nonumber norelativenumber| set laststatus=0 | :startinsert | :term" \
+    || { echo -e "\n - Neovim either isn't installed or isn't in \$PATH - \n"; exit 1; } 
