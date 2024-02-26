@@ -19,7 +19,7 @@
 case $1 in
     "pack")
         # If the notes directory exists
-        if [ -d ~/notes ];
+        if [[ -d ~/notes ]];
         then
             STARTING_PWD=$PWD
             cd $HOME
@@ -37,27 +37,23 @@ case $1 in
         openssl enc -a -aes-256-cbc -pbkdf2 --iter 1000000 -in packed_notes.tar -out packed_notes.tar.aes 2> /dev/null
 
         # Exit if the user provides two different encryption keys
-        if [[ $? != 0 ]]
-        then
+        [[ $? != 0 ]] && {
             echo "Encryption keys don't match, exiting..."
             # Remove the unencrypted .tar file
             shred -uz packed_notes.tar
             cd $STARTING_PWD
             exit
-        fi
+        }
 
         # Remove the unencrypted .tar file
         shred -uz packed_notes.tar
 
-        if [[ $2 = "clean" ]];
-        then
-            rm -rf notes
-        fi
+        [[ $2 = "clean" ]] && rm -rf notes
 
         cd $STARTING_PWD
         ;;
     "unpack")
-        if [ -f ~/packed_notes.tar.aes ];
+        if [[ -a ~/packed_notes.tar.aes ]]
         then
             STARTING_PWD=$PWD
             cd $HOME
@@ -72,14 +68,13 @@ case $1 in
         openssl enc -d -a -aes-256-cbc -pbkdf2 --iter 1000000 -in packed_notes.tar.aes -out packed_notes.tar 2> /dev/null
 
         # Exit if the wrong decryption key is given
-        if [[ $? != 0 ]]
-        then
+        [[ $? != 0 ]] && {
             echo "Incorrect Decryption key"
             # Remove the incorrectly decrypted archive file
             shred -uz packed_notes.tar
             cd $STARTING_PWD
             exit
-        fi
+        } 
 
         # Unpack all my files into the current pwd
         tar -xf packed_notes.tar
@@ -90,6 +85,8 @@ case $1 in
         cd $STARTING_PWD
         ;;
     *)
-        [ -d ~/notes ] && lf ~/notes || echo -e "\n - couldn't find a 'notes' directory in $HOME - \n"
+        [[ -d ~/notes ]] \
+            && lf ~/notes \
+            || echo -e "\n - couldn't find a 'notes' directory in $HOME - \n"
         ;;
 esac

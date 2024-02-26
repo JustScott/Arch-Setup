@@ -37,12 +37,11 @@ cd $CURRENT_PWD
 openssl enc -a -aes-256-cbc -pbkdf2 --iter 1000000 -in vault_backup.tar -out vault_backup.tar.aes 2> /dev/null
 
 # Exit if the user provides two different encryption keys
-if [[ $? != 0 ]]
-then
+[[ $? != 0 ]] && {
     echo "Encryption keys don't match"
     shred -uz vault_backup.tar
     exit
-fi
+}
 
 # Remove the unencrypted .tar file
 shred -uz vault_backup.tar

@@ -20,10 +20,10 @@ liveglow() {
     clear
 
     # Check that the filename argument is provided
-    if [ -z "$1" ]; then
+    [[ -z "$1" ]] && {
         echo "Error: No filename specified."
         return 1
-    fi
+    }
 
     SLEEP_FOR=.1
 
@@ -36,7 +36,7 @@ liveglow() {
         NEW_HASH=$(sha1sum "$FILENAME" | awk '{print $1}')
 
         # Only display the new output if the file has changed
-        if [ "$NEW_HASH" != "$OLD_HASH" ];
+        if [[ "$NEW_HASH" != "$OLD_HASH" ]];
         then
             clear
             # Run the glow command on the file and pipe the output to less,
@@ -56,10 +56,7 @@ liveglow() {
 
         # Check if the user has typed "q" to exit
         read -t $SLEEP_FOR -N 1 INPUT
-        if [[ $INPUT = "q" ]]; then
-          # Exit the loop and the function
-          break
-        fi
+        [[ $INPUT = "q" ]] && break
 
     done
 }

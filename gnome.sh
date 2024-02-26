@@ -17,34 +17,59 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-echo -e '\n#Opens new tabs in the current working directory' >> ~/.bashrc
-echo 'source /etc/profile.d/vte.sh' >> ~/.bashrc
+echo -e "\n#Opens new tabs in the current working directory" >> ~/.bashrc
+echo "source /etc/profile.d/vte.sh" >> ~/.bashrc
 
 # ----------- Configure system settings -----------
 
 # Set the color theme to dark for the system
-gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
-
-python3 DoNotRun/set_keyboard_shortcuts.py
+ACTION="Set Desktop Color Theme to Dark"
+gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" &>/dev/null \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION"
+    
 
 # ----------- Configure terminal settings -----------
 
 # Get the default terminal profile
 terminal_profile=$(gsettings get org.gnome.Terminal.ProfilesList default | tr -d \')
 
-# Set the font-name and font-size
-gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ font 'Source Code Pro 14'
-# Set the terminal size
-gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ default-size-columns 88
-gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ default-size-rows 20
+[[ -n $terminal_profile ]] && {
+    # Set the font-name and font-size
+    ACTION="Set Font Name & Size"
+    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ font "Source Code Pro 14" &>/dev/null \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION"
 
-# Turn off the terminal bell
-gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ audible-bell false
+    ACTION="Set Terminal Size in Columns"
+    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ default-size-columns 88 &>/dev/null \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION"
 
-#
-# Set the shortcuts
-#
-# Switch to next tab
-gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/ next-tab '<Control>Return'
+    ACTION="Set Terminal Size in Rows"
+    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ default-size-rows 20 &>/dev/null \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION"
+
+    ACTION="Turn off the Terminal Bell"
+    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ audible-bell false &>/dev/null \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION"
+} || echo "[FAIL] Failed to get terminal profile... skipping related commands"
+
+# ----------- Set Shortcuts & Keybindings -----------
+
+ACTION="Set Desktop Shortcuts"
+python3 DoNotRun/set_keyboard_shortcuts.py &>/dev/null \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION"
+
+ACTION="Set Keybind: Switch to the Next Terminal Tab = <Control>Return"
+gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/ next-tab '<Control>Return' &>/dev/null \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION"
 # Switch to previous tab
-gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/ prev-tab '<Control>BackSpace'
+ACTION="Set Keybind: Switch to the Previous Terminal Tab = <Control>BackSpace"
+gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/ prev-tab '<Control>BackSpace' &>/dev/null \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION"

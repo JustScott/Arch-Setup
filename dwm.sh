@@ -32,9 +32,6 @@ sudo make install # Do the initial compilation
 
 # Edit .bash_profile and .xinitrc to start dwm on reboot
 echo "startx" >> ~/.bash_profile
-echo -e "xrandr --output Virtual-1 --mode 1920x1080\nspice-vdagent &\nexec dwm" >> ~/.xinitrc
-
-cd
 
 # Install all the base packages
 sudo pacman -Sy \
@@ -44,5 +41,6 @@ sudo pacman -Sy \
     bluez bluez-utils pulseaudio-bluetooth \
     webkit2gtk dmenu picom xscreensaver --noconfirm
 
+cd ~
 # Start dwm
 startx

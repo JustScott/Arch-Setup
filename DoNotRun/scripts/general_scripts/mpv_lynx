@@ -16,25 +16,30 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#
+# Opens the provided URL in the appropriate program
+#
 
 URL="$1"
 
 VIDEO_URLS=("youtube.com" "odysee.com" "mp4")
 AUDIO_URLS=("mp3")
 
+# Loop through possible video url strings
 for item in "${AUDIO_URLS[@]}"; do
     [[ $URL =~ $item ]] && { 
         st -e mpv --no-video "$URL" 
-        break
+        exit
     }
 done
 
+# Loop through possible video url strings
 for item in "${VIDEO_URLS[@]}"; do
     [[ $URL =~ $item ]] && { 
         mpv "$URL" > /dev/null 2>&1 
-        break
+        exit
     }
 done
 
-which lynx 2> /dev/null \
-    && lynx $URL
+# Only open URL with lynx if lynx is installed
+which lynx &>/dev/null && lynx $URL

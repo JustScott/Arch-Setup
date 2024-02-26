@@ -31,15 +31,14 @@ gunzip vault_backup.tar.aes.gz
 openssl enc -d -a -aes-256-cbc -pbkdf2 --iter 1000000 -in vault_backup.tar.aes -out vault_backup.tar 2> /dev/null
 
 # Exit if the wrong decryption key is given
-if [[ $? != 0 ]]
-then
+[[ $? != 0 ]] && {
     echo "Incorrect Decryption key"
     # Rename the bak file to the origional file name
     mv vault_backup.tar.aes.gz.bak vault_backup.tar.aes.gz
     # Remove the incorrectly decrypted archive file
     shred -uz vault_backup.tar vault_backup.tar.aes
     exit
-fi
+}
 
 # Unpack all my files into the current pwd
 tar -xf vault_backup.tar

@@ -16,10 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-if [ -d $PWD/DoNotRun/scripts/general_scripts ];
-then
+[[ -d $PWD/DoNotRun/scripts/general_scripts ]] && {
     sudo ln -sf $PWD/DoNotRun/scripts/general_scripts/* /usr/local/bin
-else
+} || {
     echo "Please run script from the Arch-Setup base directory"
-    exit
-fi
+}

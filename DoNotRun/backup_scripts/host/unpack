@@ -31,15 +31,14 @@ gunzip host_backup.tar.aes.gz
 openssl enc -d -a -aes-256-cbc -pbkdf2 --iter 1000000 -in host_backup.tar.aes -out host_backup.tar 2> /dev/null
 
 # Exit if the wrong decryption key is given
-if [[ $? != 0 ]]
-then
+[[ $? != 0 ]] && {
     echo "Incorrect Decryption key"
     # Rename the bak file to the origional file name
     mv host_backup.tar.aes.gz.bak host_backup.tar.aes.gz
     # Remove the incorrectly decrypted archive file
     shred -uz host_backup.tar host_backup.tar.aes
     exit
-fi
+}
 
 # Unpack all my files into the current pwd
 tar -xf host_backup.tar

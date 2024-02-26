@@ -21,22 +21,31 @@
 # Install and configure security tools to harden the system
 #
 
-# Deny access after 6 incorrect password attempts instead of 3 (because its annoying)
-sudo bash -c "echo 'deny = 6' >> /etc/security/faillock.conf"
+ACTION="Deny access after 6 incorrect password attempts instead of 3" # Because its annoying
+sudo bash -c "echo 'deny = 6' >> /etc/security/faillock.conf" &>/dev/null \
+    && "[SUCCESS] $ACTION" \
+    || "[FAIL] $ACTION"
 
-# Disable root login
-sudo passwd --lock root
+ACTION="Disable root login"
+sudo passwd --lock root &>/dev/null \
+    && "[SUCCESS] $ACTION" \
+    || "[FAIL] $ACTION"
 
-# Disable root login over ssh
+ACTION="Disable root login over ssh"
 sudo bash -c "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config.d/*-archlinux.conf"
+    && "[SUCCESS] $ACTION" \
+    || "[FAIL] $ACTION"
 
-# Update the CPU microcode to avoid vulnerabilities
-sudo pacman -Sy intel-ucode --noconfirm
-sudo grub-mkconfig -o /boot/grub/grub.cfg
+ACTION="Update the CPU microcode to avoid vulnerabilities"
+sudo pacman -Sy intel-ucode --noconfirm &>/dev/null && sudo grub-mkconfig -o /boot/grub/grub.cfg &>/dev/null \
+    && "[SUCCESS] $ACTION" \
+    || "[FAIL] $ACTION"
 
-# Enable the firewall and deny all incoming traffic
-sudo pacman -Sy ufw --noconfirm
-sudo systemctl enable --now ufw
-sudo ufw enable
-sudo ufw default deny incoming
 
+ACTION="Enable the firewall and deny all incoming traffic"
+{
+    sudo pacman -Sy ufw --noconfirm \
+    && sudo systemctl enable --now ufw \
+    && sudo ufw enable \
+    && sudo ufw default deny incoming
+} && "[SUCCESS] $ACTION" || "[FAIL] $ACTION"

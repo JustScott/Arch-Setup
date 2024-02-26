@@ -27,10 +27,6 @@ do
     # Check if there's any audio playing
     pactl list short sinks | grep RUNNING >/dev/null
     
-    # If the audio is running
-    if [[ $? == 0 ]];
-    then
-        # Reset the screen timeout timer
-        xscreensaver-command --deactivate > /dev/null
-    fi
+    # If the audio is running, seset the screen timeout timer
+    [[ $? == 0 ]] && xscreensaver-command --deactivate > /dev/null
 done

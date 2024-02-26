@@ -37,12 +37,11 @@ cd $CURRENT_PWD
 openssl enc -a -aes-256-cbc -pbkdf2 --iter 1000000 -in low_dev_backup.tar -out low_dev_backup.tar.aes 2> /dev/null
 
 # Exit if the user provides two different encryption keys
-if [[ $? != 0 ]]
-then
+[[ $? != 0 ]] && {
     echo "Encryption keys don't match"
     shred -uz low_dev_backup.tar
     exit
-fi
+}
 
 # Remove the unencrypted .tar file
 shred -uz low_dev_backup.tar

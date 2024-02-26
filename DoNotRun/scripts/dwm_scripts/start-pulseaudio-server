@@ -18,12 +18,10 @@
 
 
 start-pulseaudio-server() {
-    pamixer --get-volume > /dev/null 2>&1
-    if [[ $? != 0 ]];
-    then
-        pulseaudio --kill > /dev/null 2>&1
-        pulseaudio --start > /dev/null 2>&1
-    fi
+    pamixer --get-volume &>/dev/null || {
+        pulseaudio --kill &>/dev/null
+        pulseaudio --start &>/dev/null
+    }
 }
 
 start-pulseaudio-server

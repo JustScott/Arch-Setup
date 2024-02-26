@@ -31,15 +31,14 @@ gunzip app_backup.tar.aes.gz
 openssl enc -d -a -aes-256-cbc -pbkdf2 --iter 1000000 -in app_backup.tar.aes -out app_backup.tar 2> /dev/null
 
 # Exit if the wrong decryption key is given
-if [[ $? != 0 ]]
-then
+[[ $? != 0 ]] && {
     echo "Incorrect Decryption key"
     # Rename the bak file to the origional file name
     mv app_backup.tar.aes.gz.bak app_backup.tar.aes.gz
     # Remove the incorrectly decrypted archive file
     shred -uz app_backup.tar app_backup.tar.aes
     exit
-fi
+}
 
 # Unpack all my files into the current pwd
 tar -xf app_backup.tar
