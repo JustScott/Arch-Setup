@@ -17,7 +17,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 [[ -d $PWD/DoNotRun/scripts/general_scripts ]] && {
-    sudo ln -sf $PWD/DoNotRun/scripts/general_scripts/* /usr/local/bin
+    ACTION="Install general scripts to /usr/local/bin/"
+    sudo ln -sf $PWD/DoNotRun/scripts/general_scripts/* /usr/local/bin \
+        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION"
 } || {
     echo "Please run script from the Arch-Setup base directory"
 }

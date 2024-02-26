@@ -17,8 +17,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 [[ -d $PWD/DoNotRun/scripts/dwm_scripts ]] && {
-    sudo ln -sf $PWD/DoNotRun/scripts/dwm_scripts/* /usr/local/bin
+    ACTION="Install dwm scripts to /usr/local/bin/"
+    sudo ln -sf $PWD/DoNotRun/scripts/dwm_scripts/* /usr/local/bin \
+        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION"
 } || {
     echo "Please run script from the Arch-Setup base directory"
-    exit
 }

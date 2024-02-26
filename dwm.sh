@@ -21,26 +21,42 @@ sudo -v # Enable sudo
 # Get the terminal and window manager from suckless
 mkdir -p ~/Git/Hub/ArchProjects
 cd ~/Git/Hub/ArchProjects # pwd -> $HOME/Git/Hub
-git clone https://www.github.com/JustScott/st
-git clone https://www.github.com/JustScott/dwm
 
+ACTION="Clone st"
+git clone https://www.github.com/JustScott/st &>/dev/null \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION"
+ACTION="Clone dwm"
+git clone https://www.github.com/JustScott/dwm \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION"
+
+ACTION="Compile st"
 cd st # pwd -> $HOME/Git/Hub/ArchProjects/st
-sudo make install
+sudo make install &>/dev/null \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION"
 
+ACTION="Compile dwm"
 cd ../dwm # pwd -> $HOME/Git/Hub/ArchProjects/dwm
-sudo make install # Do the initial compilation
+sudo make install &>/dev/null \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION"
 
 # Edit .bash_profile and .xinitrc to start dwm on reboot
 echo "startx" >> ~/.bash_profile
 
+ACTION="Install dwm related packages with pacman"
 # Install all the base packages
 sudo pacman -Sy \
     xorg-xrandr xorg-server xorg-xinit xorg-xsetroot \
     libx11 libxinerama libxft \
     pulseaudio pavucontrol brightnessctl pamixer \
     bluez bluez-utils pulseaudio-bluetooth \
-    webkit2gtk dmenu picom xscreensaver --noconfirm
+    webkit2gtk dmenu picom xscreensaver --noconfirm &>/dev/null \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION"
 
 cd ~
 # Start dwm
-startx
+startx || echo "[FAIL] Start X server"
