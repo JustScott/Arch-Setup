@@ -16,11 +16,52 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+set_keybindings() {
+    declare -A shortcut_keybinds=(
+        ["Terminal"]="<Ctrl><Alt>t"
+        ["Browser"]="<Ctrl><Shift>b"
+        ["AUR"]="<Ctrl><Alt>a"
+    )
+
+    declare -A shortcut_commands=(
+        ["Terminal"]="gnome-terminal"
+        ["Browser"]="xdg-open https://":
+        ["AUR"]="xdg-open https://wiki.archlinux.org"
+    )
+
+    keybind_locations="["
+    for ((count=0;count<${#shortcut_keybinds[@]};count++)); do
+        keybind_locations+="'/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom$count/'"
+        [[ $count == $((${#shortcut_keybinds[@]}-1)) ]] && keybind_locations+="]" || keybind_locations+=", "
+    done
+
+    ACTION="Set Keybind locations"
+    gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$keybind_locations" &>/dev/null \
+        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION"
+
+    keybind_index=0
+    for name in "${!shortcut_keybinds[@]}"; do
+        binding="${shortcut_keybinds[$name]}"
+        command="${shortcut_commands[$name]}"
+
+        ACTION="Set Desktop Shortcut for '$name'"
+        gsettings set \
+            org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom$keybind_index/ binding "$binding" \
+            &>/dev/null \
+        && gsettings set \
+            org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom$keybind_index/ command "$command" \
+            &>/dev/null \
+        && gsettings set \
+            org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom$keybind_index/ name "$name" \
+            &>/dev/null \
+        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION"
+        
+        ((keybind_index++))
+    done
+}
 
 echo -e "\n#Opens new tabs in the current working directory" >> ~/.bashrc
 echo "source /etc/profile.d/vte.sh" >> ~/.bashrc
-
-# ----------- Configure system settings -----------
 
 # Set the color theme to dark for the system
 ACTION="Set Desktop Color Theme to Dark"
@@ -59,10 +100,7 @@ terminal_profile=$(gsettings get org.gnome.Terminal.ProfilesList default | tr -d
 
 # ----------- Set Shortcuts & Keybindings -----------
 
-ACTION="Set Desktop Shortcuts"
-python3 DoNotRun/set_keyboard_shortcuts.py &>/dev/null \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION"
+set_keybindings
 
 ACTION="Set Keybind: Switch to the Next Terminal Tab = <Control>Return"
 gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/ next-tab '<Control>Return' &>/dev/null \
