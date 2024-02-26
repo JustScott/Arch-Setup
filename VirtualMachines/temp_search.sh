@@ -21,7 +21,11 @@ cd ..
 bash secure.sh
 cd VirtualMachines
 
-yay -Sy spice-vdagent librewolf-bin feh --noconfirm
+ACTION="Install TempSearch packages from the AUR"
+echo "...$ACTION..."
+yay -Sy spice-vdagent librewolf-bin feh --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || { echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit; }
 
 # Start the process in the background
 spice-vdagent &

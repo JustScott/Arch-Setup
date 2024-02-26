@@ -19,14 +19,19 @@
 # Allows for mounting USB media to the virtual machines
 sudo chmod g+rwx -R /dev/bus/usb
 
+ACTION="Install qemu related packages with pacman"
+echo "...$ACTION..."
 sudo pacman -Sy \
     gnome-boxes virt-manager \
-    qemu-emulators-full spice-vdagent --noconfirm
+    qemu-emulators-full spice-vdagent --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" \
+        || { "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit; }
 
-sudo bash -c 'echo -e "\nunix_sock_group = "libvirt"" >> /etc/libvirt/libvirtd.conf'
-sudo bash -c 'echo "unix_sock_rw_perms = "0770"" >> /etc/libvirt/libvirtd.conf'
 
-sudo usermod -aG libvirt $USER
-
-sudo bash -c 'echo "group="$USER"" >> /etc/libvirt/qemu.conf'
+sudo bash -c 'echo -e "\nunix_sock_group = "libvirt"" >> /etc/libvirt/libvirtd.conf' >/dev/null 2>>~/archsetuperrors.log \
+    && sudo bash -c 'echo "unix_sock_rw_perms = "0770"" >> /etc/libvirt/libvirtd.conf' >/dev/null 2>>~/archsetuperrors.log \
+    && sudo usermod -aG libvirt $USER >/dev/null 2>>~/archsetuperrors.log \
+    && sudo bash -c 'echo "group="$USER"" >> /etc/libvirt/qemu.conf' >/dev/null 2>>~/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
 

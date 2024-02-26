@@ -21,31 +21,34 @@
 # Install and configure security tools to harden the system
 #
 
-ACTION="Deny access after 6 incorrect password attempts instead of 3" # Because its annoying
-sudo bash -c "echo 'deny = 6' >> /etc/security/faillock.conf" &>/dev/null \
-    && "[SUCCESS] $ACTION" \
-    || "[FAIL] $ACTION"
+ACTION="Deny access temporarily after 6 incorrect password attempts instead of 3" # Because its annoying
+sudo bash -c "echo 'deny = 6' >> /etc/security/faillock.conf" >/dev/null 2>>~/archsetuperrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
 
 ACTION="Disable root login"
-sudo passwd --lock root &>/dev/null \
-    && "[SUCCESS] $ACTION" \
-    || "[FAIL] $ACTION"
+sudo passwd --lock root >/dev/null 2>>~/archsetuperrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
 
 ACTION="Disable root login over ssh"
-sudo bash -c "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config.d/*-archlinux.conf"
-    && "[SUCCESS] $ACTION" \
-    || "[FAIL] $ACTION"
+[[ -d /etc/ssh/ ]] && {
+    sudo bash -c "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config.d/*.conf" >/dev/null 2>>~/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
+}
 
-ACTION="Update the CPU microcode to avoid vulnerabilities"
-sudo pacman -Sy intel-ucode --noconfirm &>/dev/null && sudo grub-mkconfig -o /boot/grub/grub.cfg &>/dev/null \
-    && "[SUCCESS] $ACTION" \
-    || "[FAIL] $ACTION"
+ACTION="Update the CPU microcode to avoid vulnerabilities" >/dev/null 2>>~/archsetuperrors.log
+echo "...$ACTION..."
+sudo pacman -Sy intel-ucode --noconfirm &>/dev/null && sudo grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>>~/archsetuperrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
 
-
-ACTION="Enable the firewall and deny all incoming traffic"
-{
-    sudo pacman -Sy ufw --noconfirm \
-    && sudo systemctl enable --now ufw \
-    && sudo ufw enable \
-    && sudo ufw default deny incoming
-} && "[SUCCESS] $ACTION" || "[FAIL] $ACTION"
+ACTION="Install and Enable the firewall, then deny all incoming traffic"
+echo "...$ACTION..."
+sudo pacman -Sy ufw --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+    && sudo systemctl enable --now ufw >/dev/null 2>>~/archsetuperrors.log \
+    && sudo ufw enable >/dev/null 2>>~/archsetuperrors.log \
+    && sudo ufw default deny incoming >/dev/null 2>>~/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"

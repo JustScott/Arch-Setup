@@ -18,8 +18,8 @@
 
 [[ -d $PWD/DoNotRun/scripts/general_scripts ]] && {
     ACTION="Install general scripts to /usr/local/bin/"
-    sudo ln -sf $PWD/DoNotRun/scripts/general_scripts/* /usr/local/bin \
-        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION"
+    sudo ln -sf $PWD/DoNotRun/scripts/general_scripts/* /usr/local/bin >/dev/null 2>>~/archsetuperrors.log\
+        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
 } || {
     echo "Please run script from the Arch-Setup base directory"
 }

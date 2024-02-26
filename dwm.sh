@@ -23,40 +23,41 @@ mkdir -p ~/Git/Hub/ArchProjects
 cd ~/Git/Hub/ArchProjects # pwd -> $HOME/Git/Hub
 
 ACTION="Clone st"
-git clone https://www.github.com/JustScott/st &>/dev/null \
+git clone https://www.github.com/JustScott/st >/dev/null 2>>~/archsetuperrors.log \
     && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION"
+    || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
 ACTION="Clone dwm"
-git clone https://www.github.com/JustScott/dwm \
+git clone https://www.github.com/JustScott/dwm >/dev/null 2>>~/archsetuperrors.log\
     && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION"
+    || { echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit; } 
 
 ACTION="Compile st"
 cd st # pwd -> $HOME/Git/Hub/ArchProjects/st
-sudo make install &>/dev/null \
+sudo make install >/dev/null 2>>~/archsetuperrors.log \
     && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION"
+    || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
 
 ACTION="Compile dwm"
 cd ../dwm # pwd -> $HOME/Git/Hub/ArchProjects/dwm
-sudo make install &>/dev/null \
+sudo make install >/dev/null 2>>~/archsetuperrors.log \
     && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION"
+    || { echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit;} 
 
 # Edit .bash_profile and .xinitrc to start dwm on reboot
 echo "startx" >> ~/.bash_profile
 
 ACTION="Install dwm related packages with pacman"
-# Install all the base packages
+echo "...$ACTION..."
 sudo pacman -Sy \
     xorg-xrandr xorg-server xorg-xinit xorg-xsetroot \
     libx11 libxinerama libxft \
     pulseaudio pavucontrol brightnessctl pamixer \
     bluez bluez-utils pulseaudio-bluetooth \
-    webkit2gtk dmenu picom xscreensaver --noconfirm &>/dev/null \
+    webkit2gtk dmenu picom xscreensaver --noconfirm >/dev/null 2>>~/archsetuperrors.log \
         && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION"
+        || { echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit;} 
 
 cd ~
 # Start dwm
-startx || echo "[FAIL] Start X server"
+echo "exec dwm" >> ~/.xinitrc
+startx >/dev/null 2>>~/archsetuperrors.log || echo "[FAIL] Start X server... wrote error log to ~/archsetuperrors.log"

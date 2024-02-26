@@ -27,14 +27,17 @@ bash secure.sh
 cd VirtualMachines
 bash base.sh
 
-sudo pacman -Sy python python-pip docker docker-compose --noconfirm
+ACTION="Install development packages with pacman"
+echo "...$ACTION..."
+sudo pacman -Sy python python-pip docker docker-compose --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || { echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit; }
 
-#
-# Configure docker
-#
-sudo systemctl enable --now docker # start the docker service
-
-sudo usermod -aG docker $USER # Add the current user to the docker group
+ACTION="Configure Docker"
+sudo systemctl enable --now docker >/dev/null 2>>~/archsetuperrors.log \
+    && sudo usermod -aG docker $USER >/dev/null 2>>~/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
 
 
 SCRIPT_DIR=../DoNotRun/backup_scripts/primary_development

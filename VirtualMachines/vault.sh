@@ -20,7 +20,11 @@ cd ..
 bash secure.sh
 cd VirtualMachines
 
-sudo pacman -Sy keepassxc spice-vdagent --noconfirm
+ACTION="Install Vault packages with pacman"
+echo "...$ACTION..."
+sudo pacman -Sy keepassxc spice-vdagent --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || { echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit; }
 
 # Start the process in the background
 spice-vdagent &

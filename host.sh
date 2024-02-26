@@ -22,13 +22,17 @@ sudo -v
 
 #----------- Package Manager Setup -----------
 
+ACTION="Install host packages with pacman"
+echo "...$ACTION..."
 sudo pacman -Sy \
     spice-vdagent xclip \
     zip unzip \
     vim neovim \
     lf feh bat \
     newsboat calcurse \
-    keepassxc --noconfirm
+    keepassxc --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" \
+        || { "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit; }
 
 BACKUP_SCRIPT_DIR=DoNotRun/backup_scripts/host
 

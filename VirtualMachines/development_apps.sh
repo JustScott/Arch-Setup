@@ -22,7 +22,11 @@ bash secure.sh
 cd VirtualMachines
 bash base.sh
 
-yay -Sy librewolf-bin vimb  --noconfirm
+ACTION="Install browsers from the AUR"
+echo "...$ACTION..."
+yay -Sy librewolf-bin vimb --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || { echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit; }
 
 SCRIPT_DIR=../DoNotRun/backup_scripts/development_apps
 

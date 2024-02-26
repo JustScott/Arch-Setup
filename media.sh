@@ -17,5 +17,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Allows for playing videos and music from youtube using the terminal or dmenu
-sudo pacman -Sy ytfzf fzf mpv yt-dlp --noconfirm
-
+ACTION="Install media packages with pacman"
+echo "...$ACTION..."
+sudo pacman -Sy ytfzf fzf mpv yt-dlp --noconfirm >/dev/null 2>>~/archsetuperrors.log\
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
