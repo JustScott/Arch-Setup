@@ -23,10 +23,10 @@ cd VirtualMachines
 bash base.sh
 
 ACTION="Install python and pip with pacman"
-echo "...$ACTION..."
+echo -n "...$ACTION..."
 sudo pacman -Sy python python-pip --noconfirm >/dev/null 2>>~/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || { echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit; }
+    && echo "[SUCCESS]" \
+    || { echo "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }
 
 SCRIPT_DIR=../DoNotRun/backup_scripts/low_development
 

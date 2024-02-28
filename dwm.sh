@@ -46,16 +46,16 @@ sudo make install >/dev/null 2>>~/archsetuperrors.log \
 # Edit .bash_profile and .xinitrc to start dwm on reboot
 echo "startx" >> ~/.bash_profile
 
-ACTION="Install dwm related packages with pacman"
-echo "...$ACTION..."
+ACTION="Install dwm related packages with pacman (this may take a while)"
+echo -n "...$ACTION..."
 sudo pacman -Sy \
     xorg-xrandr xorg-server xorg-xinit xorg-xsetroot \
     libx11 libxinerama libxft \
     pulseaudio pavucontrol brightnessctl pamixer \
     bluez bluez-utils pulseaudio-bluetooth \
     webkit2gtk dmenu picom xscreensaver --noconfirm >/dev/null 2>>~/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || { echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit;} 
+        && echo "[SUCCESS]" \
+        || { echo "[FAIL] wrote error log to ~/archsetuperrors.log"; exit;} 
 
 cd ~
 # Start dwm

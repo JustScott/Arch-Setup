@@ -20,12 +20,12 @@
 sudo chmod g+rwx -R /dev/bus/usb
 
 ACTION="Install qemu related packages with pacman"
-echo "...$ACTION..."
+echo -n "...$ACTION..."
 sudo pacman -Sy \
     gnome-boxes virt-manager \
     qemu-emulators-full spice-vdagent --noconfirm >/dev/null 2>>~/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || { "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit; }
+        && echo "[SUCCESS]" \
+        || { "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }
 
 
 sudo bash -c 'echo -e "\nunix_sock_group = "libvirt"" >> /etc/libvirt/libvirtd.conf' >/dev/null 2>>~/archsetuperrors.log \

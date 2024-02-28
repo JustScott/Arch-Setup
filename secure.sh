@@ -39,16 +39,16 @@ ACTION="Disable root login over ssh"
 }
 
 ACTION="Update the CPU microcode to avoid vulnerabilities" >/dev/null 2>>~/archsetuperrors.log
-echo "...$ACTION..."
+echo -n "...$ACTION..."
 sudo pacman -Sy intel-ucode --noconfirm &>/dev/null && sudo grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>>~/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
+    && echo "[SUCCESS]" \
+    || echo "[FAIL] wrote error log to ~/archsetuperrors.log"
 
 ACTION="Install and Enable the firewall, then deny all incoming traffic"
-echo "...$ACTION..."
+echo -n "...$ACTION..."
 sudo pacman -Sy ufw --noconfirm >/dev/null 2>>~/archsetuperrors.log \
     && sudo systemctl enable --now ufw >/dev/null 2>>~/archsetuperrors.log \
     && sudo ufw enable >/dev/null 2>>~/archsetuperrors.log \
     && sudo ufw default deny incoming >/dev/null 2>>~/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
+        && echo "[SUCCESS]" \
+        || echo "[FAIL] wrote error log to ~/archsetuperrors.log"

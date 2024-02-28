@@ -28,10 +28,10 @@ cd VirtualMachines
 bash base.sh
 
 ACTION="Install development packages with pacman"
-echo "...$ACTION..."
+echo -n "...$ACTION..."
 sudo pacman -Sy python python-pip docker docker-compose --noconfirm >/dev/null 2>>~/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || { echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"; exit; }
+    && echo "[SUCCESS]" \
+    || { echo "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }
 
 ACTION="Configure Docker"
 sudo systemctl enable --now docker >/dev/null 2>>~/archsetuperrors.log \
