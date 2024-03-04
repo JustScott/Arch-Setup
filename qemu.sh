@@ -22,7 +22,7 @@ sudo chmod g+rwx -R /dev/bus/usb
 ACTION="Install qemu related packages with pacman"
 echo -n "...$ACTION..."
 sudo pacman -Sy \
-    gnome-boxes virt-manager \
+    gnome-boxes virt-manager virt-viewer \
     qemu-emulators-full spice-vdagent --noconfirm >/dev/null 2>>~/archsetuperrors.log \
         && echo "[SUCCESS]" \
         || { "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }

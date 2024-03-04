@@ -1,0 +1,4 @@
+#!/bin/bash
+
+vm is-running || vm start NativeBrowser
+virt-viewer -f NativeBrowser

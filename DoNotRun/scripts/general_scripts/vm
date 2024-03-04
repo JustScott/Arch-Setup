@@ -92,6 +92,7 @@ display_help() {
     printf "\t%-10s %-10s\n" "start" "Start an off or saved VM"
     printf "\t%-10s %-10s\n" "open" "Open the VMs domain console"
     printf "\t%-10s %-10s\n" "save" "Save a VMs state"
+    printf "\t%-10s %-10s\n" "is-running" "Returns 0 if the VM is running, else 1"
 
     echo "Examples:"
     echo -e "\t\`vm list\`"
@@ -99,6 +100,7 @@ display_help() {
     echo -e "\t\`vm start --open test_vm\`"
     echo -e "\t\`vm open test_vm\`"
     echo -e "\t\`vm save test_vm\`"
+    echo -e "\t\`vm is-running test_vm && echo 'running!'\`"
 }
 
 list_vms() {
@@ -189,9 +191,19 @@ case $1 in
     "save")
         save_vm $@        
         ;;
+    "is-running" | "isrunning")
+        populate_vm_states
+        VM_NAME="$2"
+        
+        [[ "${vm_states[$VM_NAME]}" == "running" ]] && exit 0 || exit 1
+        ;;
     # Print the available commands and helpful exampleds
     ""|"--help"|"-h")
         display_help
         ;;
-    *) echo -e "\nInvalid Command... try \`vm --help\` for a list of commands\n";exit 1;;
+    *) 
+        echo -e "\n - Invalid use of the \`vm\` command -";
+        display_help
+        exit 1
+        ;;
 esac
