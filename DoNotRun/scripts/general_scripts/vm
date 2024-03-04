@@ -59,31 +59,30 @@ case $1 in
         parse_vm_states
 
         # Print the header
-        printf "\n %-20s   %-10s\n" "Name" "State"
-        echo "--------------------------------"
+        printf "\n %-30s   %-10s\n" "Name" "State"
+        echo "------------------------------------------"
 
         # Print running VMs
         for vm_name in $running; do
-            printf " %-20s   %-10s\n" "$vm_name" "running"
+            printf " %-30s   %-10s\n" "$vm_name" "running"
         done
 
         # Print running VMs
         for vm_name in $paused; do
-            printf " %-20s   %-10s\n" "$vm_name" "paused"
+            printf " %-30s   %-10s\n" "$vm_name" "paused"
         done
 
         # Print saved VMs
         for vm_name in $saved; do
-            printf " %-20s   %-10s\n" "$vm_name" "saved"
+            printf " %-30s   %-10s\n" "$vm_name" "saved"
         done
 
         # Print off VMs
         for vm_name in $off; do
-            printf " %-20s   %-10s\n" "$vm_name" "off"
+            printf " %-30s   %-10s\n" "$vm_name" "off"
         done
         ;;
 
-    # Start and open the VM
     "start")
         populate_vm_states
 

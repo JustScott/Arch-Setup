@@ -22,10 +22,15 @@
 
 CURRENT_PWD="$PWD"
 
-# cd into home for relative paths
-cd ~
+cd $HOME
 
-calcurse --export > ~/.config/calcurse/calcurse.ical
+ACTION="Export ical from calcurse"
+CAL_CONFIG="$HOME/.config/calcurse/calcurse.ical"
+mkdir -p $HOME/.config/calcurse >/dev/null
+cp $CAL_CONFIG $CAL_CONFIG.bak >/dev/null
+calcurse --export > $CAL_CONFIG 2>>/tmp/packerrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION... wrote error log to /tmp/packerrors.log"
 
 tar -czf $CURRENT_PWD/host_backup.tar \
     packed_notes.tar.aes \

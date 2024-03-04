@@ -23,6 +23,15 @@
 #   This file is meant to be verbose, not efficient 
 #
 
+ACTION="Backup existing calcurse data"
+CAL_CONFIG="$HOME/.config/calcurse/calcurse.ical"
+mkdir -p $HOME/.config/calcurse >/dev/null
+calcurse --export > $CAL_CONFIG 2>>/tmp/unpackerrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || { echo "[FAIL] $ACTION... wrote error log to /tmp/unpackerrors.log";exit; } 
+
+
+
 # Decompress the encrypted archive file
 cp host_backup.tar.aes.gz host_backup.tar.aes.gz.bak
 gunzip host_backup.tar.aes.gz
@@ -48,3 +57,18 @@ shred -uz host_backup.tar host_backup.tar.aes
 
 # Rename the bak file to the origional file name
 mv host_backup.tar.aes.gz.bak host_backup.tar.aes.gz
+
+# rm the existing calcurse data to avoid duplicating data on import below
+CAL_DATA="$HOME/.local/share/calcurse"
+[[ -d $HOME/.local/share/calcurse ]] && {
+    rm -rf $CAL_DATA/notes/* &>/dev/null
+    rm $CAL_DATA/apts $CAL_DATA/todo &>/dev/null
+}
+
+ACTION="Import ical into calcurse"
+CAL_CONFIG="$HOME/.config/calcurse/calcurse.ical"
+mkdir -p $HOME/.config/calcurse >/dev/null
+cp $CAL_CONFIG $CAL_CONFIG.bak >/dev/null 
+calcurse --import $CAL_CONFIG >/dev/null 2>>/tmp/unpackerrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION... wrote error log to /tmp/unpackerrors.log"
