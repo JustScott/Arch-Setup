@@ -60,6 +60,18 @@ set_keybindings() {
     done
 }
 
+
+# ----------- Configure terminal settings -----------
+
+sudo pacman -Sy --noconfirm \
+    gnome-control-center gnome-backgrounds gnome-terminal \
+    gnome-keyring gnome-logs gnome-settings-daemon \
+    gnome-calculator gnome-software gvfs malcontent mutter \
+    gdm nautilus xdg-user-dirs-gtk xorg
+
+
+# ----------- Configure terminal settings -----------
+
 echo -e "\n#Opens new tabs in the current working directory" >> ~/.bashrc
 echo "source /etc/profile.d/vte.sh" >> ~/.bashrc
 
@@ -68,9 +80,6 @@ ACTION="Set Desktop Color Theme to Dark"
 gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" >/dev/null 2>>~/archsetuperrors.log \
     && echo "[SUCCESS] $ACTION" \
     || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
-    
-
-# ----------- Configure terminal settings -----------
 
 # Get the default terminal profile
 terminal_profile=$(gsettings get org.gnome.Terminal.ProfilesList default | tr -d \')
@@ -111,3 +120,9 @@ ACTION="Set Keybind: Switch to the Previous Terminal Tab = <Control>BackSpace"
 gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/ prev-tab '<Control>BackSpace' >/dev/null 2>>~/archsetuperrors.log \
     && echo "[SUCCESS] $ACTION" \
     || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
+
+
+# ----------- Start the gnome desktop environment -----------
+
+sudo systemctl enable --now gdm
+
