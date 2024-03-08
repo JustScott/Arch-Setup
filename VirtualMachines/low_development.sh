@@ -24,9 +24,9 @@ bash base.sh
 
 ACTION="Install python and pip with pacman"
 echo -n "...$ACTION..."
-sudo pacman -Sy python python-pip --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+sudo pacman -Sy python python-pip --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
-    || { echo "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }
+    || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
 SCRIPT_DIR=../DoNotRun/backup_scripts/low_development
 

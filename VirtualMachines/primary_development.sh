@@ -29,15 +29,15 @@ bash base.sh
 
 ACTION="Install development packages with pacman"
 echo -n "...$ACTION..."
-sudo pacman -Sy python python-pip docker docker-compose --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+sudo pacman -Sy python python-pip docker docker-compose --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
-    || { echo "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }
+    || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
 ACTION="Configure Docker"
-sudo systemctl enable --now docker >/dev/null 2>>~/archsetuperrors.log \
-    && sudo usermod -aG docker $USER >/dev/null 2>>~/archsetuperrors.log \
+sudo systemctl enable --now docker >/dev/null 2>>/tmp/archsetuperrors.log \
+    && sudo usermod -aG docker $USER >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
+        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
 
 
 SCRIPT_DIR=../DoNotRun/backup_scripts/primary_development

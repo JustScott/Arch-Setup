@@ -23,13 +23,13 @@ VIRTUAL_MACHINES_PWD=$(pwd)
 ACTION="Clone, compile, and install yay from the AUR (this may take a while)"
 echo -n "...$ACTION..."
 cd # pwd -> $HOME
-git clone https://aur.archlinux.org/yay.git >/dev/null 2>>~/archsetuperrors.log \
-    && cd yay >/dev/null 2>>~/archsetuperrors.log\
-    && makepkg -si PKGBUILD --noconfirm >/dev/null 2>>~/archsetuperrors.log\
+git clone https://aur.archlinux.org/yay.git >/dev/null 2>>/tmp/archsetuperrors.log \
+    && cd yay >/dev/null 2>>/tmp/archsetuperrors.log\
+    && makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
     && sleep 3 \
-    && cd $VIRTUAL_MACHINES_PWD >/dev/null 2>>~/archsetuperrors.log\
+    && cd $VIRTUAL_MACHINES_PWD >/dev/null 2>>/tmp/archsetuperrors.log\
         && echo "[SUCCESS]" \
-        || { echo "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }
+        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
 ACTION="Install Virtual Machine base packages with pacman"
 echo -n "...$ACTION..."
@@ -37,9 +37,9 @@ sudo pacman -Sy \
     spice-vdagent \
     zip unzip xclip \
     vim neovim \
-    lf bat feh --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+    lf bat feh --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
-        || { echo "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }
+        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
     
 # Start the process in the background
 spice-vdagent &

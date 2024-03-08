@@ -19,6 +19,6 @@
 # Allows for playing videos and music from youtube using the terminal or dmenu
 ACTION="Install media packages with pacman"
 echo -n "...$ACTION..."
-sudo pacman -Sy ytfzf fzf mpv yt-dlp --noconfirm >/dev/null 2>>~/archsetuperrors.log\
+sudo pacman -Sy ytfzf fzf mpv yt-dlp --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
     && echo "[SUCCESS]" \
-    || echo "[FAIL] wrote error log to ~/archsetuperrors.log"
+    || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"

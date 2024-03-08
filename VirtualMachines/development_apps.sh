@@ -24,9 +24,9 @@ bash base.sh
 
 ACTION="Install browsers from the AUR (this may take a while)"
 echo -n "...$ACTION..."
-yay -Sy librewolf-bin vimb --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+yay -Sy librewolf-bin vimb --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
-    || { echo "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }
+    || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
 SCRIPT_DIR=../DoNotRun/backup_scripts/development_apps
 

@@ -23,15 +23,15 @@ ACTION="Install qemu related packages with pacman"
 echo -n "...$ACTION..."
 sudo pacman -Sy \
     gnome-boxes virt-manager virt-viewer \
-    qemu-emulators-full spice-vdagent --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+    qemu-emulators-full spice-vdagent --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
-        || { "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }
+        || { "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
 
-sudo bash -c 'echo -e "\nunix_sock_group = "libvirt"" >> /etc/libvirt/libvirtd.conf' >/dev/null 2>>~/archsetuperrors.log \
-    && sudo bash -c 'echo "unix_sock_rw_perms = "0770"" >> /etc/libvirt/libvirtd.conf' >/dev/null 2>>~/archsetuperrors.log \
-    && sudo usermod -aG libvirt $USER >/dev/null 2>>~/archsetuperrors.log \
-    && sudo bash -c 'echo "group="$USER"" >> /etc/libvirt/qemu.conf' >/dev/null 2>>~/archsetuperrors.log \
+sudo bash -c 'echo -e "\nunix_sock_group = "libvirt"" >> /etc/libvirt/libvirtd.conf' >/dev/null 2>>/tmp/archsetuperrors.log \
+    && sudo bash -c 'echo "unix_sock_rw_perms = "0770"" >> /etc/libvirt/libvirtd.conf' >/dev/null 2>>/tmp/archsetuperrors.log \
+    && sudo usermod -aG libvirt $USER >/dev/null 2>>/tmp/archsetuperrors.log \
+    && sudo bash -c 'echo "group="$USER"" >> /etc/libvirt/qemu.conf' >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to ~/archsetuperrors.log"
+        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
 

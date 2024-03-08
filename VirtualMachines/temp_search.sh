@@ -23,9 +23,9 @@ cd VirtualMachines
 
 ACTION="Install TempSearch packages from the AUR (this may take a while)"
 echo -n "...$ACTION..."
-yay -Sy spice-vdagent librewolf-bin feh --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+yay -Sy spice-vdagent librewolf-bin feh --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
-    || { echo "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }
+    || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
 # Start the process in the background
 spice-vdagent &

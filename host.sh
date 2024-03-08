@@ -30,9 +30,9 @@ sudo pacman -Sy \
     vim neovim \
     lf feh bat \
     newsboat calcurse \
-    keepassxc --noconfirm >/dev/null 2>>~/archsetuperrors.log \
+    keepassxc --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
-        || { "[FAIL] wrote error log to ~/archsetuperrors.log"; exit; }
+        || { "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
 BACKUP_SCRIPT_DIR=DoNotRun/backup_scripts/host
 
