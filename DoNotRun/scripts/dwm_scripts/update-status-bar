@@ -27,7 +27,9 @@ update-status-bar() {
     done
     [[ -n "$batt_name" ]] && {
         battery_percentage="$(cat /sys/class/power_supply/"$batt_name"/capacity 2> /dev/null)%"
-        [[ "$(cat /sys/class/power_supply/"$batt_name"/status 2> /dev/null)" == "Charging" ]] && charging="+" || charging="-"
+        [[ "$(cat /sys/class/power_supply/"$batt_name"/status 2> /dev/null)" == "Charging" ]] \
+            && charging="+" \
+            || charging="-"
         battery_display=" batt: $charging$battery_percentage |"
     }
 
@@ -36,18 +38,29 @@ update-status-bar() {
     #
     network_display=""
     [[ $(nmcli d) =~ "ethernet " ]] && {
-        ethernet_interface=$(nmcli d | grep 'ethernet ' | awk '{print $1}')
-        connection_state=$(net $ethernet_interface state)
-        ssid=$(net $ethernet_interface connection)
-        # If the ethernet interface is connected to a network
-        [[ $ssid =~ "--" ]] || network_display="eth:$connection_state:$ssid |"
+        for ethernet_interface in $(nmcli d | grep 'ethernet ' | awk '{print $1}')
+        do
+            connection_state=$(net $ethernet_interface state)
+            ssid=$(net $ethernet_interface connection)    
+            # If the ethernet interface is connected to a network
+            [[ $ssid =~ "--" ]] || {
+                network_display="eth:$connection_state:$ssid |"
+                break
+            }
+        done
     }
+
     [[ $(nmcli d) =~ "wifi " ]] && {
-        wifi_interface=$(nmcli d | grep 'wifi ' | awk '{print $1}')
-        connection_state=$(net $wifi_interface state)
-        ssid=$(net $wifi_interface connection)
-        # If the wifi interface is connected to a network
-        [[ $ssid =~ "--" ]] || network_display="wifi:$connection_state:$ssid |"
+        for wifi_interface in $(nmcli d | grep 'wifi ' | awk '{print $1}')
+        do
+            connection_state=$(net $wifi_interface state)
+            ssid=$(net $wifi_interface connection)    
+            # If the wifi interface is connected to a network
+            [[ $ssid =~ "--" ]] || {
+                network_display="wifi:$connection_state:$ssid |"
+                break
+            }
+        done
     }
 
     xsetroot -name "bri: $(brightness) | vol: $(volume)% |$battery_display $network_display $(date +"%B %e %H:%M")"
