@@ -53,7 +53,7 @@ sudo pacman -Sy \
     libx11 libxinerama libxft \
     pulseaudio pavucontrol brightnessctl pamixer \
     bluez bluez-utils pulseaudio-bluetooth \
-    webkit2gtk dmenu picom xscreensaver --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
+    dmenu picom xscreensaver --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
         || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
 
