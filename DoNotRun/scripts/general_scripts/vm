@@ -197,7 +197,7 @@ case $1 in
         
         [[ "${vm_states[$VM_NAME]}" == "running" ]] && exit 0 || exit 1
         ;;
-    # Print the available commands and helpful exampleds
+    # Print the available commands and helpful examples
     ""|"--help"|"-h")
         display_help
         ;;
