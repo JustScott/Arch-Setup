@@ -18,9 +18,20 @@
 
 
 #
-# Simple to use CLI tool combining some abilities from `virt-manager`
-#  and `virsh` to make managing VMs from the terminal easy
+# Simple to use CLI tool combining some abilities from `virt-manager`,
+#  `virt-viewer`(optional), and `virsh` to make managing VMs from the 
+#   terminal easy
 #
+
+# Check that the required packages are installed
+required_packages=(virsh virt-manager)
+
+for package in ${required_packages[@]}; do 
+    $package --version &>/dev/null \
+        || { echo -e "\n - [ERROR] $package must be installed - \n"; missing_packages=true; } 
+done
+
+[[ $missing_packages = true ]] && exit 3
 
 
 declare -A vm_states=()
@@ -55,11 +66,42 @@ populate_vm_states() {
 open_vm() {
     populate_vm_states
 
-    VM_NAME=$1
+    #
+    # Capture flags
+    #
+    for arg in "${@:2}";
+    do
+        case $arg in
+            "--virt-viewer" | "-V")
+                [[ -z $virt_viewer_flag ]] && {
+                    virt-viewer --version &>/dev/null \
+                        && virt_viewer_flag=true \
+                        || { echo -e "\n - [ ERROR ] virt-viewer not installed - \n"; exit 3; } 
+                }
+            ;;
+            "--fullscreen" | "-f")
+                [[ -n "$virt_viewer_flag" ]] \
+                    && fullscreen_virt_viewer_flag="-f" \
+                    || { echo -e "\n - [ERROR] can only open VM in fullscreen with virt-viewer - \n"; exit 1; } 
+            ;;
+            *)
+                [[ -z "$VM_NAME" ]] && {
+                    VM_NAME="$arg"
+                }
+            ;;
+        esac
+    done
+
 
     [[ -n "${vm_states[$VM_NAME]}" ]] \
-        && virt-manager -c qemu:///session --show-domain-console "$VM_NAME" \
-        || echo "VM Doesn't exist"
+        && {
+            [[ $virt_viewer_flag == true ]] \
+                && {
+                    nohup virt-viewer -a $fullscreen_virt_viewer_flag "$VM_NAME" \
+                        &> /tmp/${VM_NAME}_virt_viewer.log &
+                    echo "virt-viewer stdin and stdout will be written to /tmp/${VM_NAME}_virt_viewer.log"
+                } || virt-manager -c qemu:///session --show-domain-console "$VM_NAME"
+        } || { echo -e "\n - [ERROR] VM Doesn't exist - \n"; exit 2; } 
 }
 
 save_vm() {
@@ -68,39 +110,51 @@ save_vm() {
     VM_NAME=$2
     SAVE_DIRECTORY=~/.config/libvirt/qemu/save
 
-    if [[ "${vm_states[$VM_NAME]}" = "running" || "${vm_states[$VM_NAME]}" = "paused" ]];
-    then
-        virsh managedsave --verbose $VM_NAME
-    else
-        if [[ -n "${vm_states[$VM_NAME]}" ]];
-        then
-            echo "VM not running or paused"
-        else
-            echo "VM Doesn't exist"
-            exit 1
-        fi
-    fi
+    [[ "${vm_states[$VM_NAME]}" = "running" || "${vm_states[$VM_NAME]}" = "paused" ]] \
+        && virsh managedsave --verbose $VM_NAME \
+        || { 
+            [[ -n "${vm_states[$VM_NAME]}" ]] \
+                && { echo -e "\n - [ERROR] Cannot save VM if it's not running or paused - \n"; exit 1; } \
+                || { echo -e "\n - [ERROR] VM Doesn't exist - \n"; exit 2; } 
+        }
 }
 
 display_help() {
     echo -e "\nUsage: vm [COMMAND]"
-    echo -e "\nAbstracts commands from virsh and virt-manager, to more"
-    echo -e " easily manage Virtual Machines from the terminal.\n"
+    echo -e "\nAbstracts commands from virsh, virt-manager, and"
+    echo -e " optionally virt-viewer, to more easily manage Virtual"
+    echo -e " Machines from the terminal.\n"
 
     echo "Commands:"
-    printf "\t%-10s %-10s\n" "list" "List the VMs and their states"
-    printf "\t%-10s %-10s\n" "start" "Start an off or saved VM"
-    printf "\t%-10s %-10s\n" "open" "Open the VMs domain console"
-    printf "\t%-10s %-10s\n" "save" "Save a VMs state"
-    printf "\t%-10s %-10s\n" "is-running" "Returns 0 if the VM is running, else 1"
+    printf "\t%-15s %-1s\n" "list" "List the VMs and their states"
+    printf "\t%-15s %-1s\n" "start" "Start an off or saved VM"
+    printf "\t%-15s %-1s\n" "open" "Open the VMs domain console"
+    printf "\t%-15s %-1s\n" "save" "Save a VMs state"
+    printf "\t%-15s %-1s\n" "is-running" "Returns 0 if the VM is running, else 1"
+    printf "\t%-15s %-1s\n" "version" "Returns version information"
 
-    echo "Examples:"
+    echo -e "\nCommand Flags:\n"
+    echo -e "\tstart:"
+    printf "\t    %-20s\t %-1s\n" "-o | --open" "Open the VM with virt-manager"
+    printf "\t    %-20s\t %-1s\n" "-V | --virt-viewer" "If the open flag is passed, open with virt-viewer instead of virt-manager"
+    printf "\t    %-20s\t %-1s\n" "-f | --fullscreen" "If the open flag is passed, and virt-viewer is being used, open in fullscreen"
+    echo -e "\topen:"
+    printf "\t    %-20s\t %-1s\n" "-V | --virt-viewer" "Open with virt-viewer instead of virt-manager"
+    printf "\t    %-20s\t %-1s\n" "-f | --fullscreen" "If using virt-viewer, open in fullscreen"
+
+    echo -e "\nExamples:"
     echo -e "\t\`vm list\`"
     echo -e "\t\`vm start test_vm\`"
-    echo -e "\t\`vm start --open test_vm\`"
-    echo -e "\t\`vm open test_vm\`"
+    echo -e "\t\`vm start --open --virt-viewer test_vm\`"
+    echo -e "\t\`vm start -o -V test_vm\`"
+    echo -e "\t\`vm open -V test_vm\`"
     echo -e "\t\`vm save test_vm\`"
     echo -e "\t\`vm is-running test_vm && echo 'running!'\`"
+
+    echo -e "\nError Codes:"
+    printf "\t%-3s %-1s\n" "1" "Invalid command (also used to indicate VM not running for the \`is-running\` command."
+    printf "\t%-3s %-1s\n" "2" "VM doesn't exist"
+    printf "\t%-3s %-1s\n" "3" "Missing dependencies"
 }
 
 list_vms() {
@@ -145,6 +199,18 @@ start_vm() {
                     open_flag=true
                 }
             ;;
+            "--virt-viewer" | "-V")
+                [[ -z $virt_viewer_flag ]] && {
+                    virt-viewer --version &>/dev/null \
+                        && virt_viewer_flag=true \
+                        || { echo -e "\n - [ERROR] virt-viewer not installed - \n"; exit 3; } 
+                }
+            ;;
+            "fullscreen" | "-f")
+                [[ -n "$virt_viewer_flag" ]] \
+                    && fullscreen_virt_viewer_flag="-f" \
+                    || { echo -e "\n - [ERROR] can only open VM in fullscreen with virt-viewer - \n"; exit 1; } 
+            ;;
             *)
                 [[ -z "$VM_NAME" ]] && {
                     VM_NAME="$arg"
@@ -165,44 +231,39 @@ start_vm() {
             || {
                 # If the VM exists
                 [[ -n "${vm_states[$VM_NAME]}" ]] \
-                    && echo "VM not in saved state" \
-                    || echo "VM Doesn't exist"
+                    && echo -e "\n - VM not in off or saved state, so it cannot be started - \n" \
+                    || echo -e "\n - [ERROR] VM Doesn't exist - \n"
+                exit 2
             }
     }
 
     #
     # Apply Flags
     #
-    [[ $open_flag == true ]] && open_vm "$VM_NAME"
+    [[ $open_flag == true ]] && \
+        open_vm $virt_viewer_flag $fullscreen_virt_viewer_flag "$VM_NAME"
+}
+
+check_is_running() {
+    populate_vm_states
+
+    VM_NAME="$2"
+    
+    [[ -n "${vm_states[$VM_NAME]}" ]] && {
+        [[ "${vm_states[$VM_NAME]}" == "running" ]] && exit 0 || exit 1
+    }
 }
 
 case $1 in
-    # List the running, paused, saved, and off VMs
-    "list")
-        list_vms        
-        ;;
-    "start")
-        start_vm $@
-        ;;
-    # Open the VM (domain) window
-    "open")
-       open_vm "$2"
-       ;;
-    "save")
-        save_vm $@        
-        ;;
-    "is-running" | "isrunning")
-        populate_vm_states
-        VM_NAME="$2"
-        
-        [[ "${vm_states[$VM_NAME]}" == "running" ]] && exit 0 || exit 1
-        ;;
-    # Print the available commands and helpful examples
-    ""|"--help"|"-h")
-        display_help
-        ;;
+    "list")  list_vms;;
+    "start") start_vm $@;;
+    "open")  open_vm $@;;
+    "save")  save_vm $@;;
+    "is-running" | "isrunning") check_is_running $@;;
+    "version"|"--version") echo "0.1.0";;
+    ""|"--help"|"-h") display_help;;
     *) 
-        echo -e "\n - Invalid use of the \`vm\` command -";
+        echo -e "\n - [ERROR] Invalid use of the \`vm\` command -";
         display_help
         exit 1
         ;;
