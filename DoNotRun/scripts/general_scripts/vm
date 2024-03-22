@@ -66,57 +66,114 @@ populate_vm_states() {
 open_vm() {
     populate_vm_states
 
+    # unset flag variables before match, for safety
+    unset fullscreen_virt_viewer_flag \
+        virt_viewer_flag \
+        vm_names \
+        skipped_command_input
     #
     # Capture flags
     #
-    for arg in "${@:2}";
+    for arg in "${@}";
     do
         case $arg in
             "--virt-viewer" | "-V")
-                [[ -z $virt_viewer_flag ]] && {
-                    virt-viewer --version &>/dev/null \
-                        && virt_viewer_flag=true \
-                        || { echo -e "\n - [ ERROR ] virt-viewer not installed - \n"; exit 3; } 
+                [[ -n "$virt_viewer_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated virt-viewer flag - \n"
+                    exit 1
                 }
+
+                virt-viewer --version &>/dev/null \
+                    && virt_viewer_flag='-V' \
+                    || { echo -e "\n - [ ERROR ] virt-viewer not installed - \n"; exit 3; } 
             ;;
             "--fullscreen" | "-f")
+                [[ -n "$fullscreen_virt_viewer_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated fullscreen flag - \n"
+                    exit 1
+                }
                 [[ -n "$virt_viewer_flag" ]] \
                     && fullscreen_virt_viewer_flag="-f" \
-                    || { echo -e "\n - [ERROR] can only open VM in fullscreen with virt-viewer - \n"; exit 1; } 
+                    || {
+                        echo -e "\n - [ERROR] can only open VM in fullscreen with virt-viewer - \n"
+                        exit 1
+                    } 
             ;;
-            *)
-                [[ -z "$VM_NAME" ]] && {
-                    VM_NAME="$arg"
+            *) 
+                [[ "$arg" == "open" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
                 }
+                vm_names+=($arg)
             ;;
         esac
     done
 
+    [[ -z ${vm_names[@]} ]] && {
+        echo -e "\n - [ERROR] must pass at least one VM name - \n"
+        exit 1
+    }
 
-    [[ -n "${vm_states[$VM_NAME]}" ]] \
-        && {
-            [[ $virt_viewer_flag == true ]] \
-                && {
-                    nohup virt-viewer -a $fullscreen_virt_viewer_flag "$VM_NAME" \
-                        &> /tmp/${VM_NAME}_virt_viewer.log &
-                    echo "virt-viewer stdin and stdout will be written to /tmp/${VM_NAME}_virt_viewer.log"
-                } || virt-manager -c qemu:///session --show-domain-console "$VM_NAME"
-        } || { echo -e "\n - [ERROR] VM Doesn't exist - \n"; exit 2; } 
+    for vm_name in ${vm_names[@]}; do
+        [[ -n "${vm_states[$vm_name]}" ]] || { 
+            echo -e "\n - [ERROR] VM '$vm_name' Doesn't exist - \n"
+            exit 2
+        } 
+
+        [[ -n "$virt_viewer_flag" ]] && {
+            nohup virt-viewer -a $fullscreen_virt_viewer_flag "$vm_name" \
+                &> /tmp/${vm_name}_virt_viewer.log &
+            echo "virt-viewer stdin and stdout will be written to /tmp/${vm_name}_virt_viewer.log"
+        } || virt-manager -c qemu:///session --show-domain-console "$vm_name"
+    done
 }
 
 save_vm() {
     populate_vm_states
 
-    VM_NAME=$2
-    SAVE_DIRECTORY=~/.config/libvirt/qemu/save
+    # unset flag variables before match, for safety
+    unset save_to_file_flag \
+        vm_names \
+        skipped_command_input
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            "--file" | "-f")
+                [[ -n "$save_to_file_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated file flag - \n"
+                    exit 1
+                }
+                save_to_file_flag=true
+            ;;
+            *) 
+                [[ "$arg" == "save" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+                vm_names+=($arg)
+            ;;
+        esac
+    done
 
-    [[ "${vm_states[$VM_NAME]}" = "running" || "${vm_states[$VM_NAME]}" = "paused" ]] \
-        && virsh managedsave --verbose $VM_NAME \
-        || { 
-            [[ -n "${vm_states[$VM_NAME]}" ]] \
+    [[ -z ${vm_names[@]} ]] && {
+        echo -e "\n - [ERROR] must pass at least one VM name - \n"
+        exit 1
+    }
+
+    for vm_name in ${vm_names[@]}; do
+        [[ "${vm_states[$vm_name]}" == "running" || "${vm_states[$VM_NAME]}" == "paused" ]] && {
+            [[ $save_to_file_flag == true ]] \
+            && virsh save --verbose $vm_name  \
+            || virsh managedsave --verbose $vm_name
+        } || { 
+            [[ -n "${vm_states[$vm_name]}" ]] \
                 && { echo -e "\n - [ERROR] Cannot save VM if it's not running or paused - \n"; exit 1; } \
-                || { echo -e "\n - [ERROR] VM Doesn't exist - \n"; exit 2; } 
+                || { echo -e "\n - [ERROR] VM '$vm_name' Doesn't exist - \n"; exit 2; } 
         }
+    done
 }
 
 display_help() {
@@ -127,10 +184,10 @@ display_help() {
 
     echo "Commands:"
     printf "\t%-15s %-1s\n" "list" "List the VMs and their states"
-    printf "\t%-15s %-1s\n" "start" "Start an off or saved VM"
-    printf "\t%-15s %-1s\n" "open" "Open the VMs domain console"
-    printf "\t%-15s %-1s\n" "save" "Save a VMs state"
-    printf "\t%-15s %-1s\n" "is-running" "Returns 0 if the VM is running, else 1"
+    printf "\t%-15s %-1s\n" "start" "Start one or more saved or off VMs"
+    printf "\t%-15s %-1s\n" "open" "Open one or more VMs with virt-manager or virt-viewer"
+    printf "\t%-15s %-1s\n" "save" "Save one or more VM states"
+    printf "\t%-15s %-1s\n" "is-running" "Returns 0 if the VMs are running, otherwise returns 1"
     printf "\t%-15s %-1s\n" "version" "Returns version information"
 
     echo -e "\nCommand Flags:\n"
@@ -144,12 +201,12 @@ display_help() {
 
     echo -e "\nExamples:"
     echo -e "\t\`vm list\`"
-    echo -e "\t\`vm start test_vm\`"
-    echo -e "\t\`vm start --open --virt-viewer test_vm\`"
-    echo -e "\t\`vm start -o -V test_vm\`"
-    echo -e "\t\`vm open -V test_vm\`"
-    echo -e "\t\`vm save test_vm\`"
-    echo -e "\t\`vm is-running test_vm && echo 'running!'\`"
+    echo -e "\t\`vm start <vm_name1> <vm_name2>\`"
+    echo -e "\t\`vm start --open --virt-viewer <vm_name1> <vm_name2>\`"
+    echo -e "\t\`vm start -o -V <vm_name1>\`"
+    echo -e "\t\`vm open -V <vm_name1> <vm_name2>\`"
+    echo -e "\t\`vm save <vm_name1>\`"
+    echo -e "\t\`vm is-running <vm_name1> <vm_name2> && echo 'running!'\`"
 
     echo -e "\nError Codes:"
     printf "\t%-3s %-1s\n" "1" "Invalid command (also used to indicate VM not running for the \`is-running\` command."
@@ -188,70 +245,128 @@ list_vms() {
 start_vm() {
     populate_vm_states
 
+    # unset flag variables before match, for safety
+    unset open_flag \
+        virt_viewer_flag \
+        fullscreen_virt_viewer_flag \
+        vm_names \
+        skipped_command_input
     #
     # Capture flags
     #
-    for arg in "${@:2}";
+    for arg in "${@}";
     do
         case $arg in
             "--open" | "-o")
-                [[ -z $open_flag ]] && {
-                    open_flag=true
+                [[ -n "$open_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated open flag - \n"
+                    exit 1
                 }
+                open_flag=true
             ;;
             "--virt-viewer" | "-V")
-                [[ -z $virt_viewer_flag ]] && {
-                    virt-viewer --version &>/dev/null \
-                        && virt_viewer_flag=true \
-                        || { echo -e "\n - [ERROR] virt-viewer not installed - \n"; exit 3; } 
+                [[ -n "$virt_viewer_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated virt-viewer flag - \n"
+                    exit 1
                 }
+
+                [[ -z "$open_flag" ]] && { 
+                    echo -e "\n - [ERROR] must pass open flag to use virt-viewer - \n"
+                    exit 1
+                }
+
+                virt-viewer --version &>/dev/null \
+                    && virt_viewer_flag='-V' \
+                    || { echo -e "\n - [ERROR] virt-viewer not installed - \n"; exit 3; } 
             ;;
-            "fullscreen" | "-f")
-                [[ -n "$virt_viewer_flag" ]] \
+            "--fullscreen" | "-f")
+                [[ -n "$fullscreen_virt_viewer_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated fullscreen flag - \n"
+                    exit 1
+                }
+                [[ -n "$virt_viewer_flag" && -n "$open_flag" ]] \
                     && fullscreen_virt_viewer_flag="-f" \
-                    || { echo -e "\n - [ERROR] can only open VM in fullscreen with virt-viewer - \n"; exit 1; } 
+                    || { 
+                        echo -e "\n - [ERROR] full screen requires the virt-viewer and open flags - \n"
+                        exit 1
+                    } 
             ;;
-            *)
-                [[ -z "$VM_NAME" ]] && {
-                    VM_NAME="$arg"
+            *) 
+                [[ "$arg" == "start" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
                 }
+                vm_names+=($arg)
             ;;
         esac
     done
 
-    #
-    # Only start if the VM exists and is saved or off
-    #
-    [[ "${vm_states[$VM_NAME]}" = "saved" ]] && {
-        virsh restore ~/.config/libvirt/qemu/save/$VM_NAME.save \
-            && virsh managedsave-remove "$VM_NAME" # Only remove if the restore works 
-    } || {
-        [[ "${vm_states[$VM_NAME]}" = "off" ]] \
-            && virsh start "$VM_NAME" \
-            || {
-                # If the VM exists
-                [[ -n "${vm_states[$VM_NAME]}" ]] \
-                    && echo -e "\n - VM not in off or saved state, so it cannot be started - \n" \
-                    || echo -e "\n - [ERROR] VM Doesn't exist - \n"
-                exit 2
-            }
+    [[ -z ${vm_names[@]} ]] && {
+        echo -e "\n - [ERROR] must pass at least one VM name - \n"
+        exit 1
     }
 
     #
-    # Apply Flags
+    # Only start if the VM exists and is saved or off
     #
-    [[ $open_flag == true ]] && \
-        open_vm $virt_viewer_flag $fullscreen_virt_viewer_flag "$VM_NAME"
+    for vm_name in ${vm_names[@]}; do
+        [[ -n "${vm_states[$vm_name]}" ]] || {
+            echo -e "\n - [ERROR] VM '$vm_name' Doesn't exist - \n"
+            exit 2
+        }
+
+        [[ "${vm_states[$vm_name]}" = "saved" ]] && {
+            virsh restore ~/.config/libvirt/qemu/save/$vm_name.save \
+                && virsh managedsave-remove "$vm_name" # Only remove if the restore works 
+        } || {
+            [[ "${vm_states[$vm_name]}" = "off" ]] \
+                && virsh start "$vm_name" \
+                || {
+                    echo -e "\n - [ERROR] VM not in an off or saved state, so it cannot be started - \n"
+                    exit 1
+                }
+        }
+
+        #
+        # Apply Flags
+        #
+        [[ $open_flag == true ]] \
+            && open_vm $virt_viewer_flag $fullscreen_virt_viewer_flag $vm_name
+    done
 }
 
 check_is_running() {
     populate_vm_states
 
-    VM_NAME="$2"
-    
-    [[ -n "${vm_states[$VM_NAME]}" ]] && {
-        [[ "${vm_states[$VM_NAME]}" == "running" ]] && exit 0 || exit 1
+    for arg in "${@}"; do
+        case $arg in
+            *) 
+                [[ "$arg" == "is-running" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+                vm_names+=($arg)
+            ;;
+        esac
+    done
+
+    [[ -z ${vm_names[@]} ]] && {
+        echo -e "\n - [ERROR] must pass at least one VM name - \n"
+        exit 1
     }
+   
+    for vm_name in ${vm_names[@]}; do
+        [[ -n "${vm_states[$vm_name]}" ]] || { 
+            echo -e "\n - [ERROR] VM '$vm_name' Doesn't exist - \n"
+            exit 2
+        }
+
+        [[ "${vm_states[$vm_name]}" != "running" ]] && {
+            exit 1
+        }
+    done
+
+    exit 0
 }
 
 case $1 in
@@ -259,7 +374,7 @@ case $1 in
     "start") start_vm $@;;
     "open")  open_vm $@;;
     "save")  save_vm $@;;
-    "is-running" | "isrunning") check_is_running $@;;
+    "is-running") check_is_running $@;;
     "version"|"--version") echo "0.1.0";;
     ""|"--help"|"-h") display_help;;
     *) 
