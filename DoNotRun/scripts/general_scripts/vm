@@ -134,14 +134,16 @@ save_vm() {
     # unset flag variables before match, for safety
     unset save_to_file_flag \
         vm_names \
-        skipped_command_input
+        skipped_command_input \
+        save_to_file_flag \
+        file_path
     #
     # Capture flags
     #
     for arg in "${@}";
     do
         case $arg in
-            "--file" | "-f")
+            "--file" | "-F")
                 [[ -n "$save_to_file_flag" ]] && {
                     echo -e "\n - [ERROR] duplicated file flag - \n"
                     exit 1
@@ -153,6 +155,11 @@ save_vm() {
                     skipped_command_input=true
                     continue
                 }
+                [[ "$save_to_file_flag" == "true" && -z "$file_path" ]] && {
+                    file_path="$arg"
+                    continue
+                }
+
                 vm_names+=($arg)
             ;;
         esac
@@ -162,16 +169,25 @@ save_vm() {
         echo -e "\n - [ERROR] must pass at least one VM name - \n"
         exit 1
     }
+    
+    [[ ${#vm_names[@]} > 1 && -n "$file_path" ]] && {
+        echo -e "\n - [ERROR] Cannot pass multiple VM names while manually setting file path - \n"
+        exit 1
+    }
 
     for vm_name in ${vm_names[@]}; do
+        [[ -n "${vm_states[$vm_name]}" ]] || {
+            echo -e "\n - [ERROR] VM '$vm_name' Doesn't exist - \n"
+            exit 2
+        }
+
         [[ "${vm_states[$vm_name]}" == "running" || "${vm_states[$VM_NAME]}" == "paused" ]] && {
-            [[ $save_to_file_flag == true ]] \
-            && virsh save --verbose $vm_name  \
-            || virsh managedsave --verbose $vm_name
+            [[ $save_to_file_flag == true && -n "$file_path" ]] \
+                && virsh save --verbose $vm_name $file_path \
+                || virsh managedsave --verbose $vm_name
         } || { 
-            [[ -n "${vm_states[$vm_name]}" ]] \
-                && { echo -e "\n - [ERROR] Cannot save VM if it's not running or paused - \n"; exit 1; } \
-                || { echo -e "\n - [ERROR] VM '$vm_name' Doesn't exist - \n"; exit 2; } 
+            echo -e "\n - [ERROR] Cannot save VM if it's not running or paused - \n"
+            exit 1
         }
     done
 }
@@ -195,17 +211,22 @@ display_help() {
     printf "\t    %-20s\t %-1s\n" "-o | --open" "Open the VM with virt-manager"
     printf "\t    %-20s\t %-1s\n" "-V | --virt-viewer" "If the open flag is passed, open with virt-viewer instead of virt-manager"
     printf "\t    %-20s\t %-1s\n" "-f | --fullscreen" "If the open flag is passed, and virt-viewer is being used, open in fullscreen"
+    printf "\t    %-20s\t %-1s\n" "-F | --file" "Restore VM from a manually saved VM state file. No other flags or VM names should be passed with this"
     echo -e "\topen:"
     printf "\t    %-20s\t %-1s\n" "-V | --virt-viewer" "Open with virt-viewer instead of virt-manager"
     printf "\t    %-20s\t %-1s\n" "-f | --fullscreen" "If using virt-viewer, open in fullscreen"
+    echo -e "\tsave:"
+    printf "\t    %-20s\t %-1s\n" "-F | --file" "Manually save VM state to a file. Only the VM name and location should be passed at once."
 
     echo -e "\nExamples:"
     echo -e "\t\`vm list\`"
     echo -e "\t\`vm start <vm_name1> <vm_name2>\`"
     echo -e "\t\`vm start --open --virt-viewer <vm_name1> <vm_name2>\`"
     echo -e "\t\`vm start -o -V <vm_name1>\`"
+    echo -e "\t\`vm start -f </some/path/vm_save_file.save>\`"
     echo -e "\t\`vm open -V <vm_name1> <vm_name2>\`"
     echo -e "\t\`vm save <vm_name1>\`"
+    echo -e "\t\`vm save <vm_name1> -f </some/path/vm_save_file.save>\`"
     echo -e "\t\`vm is-running <vm_name1> <vm_name2> && echo 'running!'\`"
 
     echo -e "\nError Codes:"
@@ -250,13 +271,22 @@ start_vm() {
         virt_viewer_flag \
         fullscreen_virt_viewer_flag \
         vm_names \
-        skipped_command_input
+        skipped_command_input \
+        restore_from_file_flag \
+        file_path
     #
     # Capture flags
     #
     for arg in "${@}";
     do
         case $arg in
+            "--file" | "-F")
+                [[ -n "$save_to_file_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated file flag - \n"
+                    exit 1
+                }
+                restore_from_file_flag=true
+            ;;
             "--open" | "-o")
                 [[ -n "$open_flag" ]] && {
                     echo -e "\n - [ERROR] duplicated open flag - \n"
@@ -296,19 +326,34 @@ start_vm() {
                     skipped_command_input=true
                     continue
                 }
+
+                [[ "$restore_from_file_flag" == "true" && -z "$file_path" ]] && {
+                    file_path="$arg"
+                    continue
+                }
+
                 vm_names+=($arg)
             ;;
         esac
     done
+
+    # file path is only used to restore from file, so no VM name is needed
+    #  ! Subject to change to allow other flags
+    [[ -n "$file_path" && -f "$file_path" && -n "${vm_names[@]}" ]] || {
+        [[ $restore_from_file_flag == true && -n "$file_path" ]] && {
+            virsh restore "$file_path"
+            exit 0
+        }
+    } && {
+        echo -e "\n - [ERROR] file path - \n"
+        exit 1
+    }
 
     [[ -z ${vm_names[@]} ]] && {
         echo -e "\n - [ERROR] must pass at least one VM name - \n"
         exit 1
     }
 
-    #
-    # Only start if the VM exists and is saved or off
-    #
     for vm_name in ${vm_names[@]}; do
         [[ -n "${vm_states[$vm_name]}" ]] || {
             echo -e "\n - [ERROR] VM '$vm_name' Doesn't exist - \n"
@@ -319,12 +364,10 @@ start_vm() {
             virsh restore ~/.config/libvirt/qemu/save/$vm_name.save \
                 && virsh managedsave-remove "$vm_name" # Only remove if the restore works 
         } || {
-            [[ "${vm_states[$vm_name]}" = "off" ]] \
-                && virsh start "$vm_name" \
-                || {
-                    echo -e "\n - [ERROR] VM not in an off or saved state, so it cannot be started - \n"
-                    exit 1
-                }
+            [[ "${vm_states[$vm_name]}" = "off" ]] && virsh start "$vm_name" || {
+                echo -e "\n - [ERROR] VM not in an off or saved state, so it cannot be started - \n"
+                exit 1
+            }
         }
 
         #
@@ -337,6 +380,10 @@ start_vm() {
 
 check_is_running() {
     populate_vm_states
+
+    # unset flag variables before match, for safety
+    unset vm_names \
+        skipped_command_input
 
     for arg in "${@}"; do
         case $arg in
