@@ -17,8 +17,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 volume-up() {
-    start-pulseaudio-server
-    pamixer --increase 5
+    pamixer --increase 5 || {
+        start-pulseaudio-server
+        volume-up
+        sleep 1
+    }
     update-status-bar
 }
 

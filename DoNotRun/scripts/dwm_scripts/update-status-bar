@@ -32,31 +32,26 @@ update-status-bar() {
     # 
     # Yes, ethernet is suppose to only show if wifi isn't connected to a network
     #
-    network_display=""
-    [[ $(nmcli d) =~ "ethernet " ]] && {
-        for ethernet_interface in $(nmcli d | grep 'ethernet ' | awk '{print $1}')
-        do
-            connection_state=$(net $ethernet_interface state)
-            ssid=$(net $ethernet_interface connection)    
-            # If the ethernet interface is connected to a network
-            [[ $ssid =~ "--" ]] || {
-                network_display="eth:$connection_state:$ssid |"
-                break
-            }
-        done
+    nmcli_device_output=$(nmcli d)
+
+    [[ "$nmcli_device_output" =~ "ethernet " ]] && {
+        ethernet_output=$(echo "$nmcli_device_output" | grep 'ethernet ')
+        connection_state=$(echo "$ethernet_output" | awk '{print $3}')
+        ssid=$(echo "$ethernet_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
+        # If the ethernet interface is connected to a network
+        [[ $ssid =~ "--" ]] || {
+            network_display="eth:$connection_state:$ssid |"
+        }
     }
 
-    [[ $(nmcli d) =~ "wifi " ]] && {
-        for wifi_interface in $(nmcli d | grep 'wifi ' | awk '{print $1}')
-        do
-            connection_state=$(net $wifi_interface state)
-            ssid=$(net $wifi_interface connection)    
-            # If the wifi interface is connected to a network
-            [[ $ssid =~ "--" ]] || {
-                network_display="wifi:$connection_state:$ssid |"
-                break
-            }
-        done
+    [[ "$nmcli_device_output" =~ "wifi " ]] && {
+        wifi_output=$(echo "$nmcli_device_output" | grep 'wifi ')
+        connection_state=$(echo "$wifi_output" | awk '{print $3}')
+        ssid=$(echo "$wifi_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
+        # If the wifi interface is connected to a network
+        [[ $ssid =~ "--" ]] || {
+            network_display="wifi:$connection_state:$ssid |"
+        }
     }
 
     xsetroot -name "bri: $(brightness) | vol: $(volume)% |$battery_display $network_display $(date +"%B %e %H:%M")"

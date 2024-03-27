@@ -17,8 +17,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 volume() {
-    start-pulseaudio-server
-    pamixer --get-volume
+    pamixer --get-volume || {
+        start-pulseaudio-server
+        volume
+        sleep 1
+    }
 }
 
 volume

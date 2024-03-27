@@ -17,8 +17,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 volume-down() {
-    start-pulseaudio-server
-    pamixer --decrease 5
+    pamixer --decrease 5 || {
+        start-pulseaudio-server
+        volume-down
+        sleep 1
+    }
     update-status-bar
 }
 
