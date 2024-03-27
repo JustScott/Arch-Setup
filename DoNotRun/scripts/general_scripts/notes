@@ -130,6 +130,7 @@ display_help() {
     echo -e "\t\`notes\` # opens notes in lf, or just changes to directory"
     echo -e "\t\`notes pack\`"
     echo -e "\t\`notes pack --clean\` # removes '$HOME/notes' after creating <packed_notes>.tar.aes"
+    echo -e "\t\`notes unpack\`"
 }
 
 

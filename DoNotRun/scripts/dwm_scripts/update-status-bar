@@ -18,20 +18,16 @@
 
 
 update-status-bar() {
-    battery_display=""
-    # For loop ensure different battery names up to 5 aren't excluded
-    for batt_number in 0 1 2 3 4 5
-    do
-        [[ -a /sys/class/power_supply/BAT$batt_number/capacity ]] \
-            && batt_name="BAT$batt_number"
-    done
-    [[ -n "$batt_name" ]] && {
-        battery_percentage="$(cat /sys/class/power_supply/"$batt_name"/capacity 2> /dev/null)%"
-        [[ "$(cat /sys/class/power_supply/"$batt_name"/status 2> /dev/null)" == "Charging" ]] \
-            && charging="+" \
-            || charging="-"
-        battery_display=" batt: $charging$battery_percentage |"
-    }
+    # Get all batteries with capacities
+    batt_array=$(ls /sys/class/power_supply/*/capacity)
+    # Take the first battery with a capacity value as the default
+    batt_path=$(dirname ${batt_array[0]})
+    batt_percentage=$(cat $batt_path/capacity)
+
+    [[ "$(cat $batt_path/status 2> /dev/null)" == "Charging" ]] \
+        && charging="+" \
+        || charging="-"
+    battery_display=" batt: $charging$batt_percentage% |"
 
     # 
     # Yes, ethernet is suppose to only show if wifi isn't connected to a network

@@ -24,14 +24,16 @@
 #
 
 # Check that the required packages are installed
-required_packages=(virsh virt-manager)
+check_packages() {
+    required_packages=(virsh virt-manager)
 
-for package in ${required_packages[@]}; do 
-    $package --version &>/dev/null \
-        || { echo -e "\n - [ERROR] $package must be installed - \n"; missing_packages=true; } 
-done
+    for package in ${required_packages[@]}; do 
+        $package --version &>/dev/null \
+            || { echo -e "\n - [ERROR] $package must be installed - \n"; missing_packages=true; } 
+    done
 
-[[ $missing_packages = true ]] && exit 3
+    [[ $missing_packages = true ]] && exit 3
+}
 
 
 declare -A vm_states=()
@@ -211,12 +213,12 @@ display_help() {
     printf "\t    %-20s\t %-1s\n" "-o | --open" "Open the VM with virt-manager"
     printf "\t    %-20s\t %-1s\n" "-V | --virt-viewer" "If the open flag is passed, open with virt-viewer instead of virt-manager"
     printf "\t    %-20s\t %-1s\n" "-f | --fullscreen" "If the open flag is passed, and virt-viewer is being used, open in fullscreen"
-    printf "\t    %-20s\t %-1s\n" "-F | --file" "Restore VM from a manually saved VM state file. No other flags or VM names should be passed with this"
+    printf "\t    %-20s\t %-1s\n" "-F | --file" "Restore VM from a manually saved VM state file. Only the file name with no additional flags should be passed."
     echo -e "\topen:"
     printf "\t    %-20s\t %-1s\n" "-V | --virt-viewer" "Open with virt-viewer instead of virt-manager"
     printf "\t    %-20s\t %-1s\n" "-f | --fullscreen" "If using virt-viewer, open in fullscreen"
     echo -e "\tsave:"
-    printf "\t    %-20s\t %-1s\n" "-F | --file" "Manually save VM state to a file. Only the VM name and location should be passed at once."
+    printf "\t    %-20s\t %-1s\n" "-F | --file" "Manually save VM state to a file. Only the VM name and location should be passed with no additional flags."
 
     echo -e "\nExamples:"
     echo -e "\t\`vm list\`"
@@ -417,11 +419,11 @@ check_is_running() {
 }
 
 case $1 in
-    "list")  list_vms;;
-    "start") start_vm $@;;
-    "open")  open_vm $@;;
-    "save")  save_vm $@;;
-    "is-running") check_is_running $@;;
+    "list")       check_packages; list_vms;;
+    "start")      check_packages; start_vm $@;;
+    "open")       check_packages; open_vm $@;;
+    "save")       check_packages; save_vm $@;;
+    "is-running") check_packages; check_is_running $@;;
     "version"|"--version") echo "0.1.0";;
     ""|"--help"|"-h") display_help;;
     *) 
