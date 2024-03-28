@@ -21,4 +21,166 @@
 # A simple to use snapper abstraction for writing to multiple configs at once
 #
 
+get_configs() {
+    CONFIGS=($(sudo snapper list-configs | awk 'NR>2 {print $1}'))
 
+    [[ ${#CONFIGS[@]} -gt 0 ]] || {
+        echo -e "\n - [ERROR] Must create a config before using snap"
+        exit 3
+    
+    }
+}
+
+# Check that the required packages are installed
+check_packages() {
+    get_configs # Exits if no configs exist
+
+    required_packages=(btrfs snapper)
+
+    for package in ${required_packages[@]}; do 
+        $package --version &>/dev/null \
+            || { echo -e "\n - [ERROR] $package must be installed - \n"; missing_packages=true; } 
+    done
+
+    [[ $missing_packages = true ]] && exit 3
+}
+
+display_help() {
+    echo -e "\nUsage: snap [COMMAND]"
+    echo -e "\nA package manager wrapper using btrfs snapper snapshots to"
+    echo -e " have full control over the packages on your system\n"
+
+    echo "Commands:"
+    printf "\t%-15s %-1s\n" "list" "displays a list of the packages installed via snap along with there state"
+    printf "\t%-15s %-1s\n" "install" "creates a pre & post snapshot of the package installation"
+    printf "\t%-15s %-1s\n" "uninstall" "undoes the changes between the pre & post snapshot, and deletes the snapshots"
+    printf "\t%-15s %-1s\n" "disable" "un-does the changes between the pre & post snapshots"
+    printf "\t%-15s %-1s\n" "enable" "re-does the changes betweem the pre & post snapshots"
+    printf "\t%-15s %-1s\n" "upgrade" "Reinstalls the newest package version, replacing the old snapshot"
+    printf "\t%-15s %-1s\n" "version" "Returns version information"
+
+    echo -e "\nCommand Flags:\n"
+    echo -e "\tinstall:"
+    printf "\t    %-20s\t %-1s\n" "-F | --flag" "description"
+    echo -e "\tuninstall:"
+    printf "\t    %-20s\t %-1s\n" "-f | --flag" "description"
+    echo -e "\tenable:"
+    printf "\t    %-20s\t %-1s\n" "-F | --flag" "description"
+
+    echo -e "\nExamples:"
+    echo -e "\t\`snapper list\`"
+    echo -e "\t\`snapper install go rustup python\`"
+    echo -e "\t\`snapper uninstall go rustup\`"
+    echo -e "\t\`snapper disable go python\`"
+    echo -e "\t\`snapper enable go\`"
+    echo -e "\t\`snapper upgrade python\`"
+
+    echo -e "\nError Codes:"
+    printf "\t%-3s %-1s\n" "1" "Invalid command (also used to indicate VM not running for the \`is-running\` command."
+    printf "\t%-3s %-1s\n" "2" "VM doesn't exist"
+    printf "\t%-3s %-1s\n" "3" "Missing dependencies"
+}
+
+install_package() {
+    # unset flag variables before match, for safety
+    unset noconfirm_flag \
+        skipped_command_input \
+
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            "--noconfirm" | "-y")
+                [[ -n "$noconfirm_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated noconfirm flag - \n"
+                    exit 1
+                }
+                noconfirm_flag="--noconfirm"
+            ;;
+            *) 
+                [[ "$arg" == "install" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+
+                package_names+=($arg)
+            ;;
+        esac
+    done
+    
+    [[ ${#package_names[@]} -lt 0 ]] && {
+        echo -e "\n - [ERROR] must provide at least one package - \n"
+        exit 1
+    }
+
+    pacman -Si ${package_names[@]} &>/dev/null || {
+        echo "...updating package index..."
+        sudo pacman -Sy ${package_names[@]} &>/dev/null || {
+            echo -e "\n - [ERROR] one of those packages doesn't exist - \n"
+            exit 1
+        }
+    }
+
+    for package in ${package_names[@]}
+    do
+        pacman -Q $package &>/dev/null && {
+            echo "$package already installed... skipping"
+            continue
+        }
+
+        for config in ${CONFIGS[@]}
+        do
+            sudo snapper -c $config create -d "snap__$package" -t pre
+        done
+
+        [[ -n $noconfirm_flag ]] && {
+            echo -n "...installing $package..."
+            sudo pacman -S $noconfirm_flag $package &>/dev/null
+            echo "[DONE]"
+        } || sudo pacman -S $package
+
+        for config in ${CONFIGS[@]}
+        do
+            # We can assume that the most recent snapshot was the one we created
+            pre_number=$(sudo snapper -c $config list | awk '{print $1}' | tail -n 1)
+            sudo snapper -c $config create -d "snap__$package" \
+                -t post --pre-number $pre_number 
+        done
+
+
+    done
+}
+
+list_packages() {
+    # Loop over each row of the snapper list output containing "snap__"
+    sudo snapper -c $CONFIGS list | grep "snap__" | while IFS= read -r line
+    do
+        # Only output packages that have pre and post snapshots
+        [[ "$(echo $line | awk -F '|' '{print $2}' )" == " post " ]] && {
+            # Grabs the snapshot description
+            package_name=$(echo $line | awk -F '|' '{print $7}' | sed 's/snap__//')
+            # Only grabs the first line of the --version output
+            readarray -t package_version_array_output < <($package_name --version)
+            echo $package_version_array_output
+        }
+    done
+}
+
+
+case $1 in
+    "list")       check_packages; list_packages;;
+    "install")    check_packages; install_package $@;;
+    "uninstall")  check_packages; display_help $@;;
+    "disable")    check_packages; display_help $@;;
+    "enable")     check_packages; display_help $@;;
+    "upgrade")    check_packages; display_help $@;;
+    "version"|"--version") echo "0.1.0";;
+    ""|"--help"|"-h") display_help;;
+    *) 
+        echo -e "\n - [ERROR] Invalid use of the \`snap\` command -";
+        display_help
+        exit 1
+        ;;
+esac
