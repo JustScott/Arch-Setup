@@ -85,12 +85,16 @@ display_help() {
     printf "\t    %-20s\t %-1s\n" "-d | --disabled" "Upgrade all disabled packages"
 
     echo -e "\nExamples:"
-    echo -e "\t\`snapper list\`"
-    echo -e "\t\`snapper install go rustup python\`"
-    echo -e "\t\`snapper uninstall go rustup\`"
-    echo -e "\t\`snapper disable go python\`"
-    echo -e "\t\`snapper enable go\`"
-    echo -e "\t\`snapper upgrade python\`"
+    echo -e "\t\`snap list -N\`"
+    echo -e "\t\`snap install -y go rustup python\`"
+    echo -e "\t\`snap uninstall --noconfirm go rustup\`"
+    echo -e "\t\`snap disable go python\`"
+    echo -e "\t\`snap disable -a\`"
+    echo -e "\t\`snap enable go\`"
+    echo -e "\t\`snap upgrade python go -y\`"
+    echo -e "\t\`snap upgrade --enabled\`"
+    echo -e "\t\`snap upgrade --non-snap htop\`"
+    echo -e "\t\`snap upgrade --non-snap --all\`"
 
     echo -e "\nError Codes:"
     printf "\t%-3s %-1s\n" "1" "Invalid command"
@@ -530,25 +534,40 @@ list_packages() {
             ;;
         esac
     done
+
+    [[ $non_snap_flag == true ]] && {
+        pacman -Q && exit 0 || {
+            echo -e "\n - [ERROR] Failed to list pacman packages - \n"
+            exit 1
+        }
+    }
+
     # Loop over each row of the snapper list output containing "snap__"
     sudo snapper -c ${CONFIGS[0]} list | grep "snap__" | while IFS= read -r line
     do
         # Only output packages that have pre and post snapshots
         [[ "$(echo $line | awk -F '|' '{print $2}' )" == " post " ]] && {
+            package_name=$(echo $line | awk -F '|' '{print $7}' | sed 's/snap__//')
+
             # Grabs the snapshot description
             package_name=$(echo $line | awk -F '|' '{print $7}' | sed 's/snap__//')
             { which $package_name || type $package_name; } &>/dev/null && {
-                readarray -t package_version_array_output < <(pacman -Q $package_name)
-                echo " $package_version_array_output" | tr '[:upper:]' '[:lower:]'
-            } \
-                || printf "%-20s %-1s\n" "$package_name" "[disabled]" | tr '[:upper:]' '[:lower:]'
+                [[ $disabled_flag == true ]] || {
+                    readarray -t package_version_array_output < <(pacman -Q $package_name)
+                    echo " $package_version_array_output" | tr '[:upper:]' '[:lower:]'
+                }
+            } || {
+                [[ $enabled_flag == true ]] || {
+                    printf "%-20s %-1s\n" "$package_name" "[disabled]" | tr '[:upper:]' '[:lower:]'
+                }
+            }
         }
     done
 }
 
 
 case $1 in
-    "list")       check_packages; list_packages;;
+    "list")       check_packages; list_packages $@;;
     "install")    check_packages; install_packages $@;;
     "uninstall")  check_packages; uninstall_packages $@;;
     "disable")    check_packages; disable_packages $@;;
