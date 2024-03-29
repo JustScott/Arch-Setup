@@ -260,6 +260,12 @@ uninstall_packages() {
                 snapshot_number=$(echo $line | awk '{print $1}')
                 sudo snapper -c $config delete $snapshot_number
             done
+
+            sudo snapper -c $config list | grep "snap_wrap-disable__$package" | while IFS= read -r line   
+            do
+                snapshot_number=$(echo $line | awk '{print $1}')
+                sudo snapper -c $config delete $snapshot_number
+            done
         done
     done
 }
@@ -312,14 +318,23 @@ disable_packages() {
 
         for config in ${CONFIGS[@]}
         do
+            # Create a wrapper to prevent erasing user made changes to things like config files
+            sudo snapper -c $config create -d "snap_wrap-disable__$package" --type pre
+
             sudo snapper -c $config list | grep "snap__$package" | sort -n | while IFS= read -r line   
             do
+
                 snapshot_numbers+=($(echo $line | awk '{print $1}'))
                 [[ ${#snapshot_numbers[@]} == 2 && ${snapshot_numbers[0]} -lt ${snapshot_numbers[1]} ]] && {
                     sudo snapper -c $config undochange "${snapshot_numbers[0]}..${snapshot_numbers[1]}" &>/dev/null
                     snapshot_numbers=()
                 }
+
             done
+
+            pre_number=$(sudo snapper -c $config list | awk '{print $1}' | tail -n 1)
+            sudo snapper -c $config create -d "snap_wrap-disable__$package" \
+                -t post --pre-number $pre_number 
         done
     done
 }
@@ -372,12 +387,13 @@ enable_packages() {
 
         for config in ${CONFIGS[@]}
         do
-            sudo snapper -c $config list | grep "snap__$package" | sort -nr | while IFS= read -r line   
+            sudo snapper -c $config list | grep "snap_wrap-disable__$package" | sort -n | while IFS= read -r line   
             do
                 snapshot_numbers+=($(echo $line | awk '{print $1}'))
-                [[ ${#snapshot_numbers[@]} == 2 && ${snapshot_numbers[0]} -gt ${snapshot_numbers[1]} ]] && {
+                [[ ${#snapshot_numbers[@]} == 2 && ${snapshot_numbers[0]} -lt ${snapshot_numbers[1]} ]] && {
                     sudo snapper -c $config undochange "${snapshot_numbers[0]}..${snapshot_numbers[1]}" &>/dev/null
-                    snapshot_numbers=()
+                    sudo snapper -c $config delete ${snapshot_numbers[@]}
+                    unset snapshot_numbers
                 }
             done
         done
@@ -547,8 +563,6 @@ list_packages() {
     do
         # Only output packages that have pre and post snapshots
         [[ "$(echo $line | awk -F '|' '{print $2}' )" == " post " ]] && {
-            package_name=$(echo $line | awk -F '|' '{print $7}' | sed 's/snap__//')
-
             # Grabs the snapshot description
             package_name=$(echo $line | awk -F '|' '{print $7}' | sed 's/snap__//')
             { which $package_name || type $package_name || pacman -Q $package_name; } &>/dev/null && {

@@ -14,7 +14,7 @@ All of my scripts for installing certain sets of software in arch linux.
 * Run `dwm.sh` to configure and install the dwm Window Manager
 * Run `gnome.sh` to configure and install the Gnome Desktop Environment
 
-### Install scripts to `/usr/local/bin` (won't overwrite existing files)
+### Install scripts to `/usr/local/bin` (will overwrite existing files) 
 * Run `dwm-scripts.sh` to install dwm specific scripts
 * Run `general-scripts.sh` to install general scripts
 
