@@ -45,12 +45,14 @@ check_packages() {
     done
 
     [[ $missing_packages = true ]] && exit 3
+
+    sudo -v
 }
 
 display_help() {
     echo -e "\nUsage: snap [COMMAND]"
     echo -e "\nA package manager wrapper using btrfs snapper snapshots to"
-    echo -e " have full control over the packages on your system\n"
+    echo -e " have better control over the packages on your system\n"
 
     echo "Commands:"
     printf "\t%-15s %-1s\n" "list" "displays a list of the packages installed via snap along with there state"
@@ -62,12 +64,25 @@ display_help() {
     printf "\t%-15s %-1s\n" "version" "Returns version information"
 
     echo -e "\nCommand Flags:\n"
+    echo -e "\tlist:"
+    printf "\t    %-20s\t %-1s\n" "-e | --enabled" "List enabled packages only"
+    printf "\t    %-20s\t %-1s\n" "-e | --disabled" "List disabled packages only"
+    printf "\t    %-20s\t %-1s\n" "-N | --non-snap" "List all packages not managed by snap"
     echo -e "\tinstall:"
-    printf "\t    %-20s\t %-1s\n" "-F | --flag" "description"
+    printf "\t    %-20s\t %-1s\n" "-y | --noconfirm" "Automatically answer default to all pacman prompts"
     echo -e "\tuninstall:"
-    printf "\t    %-20s\t %-1s\n" "-f | --flag" "description"
+    printf "\t    %-20s\t %-1s\n" "-y | --noconfirm" "Automatically answer default to all pacman prompts"
+    printf "\t    %-20s\t %-1s\n" "-a | --all" "Uninstall all packages managed by snap"
     echo -e "\tenable:"
-    printf "\t    %-20s\t %-1s\n" "-F | --flag" "description"
+    printf "\t    %-20s\t %-1s\n" "-a | --all" "Disable all packages"
+    echo -e "\tdisable:"
+    printf "\t    %-20s\t %-1s\n" "-a | --all" "Enable all packages"
+    echo -e "\tupgrade:"
+    printf "\t    %-20s\t %-1s\n" "-y | --noconfirm" "Automatically answer default to all pacman prompts"
+    printf "\t    %-20s\t %-1s\n" "-a | --all" "Upgrade all packages managed by snap"
+    printf "\t    %-20s\t %-1s\n" "-N | --non-snap" "Use with --all to upgrade all system packages not managed by snap, or alone to upgrade specific packages"
+    printf "\t    %-20s\t %-1s\n" "-e | --enabled" "Upgrade all enabled packages"
+    printf "\t    %-20s\t %-1s\n" "-d | --disabled" "Upgrade all disabled packages"
 
     echo -e "\nExamples:"
     echo -e "\t\`snapper list\`"
@@ -81,6 +96,8 @@ display_help() {
     printf "\t%-3s %-1s\n" "1" "Invalid command"
     printf "\t%-3s %-1s\n" "2" "Package doesn't exist"
     printf "\t%-3s %-1s\n" "3" "Missing dependencies"
+
+    echo ""
 }
 
 install_packages() {
@@ -96,7 +113,7 @@ install_packages() {
         case $arg in
             "--noconfirm" | "-y")
                 [[ -n "$noconfirm_flag" ]] && {
-                    echo -e "\n - [ERROR] duplicated noconfirm flag - \n"
+                    echo -e "\n - [ERROR] duplicated the 'noconfirm' flag - \n"
                     exit 1
                 }
                 local noconfirm_flag="--noconfirm"
@@ -167,6 +184,7 @@ uninstall_packages() {
     # unset flag variables before match, for safety
     local unset skipped_command_input \
         noconfirm_flag \
+        all_flag
 
     #
     # Capture flags
@@ -176,10 +194,17 @@ uninstall_packages() {
         case $arg in
             "--noconfirm" | "-y")
                 [[ -n "$noconfirm_flag" ]] && {
-                    echo -e "\n - [ERROR] duplicated noconfirm flag - \n"
+                    echo -e "\n - [ERROR] duplicated the 'noconfirm' flag - \n"
                     exit 1
                 }
                 local noconfirm_flag="--noconfirm"
+            ;;
+            "--all" | "-a")
+                [[ -n "$all_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the 'all' flag - \n"
+                    exit 1
+                }
+                local all_flag=true
             ;;
             *) 
                 [[ "$arg" == "uninstall" && -z "$skipped_command_input" ]] && {
@@ -191,6 +216,11 @@ uninstall_packages() {
             ;;
         esac
     done
+
+    [[ $all_flag == true ]] && {
+        populate_enabled_disabled_all
+        package_names+=(${all_snap_packages[@]})
+    }
 
     [[ ${#package_names[@]} -lt 0 ]] && {
         echo -e "\n - [ERROR] must provide at least one package - \n"
@@ -232,7 +262,8 @@ uninstall_packages() {
 
 disable_packages() {
     # unset flag variables before match, for safety
-    local unset skipped_command_input
+    local unset skipped_command_input \
+        all_flag
 
     #
     # Capture flags
@@ -240,6 +271,13 @@ disable_packages() {
     for arg in "${@}";
     do
         case $arg in
+            "--all" | "-a")
+                [[ -n "$all_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the 'all' flag - \n"
+                    exit 1
+                }
+                local all_flag=true
+            ;;
             *) 
                 [[ "$arg" == "disable" && -z "$skipped_command_input" ]] && {
                     skipped_command_input=true
@@ -250,6 +288,11 @@ disable_packages() {
             ;;
         esac
     done
+
+    [[ $all_flag == true ]] && {
+        populate_enabled_disabled_all
+        package_names+=(${all_snap_packages[@]})
+    }
 
     [[ ${#package_names[@]} -lt 0 ]] && {
         echo -e "\n - [ERROR] must provide at least one package - \n"
@@ -279,7 +322,8 @@ disable_packages() {
 
 enable_packages() {
     # unset flag variables before match, for safety
-    local unset skipped_command_input
+    local unset skipped_command_input \
+        all_flag \
 
     #
     # Capture flags
@@ -287,6 +331,13 @@ enable_packages() {
     for arg in "${@}";
     do
         case $arg in
+            "--all" | "-a")
+                [[ -n "$all_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the 'all' flag - \n"
+                    exit 1
+                }
+                local all_flag=true
+            ;;
             *) 
                 [[ "$arg" == "enable" && -z "$skipped_command_input" ]] && {
                     skipped_command_input=true
@@ -297,6 +348,11 @@ enable_packages() {
             ;;
         esac
     done
+
+    [[ $all_flag == true ]] && {
+        populate_enabled_disabled_all
+        package_names+=(${all_snap_packages[@]})
+    }
 
     [[ ${#package_names[@]} -lt 0 ]] && {
         echo -e "\n - [ERROR] must provide at least one package - \n"
@@ -328,6 +384,10 @@ upgrade_packages() {
     # unset flag variables before match, for safety
     local unset noconfirm_flag \
         skipped_command_input \
+        all_flag \
+        enabled_flag \
+        disabled_flag \
+        non_snap_flag \
 
     #
     # Capture flags
@@ -337,10 +397,38 @@ upgrade_packages() {
         case $arg in
             "--noconfirm" | "-y")
                 [[ -n "$noconfirm_flag" ]] && {
-                    echo -e "\n - [ERROR] duplicated noconfirm flag - \n"
+                    echo -e "\n - [ERROR] duplicated the 'noconfirm' flag - \n"
                     exit 1
                 }
                 local noconfirm_flag="--noconfirm"
+            ;;
+            "--all" | "-a")
+                [[ -n "$all_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the 'all' flag - \n"
+                    exit 1
+                }
+                local all_flag=true
+            ;;
+            "--non-snap" | "-N")
+                [[ -n "$non_snap_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the 'non-snap' flag - \n"
+                    exit 1
+                }
+                local non_snap_flag=true
+            ;;
+            "--enabled" | "-e")
+                [[ -n "$enabled_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the 'enabled' flag - \n"
+                    exit 1
+                }
+                local enabled_flag=true
+            ;;
+            "--disabled" | "-d")
+                [[ -n "$disabled_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the 'disabled' flag - \n"
+                    exit 1
+                }
+                local disabled_flag=true
             ;;
             *) 
                 [[ "$arg" == "upgrade" && -z "$skipped_command_input" ]] && {
@@ -353,13 +441,95 @@ upgrade_packages() {
         esac
     done
 
+    [[ $all_flag == true ]] && {
+        populate_enabled_disabled_all
 
+        [[ $non_snap_flag == true ]] && {
+            disable_packages --all
+            sudo pacman -Syu $noconfirm_flag ${package_names[@]} || {
+                echo -e "\n - [ERROR] Failed to upgrade all non-snap packages - \n"
+                exit 2
+            }
+            enable_packages ${enabled_packages[@]}
+            exit 0
+        } || package_names+=(${all_snap_packages[@]})
+    } || {
+        [[ $non_snap_flag == true ]] && {
+            populate_enabled_disabled_all
+
+            disable_packages --all
+            sudo pacman -Sy $noconfirm_flag ${package_names[@]} || {
+                echo -e "\n - [ERROR] Failed to upgrade specified non-snap packages - \n"
+                exit 2
+            }
+            enable_packages ${enabled_packages[@]}
+            exit 0
+        }
+
+        populate_enabled_disabled_all
+        [[ $enabled_flag == true ]] && package_names+=(${enabled_packages[@]}) || {
+            [[ $disabled_flag == true ]] && package_names+=(${disabled_packages[@]})
+        }
+    }
 
     uninstall_packages $noconfirm_flag ${package_names[@]} \
         && install_packages $noconfirm_flag ${package_names[@]}
 }
 
+populate_enabled_disabled_all() {
+    disabled_packages=($(list_packages | grep "disabled" | awk '{print $1}'))
+
+    enabled_packages=($(list_packages | grep -v "disabled" | awk '{print $1}'))
+
+    all_snap_packages=($(list_packages | awk '{print $1}'))
+}
+
 list_packages() {
+    # unset flag variables before match, for safety
+    local unset noconfirm_flag \
+        skipped_command_input \
+        all_flag \
+        enabled_flag \
+        disabled_flag \
+        non_snap_flag \
+
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            "--non-snap" | "-N")
+                [[ -n "$non_snap_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the 'non-snap' flag - \n"
+                    exit 1
+                }
+                local non_snap_flag=true
+            ;;
+            "--enabled" | "-e")
+                [[ -n "$enabled_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the 'enabled' flag - \n"
+                    exit 1
+                }
+                local enabled_flag=true
+            ;;
+            "--disabled" | "-d")
+                [[ -n "$disabled_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the 'disabled' flag - \n"
+                    exit 1
+                }
+                local disabled_flag=true
+            ;;
+            *) 
+                [[ "$arg" == "list" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+
+                local package_names+=($arg)
+            ;;
+        esac
+    done
     # Loop over each row of the snapper list output containing "snap__"
     sudo snapper -c ${CONFIGS[0]} list | grep "snap__" | while IFS= read -r line
     do
