@@ -1,0 +1,93 @@
+#!/bin/bash
+#
+# move - part of the Arch-Setup project
+# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+#
+# move is a simple and reliable way to backup your system
+#
+
+calcurse_backup() {
+    echo "Backing up calcurse"
+    exit
+}
+
+
+DATA_DIRECTORY=$HOME/.config/move
+BACKUP_PATHS=$DATA_DIRECTORY/backup_paths
+
+[[ -d $DATA_DIRECTORY ]] || {
+    echo -e "\n - [ERROR] $DATA_DIRECTORY doesn't exist... creating & exiting - \n"
+    mkdir -p $DATA_DIRECTORY
+    exit 1
+}
+
+pack() {
+    compress() {
+        [[ -f $BACKUP_PATHS ]] && {
+            source $BACKUP_PATHS # imports the 'paths' array
+
+            cp /tmp/example.tar.aes.gz /tmp/example.tar.aes.gz.bak &>/dev/null
+
+            # Verify all paths exist
+            for path in ${paths[@]};
+            do
+                [[ -d $path || -f $path ]] || {
+                    echo -e "\n - [ERROR] $path from $BACKUP_PATHS doesn't exist - \n"
+                    exit 1
+                }
+            done
+
+            tar -czf /tmp/example.tar ${paths[@]}
+        }
+    }
+
+    encrypt() {
+        while :
+        do
+            openssl enc \
+                -a -aes-256-cbc -pbkdf2 --iter 1000000 \
+                -in host_backup.tar -out host_backup.tar.aes 2> /dev/null
+
+            # Only exit the loop if the encryption succeeds
+            [[ $? == 0 ]] \
+                && break \
+                || echo -e "\n - Encryption keys don't match... try again - \n"
+        done
+    }
+}
+
+#
+# If a supported app is installed, back it up
+#
+
+calcurse --version &>/dev/null && {
+    [[ -d $HOME/.config/calcurse ]] && calcurse_backup
+}
+
+case $1 in
+    "pack")          check_packages; pack;;
+    "unpack")        check_packages; decompress; decrypt;;
+    "version"|"--version") echo "0.1.0";;
+    ""|"--help"|"-h") display_help;;
+    *) 
+        echo -e "\n - [ERROR] Invalid use of the \`vm\` command -";
+        display_help
+        exit 1
+        ;;
+esac
+compress
+encrypt
