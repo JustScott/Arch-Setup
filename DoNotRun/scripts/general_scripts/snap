@@ -38,8 +38,10 @@ check_packages() {
     required_packages=(btrfs snapper)
 
     for package in ${required_packages[@]}; do 
-        $package --version &>/dev/null \
-            || { echo -e "\n - [ERROR] $package must be installed - \n"; missing_packages=true; } 
+        $package --version &>/dev/null || {
+            echo -e "\n - [ERROR] $package must be installed - \n"
+            missing_packages=true
+        } 
     done
 
     [[ $missing_packages = true ]] && exit 3
@@ -76,14 +78,14 @@ display_help() {
     echo -e "\t\`snapper upgrade python\`"
 
     echo -e "\nError Codes:"
-    printf "\t%-3s %-1s\n" "1" "Invalid command (also used to indicate VM not running for the \`is-running\` command."
-    printf "\t%-3s %-1s\n" "2" "VM doesn't exist"
+    printf "\t%-3s %-1s\n" "1" "Invalid command"
+    printf "\t%-3s %-1s\n" "2" "Package doesn't exist"
     printf "\t%-3s %-1s\n" "3" "Missing dependencies"
 }
 
-install_package() {
+install_packages() {
     # unset flag variables before match, for safety
-    unset noconfirm_flag \
+    local unset noconfirm_flag \
         skipped_command_input \
 
     #
@@ -97,7 +99,7 @@ install_package() {
                     echo -e "\n - [ERROR] duplicated noconfirm flag - \n"
                     exit 1
                 }
-                noconfirm_flag="--noconfirm"
+                local noconfirm_flag="--noconfirm"
             ;;
             *) 
                 [[ "$arg" == "install" && -z "$skipped_command_input" ]] && {
@@ -105,7 +107,7 @@ install_package() {
                     continue
                 }
 
-                package_names+=($arg)
+                local package_names+=($arg)
             ;;
         esac
     done
@@ -116,17 +118,18 @@ install_package() {
     }
 
     pacman -Si ${package_names[@]} &>/dev/null || {
-        echo "...updating package index..."
-        sudo pacman -Sy ${package_names[@]} &>/dev/null || {
-            echo -e "\n - [ERROR] one of those packages doesn't exist - \n"
-            exit 1
-        }
+        echo "...failed to find all packages, updating package index..."
+        sudo pacman -Si ${package_names[@]} >/dev/null || exit 2
     }
 
     for package in ${package_names[@]}
     do
         pacman -Q $package &>/dev/null && {
             echo "$package already installed... skipping"
+            continue
+        }
+        list_packages $package | grep "$package" &>/dev/null && {
+            echo "$package snapshot already exists, try enabling instead... skipping"
             continue
         }
 
@@ -137,9 +140,18 @@ install_package() {
 
         [[ -n $noconfirm_flag ]] && {
             echo -n "...installing $package..."
-            sudo pacman -S $noconfirm_flag $package &>/dev/null
+            sudo pacman -S $noconfirm_flag $package &>/dev/null || {
+                pre_number=$(sudo snapper -c $config list | awk '{print $1}' | tail -n 1)
+                sudo snapper -c $config delete $pre_number
+                echo -e "\n - [ERROR] pacman failed to install $package... stopping - \n"
+                exit 2
+            }
             echo "[DONE]"
-        } || sudo pacman -S $package
+        } || sudo pacman -S $package || {
+            pre_number=$(sudo snapper -c $config list | awk '{print $1}' | tail -n 1)
+            sudo snapper -c $config delete $pre_number
+            exit 2
+        }
 
         for config in ${CONFIGS[@]}
         do
@@ -148,22 +160,218 @@ install_package() {
             sudo snapper -c $config create -d "snap__$package" \
                 -t post --pre-number $pre_number 
         done
-
-
     done
+}
+
+uninstall_packages() {
+    # unset flag variables before match, for safety
+    local unset skipped_command_input \
+        noconfirm_flag \
+
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            "--noconfirm" | "-y")
+                [[ -n "$noconfirm_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated noconfirm flag - \n"
+                    exit 1
+                }
+                local noconfirm_flag="--noconfirm"
+            ;;
+            *) 
+                [[ "$arg" == "uninstall" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+
+                local package_names+=($arg)
+            ;;
+        esac
+    done
+
+    [[ ${#package_names[@]} -lt 0 ]] && {
+        echo -e "\n - [ERROR] must provide at least one package - \n"
+        exit 1
+    }
+
+    # Uninstall to remove any files created after installation that pacman
+    #  was instructed to delete
+    #
+    enable_packages ${package_names[@]}
+    for package in ${package_names[@]}
+    do
+        [[ -n $noconfirm_flag ]] && {
+            echo -n "...uninstalling $package..."
+            sudo pacman -R $noconfirm_flag $package &>/dev/null || {
+                echo -e "\n - [ERROR] pacman failed to uninstall $package... stopping - \n"
+                exit 2
+            }
+            echo "[DONE]"
+        } || {
+            sudo pacman -R $package || exit 2
+        }
+    done
+    
+    disable_packages ${package_names[@]}
+
+    for package in ${package_names[@]}
+    do
+        for config in ${CONFIGS[@]}
+        do
+            sudo snapper -c $config list | grep "snap__$package" | while IFS= read -r line   
+            do
+                snapshot_number=$(echo $line | awk '{print $1}')
+                sudo snapper -c $config delete $snapshot_number
+            done
+        done
+    done
+}
+
+disable_packages() {
+    # unset flag variables before match, for safety
+    local unset skipped_command_input
+
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            *) 
+                [[ "$arg" == "disable" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+
+                local package_names+=($arg)
+            ;;
+        esac
+    done
+
+    [[ ${#package_names[@]} -lt 0 ]] && {
+        echo -e "\n - [ERROR] must provide at least one package - \n"
+        exit 1
+    }
+
+    for package in ${package_names[@]}
+    do
+        list_packages | grep "$package" &>/dev/null || {
+            echo "'$package' doesn't exist... skipping"
+            continue
+        }
+
+        for config in ${CONFIGS[@]}
+        do
+            sudo snapper -c $config list | grep "snap__$package" | sort -n | while IFS= read -r line   
+            do
+                snapshot_numbers+=($(echo $line | awk '{print $1}'))
+                [[ ${#snapshot_numbers[@]} == 2 && ${snapshot_numbers[0]} -lt ${snapshot_numbers[1]} ]] && {
+                    sudo snapper -c $config undochange "${snapshot_numbers[0]}..${snapshot_numbers[1]}" &>/dev/null
+                    snapshot_numbers=()
+                }
+            done
+        done
+    done
+}
+
+enable_packages() {
+    # unset flag variables before match, for safety
+    local unset skipped_command_input
+
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            *) 
+                [[ "$arg" == "enable" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+
+                local package_names+=($arg)
+            ;;
+        esac
+    done
+
+    [[ ${#package_names[@]} -lt 0 ]] && {
+        echo -e "\n - [ERROR] must provide at least one package - \n"
+        exit 1
+    }
+
+    for package in ${package_names[@]}
+    do
+        list_packages | grep "$package" &>/dev/null || {
+            echo "'$package' doesn't exist... skipping"
+            continue
+        }
+
+        for config in ${CONFIGS[@]}
+        do
+            sudo snapper -c $config list | grep "snap__$package" | sort -nr | while IFS= read -r line   
+            do
+                snapshot_numbers+=($(echo $line | awk '{print $1}'))
+                [[ ${#snapshot_numbers[@]} == 2 && ${snapshot_numbers[0]} -gt ${snapshot_numbers[1]} ]] && {
+                    sudo snapper -c $config undochange "${snapshot_numbers[0]}..${snapshot_numbers[1]}" &>/dev/null
+                    snapshot_numbers=()
+                }
+            done
+        done
+    done
+}
+
+upgrade_packages() {
+    # unset flag variables before match, for safety
+    local unset noconfirm_flag \
+        skipped_command_input \
+
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            "--noconfirm" | "-y")
+                [[ -n "$noconfirm_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated noconfirm flag - \n"
+                    exit 1
+                }
+                local noconfirm_flag="--noconfirm"
+            ;;
+            *) 
+                [[ "$arg" == "upgrade" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+
+                local package_names+=($arg)
+            ;;
+        esac
+    done
+
+
+
+    uninstall_packages $noconfirm_flag ${package_names[@]} \
+        && install_packages $noconfirm_flag ${package_names[@]}
 }
 
 list_packages() {
     # Loop over each row of the snapper list output containing "snap__"
-    sudo snapper -c $CONFIGS list | grep "snap__" | while IFS= read -r line
+    sudo snapper -c ${CONFIGS[0]} list | grep "snap__" | while IFS= read -r line
     do
         # Only output packages that have pre and post snapshots
         [[ "$(echo $line | awk -F '|' '{print $2}' )" == " post " ]] && {
             # Grabs the snapshot description
             package_name=$(echo $line | awk -F '|' '{print $7}' | sed 's/snap__//')
-            # Only grabs the first line of the --version output
-            readarray -t package_version_array_output < <($package_name --version)
-            echo $package_version_array_output
+            { which $package_name || type $package_name; } &>/dev/null && {
+                readarray -t package_version_array_output < <(pacman -Q $package_name)
+                echo " $package_version_array_output" | tr '[:upper:]' '[:lower:]'
+            } \
+                || printf "%-20s %-1s\n" "$package_name" "[disabled]" | tr '[:upper:]' '[:lower:]'
         }
     done
 }
@@ -171,11 +379,11 @@ list_packages() {
 
 case $1 in
     "list")       check_packages; list_packages;;
-    "install")    check_packages; install_package $@;;
-    "uninstall")  check_packages; display_help $@;;
-    "disable")    check_packages; display_help $@;;
-    "enable")     check_packages; display_help $@;;
-    "upgrade")    check_packages; display_help $@;;
+    "install")    check_packages; install_packages $@;;
+    "uninstall")  check_packages; uninstall_packages $@;;
+    "disable")    check_packages; disable_packages $@;;
+    "enable")     check_packages; enable_packages $@;;
+    "upgrade")    check_packages; upgrade_packages $@;;
     "version"|"--version") echo "0.1.0";;
     ""|"--help"|"-h") display_help;;
     *) 
