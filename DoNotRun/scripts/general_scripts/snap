@@ -537,7 +537,7 @@ list_packages() {
 
     [[ $non_snap_flag == true ]] && {
         pacman -Q && exit 0 || {
-            echo -e "\n - [ERROR] Failed to list pacman packages - \n"
+            echo -e "\n - [ERROR] Failed to list pacman packages with \`pacman -Q\`- \n"
             exit 1
         }
     }
@@ -551,7 +551,7 @@ list_packages() {
 
             # Grabs the snapshot description
             package_name=$(echo $line | awk -F '|' '{print $7}' | sed 's/snap__//')
-            { which $package_name || type $package_name; } &>/dev/null && {
+            { which $package_name || type $package_name || pacman -Q $package_name; } &>/dev/null && {
                 [[ $disabled_flag == true ]] || {
                     readarray -t package_version_array_output < <(pacman -Q $package_name)
                     echo " $package_version_array_output" | tr '[:upper:]' '[:lower:]'
