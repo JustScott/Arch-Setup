@@ -27,7 +27,7 @@ update-status-bar() {
     [[ "$(cat $batt_path/status 2> /dev/null)" == "Charging" ]] \
         && charging="+" \
         || charging="-"
-    battery_display=" batt: $charging$batt_percentage% |"
+    [[ -n $batt_percentage ]] && battery_display=" batt: $charging$batt_percentage% |"
 
     # 
     # Yes, ethernet is suppose to only show if wifi isn't connected to a network
@@ -54,7 +54,10 @@ update-status-bar() {
         }
     }
 
-    xsetroot -name "bri: $(brightness) | vol: $(volume)% |$battery_display $network_display $(date +"%B %e %H:%M")"
+    brightness_percentage=$(brightness)
+    [[ -n $brightness_percentage ]] && brightness_display="bri: $brightness_percentage |"
+    
+    xsetroot -name "$brightness_display vol: $(volume)% |$battery_display $network_display $(date +"%B %e %H:%M")"
 }
 
 update-status-bar

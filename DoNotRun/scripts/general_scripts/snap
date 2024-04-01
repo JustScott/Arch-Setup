@@ -18,7 +18,12 @@
 
 
 #
-# A simple to use snapper abstraction for writing to multiple configs at once
+# A package manager wrapper that uses btrfs snapper to track the changes made
+#  on the subvolumes/filesystem during installation. This allows for cleaning
+#  up any files or directories that a package may leave out of its uninstall
+#  process. It also allows you to disable a package, essentially uninstalling
+#  it from your system temporarily, and to re-enable that package as if it had
+#  never been gone, keeping all your changes to its config files in tact.
 #
 
 get_configs() {

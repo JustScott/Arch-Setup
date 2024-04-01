@@ -17,7 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 brightness-down() {
-    brightnessctl set 10%- > /dev/null
+    brightnessctl set 10%- &> /dev/null
     update-status-bar
 }
 
