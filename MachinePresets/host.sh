@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# development_apps.sh - part of the Arch-Setup project
+# host.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,21 +17,28 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 cd ..
-bash user.sh
+bash media.sh
 bash secure.sh
-cd VirtualMachines
+bash qemu.sh
+bash dwm.sh
+bash general-scripts.sh
+cd MachinePresets
 bash base.sh
 
-ACTION="Install browsers from the AUR (this may take a while)"
-echo -n "...$ACTION..."
-yay -Sy librewolf-bin vimb --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+packages=(newsboat calcurse keepassxc)
 
-SCRIPT_DIR=../DoNotRun/backup_scripts/development_apps
+pacman -Q ${packages[@]} &>/dev/null || {
+    ACTION="Install host packages with pacman"
+    echo -n "...$ACTION..."
+    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
+        && echo "[SUCCESS]" \
+        || { "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+}
 
-sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
-sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
+BACKUP_SCRIPT_DIR=../DoNotRun/backup_scripts/host
 
-cd ..
-bash dwm.sh
+sudo ln -sf $PWD/$BACKUP_SCRIPT_DIR/pack /usr/local/bin/pack
+sudo ln -sf $PWD/$BACKUP_SCRIPT_DIR/unpack /usr/local/bin/unpack
+
+cd $HOME
+exec dwm

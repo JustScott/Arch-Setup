@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# primary_development.sh - part of the Arch-Setup project
+# vault.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,34 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#
-# For installation and configuration of development specific
-#  packages
-#
-
 cd ..
-bash user.sh
 bash secure.sh
-cd VirtualMachines
-bash base.sh
+cd MachinePresets
 
-ACTION="Install development packages with pacman"
+ACTION="Install Vault packages with pacman"
 echo -n "...$ACTION..."
-sudo pacman -Sy python python-pip docker docker-compose --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
+sudo pacman -Sy keepassxc spice-vdagent --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
     || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
-ACTION="Configure Docker"
-sudo systemctl enable --now docker >/dev/null 2>>/tmp/archsetuperrors.log \
-    && sudo usermod -aG docker $USER >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-
-
-SCRIPT_DIR=../DoNotRun/backup_scripts/primary_development
-
-sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
-sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
-
-cd ..
-bash dwm.sh
+cd $HOME
+exec dwm

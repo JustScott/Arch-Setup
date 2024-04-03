@@ -16,48 +16,69 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-sudo -v # Enable sudo
+# Install or update dwm scripts
+[[ -d $PWD/DoNotRun/scripts/dwm_scripts ]] && {
+    ACTION="Install dwm scripts to /usr/local/bin/"
+    sudo ln -sf $PWD/DoNotRun/scripts/dwm_scripts/* /usr/local/bin >/dev/null 2>>/tmp/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+} || {
+    echo "Please run script from the Arch-Setup base directory"
+}
 
 # Get the terminal and window manager from suckless
 mkdir -p ~/Git/Hub/ArchProjects
 cd ~/Git/Hub/ArchProjects # pwd -> $HOME/Git/Hub
 
-ACTION="Clone st"
-git clone https://www.github.com/JustScott/st >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-ACTION="Clone dwm"
-git clone https://www.github.com/JustScott/dwm >/dev/null 2>>/tmp/archsetuperrors.log\
-    && echo "[SUCCESS] $ACTION" \
-    || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit; } 
+{ which dwm || type dwm; } &>/dev/null || {
+    ACTION="Clone dwm"
+    git clone https://www.github.com/JustScott/dwm >/dev/null 2>>/tmp/archsetuperrors.log\
+        && echo "[SUCCESS] $ACTION" \
+        || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit; } 
 
-ACTION="Compile st"
-cd st # pwd -> $HOME/Git/Hub/ArchProjects/st
-sudo make install >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+    ACTION="Compile dwm"
+    cd ../dwm # pwd -> $HOME/Git/Hub/ArchProjects/dwm
+    sudo make install >/dev/null 2>>/tmp/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" \
+        || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit;} 
+}
 
-ACTION="Compile dwm"
-cd ../dwm # pwd -> $HOME/Git/Hub/ArchProjects/dwm
-sudo make install >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit;} 
+{ which st || type st; } &>/dev/null || {
+    ACTION="Clone st"
+    git clone https://www.github.com/JustScott/st >/dev/null 2>>/tmp/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
 
-# Edit .bash_profile and .xinitrc to start dwm on reboot
-echo "startx" >> ~/.bash_profile
+    ACTION="Compile st"
+    cd st # pwd -> $HOME/Git/Hub/ArchProjects/st
+    sudo make install >/dev/null 2>>/tmp/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+}
 
-ACTION="Install dwm related packages with pacman (this may take a while)"
-echo -n "...$ACTION..."
-sudo pacman -Sy \
+# startx runs .xinitrc on user login
+grep "startx" $HOME/.bash_profile &>/dev/null || \
+    echo -e "\nstartx" >> $HOME/.bash_profile
+
+packages=(
     xorg-xrandr xorg-server xorg-xinit xorg-xsetroot \
     libx11 libxinerama libxft \
     pulseaudio pavucontrol brightnessctl pamixer \
-    bluez bluez-utils pulseaudio-bluetooth \
-    dmenu picom xscreensaver --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS]" \
-        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
+    dmenu picom xscreensaver
+)
 
-cd ~
-# Start dwm
-echo "exec dwm" >> ~/.xinitrc
-startx >/dev/null 2>>/tmp/archsetuperrors.log || echo "[FAIL] Start X server... wrote error log to /tmp/archsetuperrors.log"
+pacman -Q ${packages[@]} &>/dev/null || {
+    ACTION="Install dwm related packages with pacman (this may take a while)"
+    echo -n "...$ACTION..."
+    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
+            && echo "[SUCCESS]" \
+            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
+}
+
+cd $HOME
+echo $HOME/.xinitrc | grep "exec dwm" &>/dev/null \
+    || echo -e "\nexec dwm" >> ~/.xinitrc
+# Only start dwm if not already running
+[[ -z "$DISPLAY" ]] && {
+    startx >/dev/null 2>>/tmp/archsetuperrors.log \
+        || echo "[FAIL] Start X server... wrote error log to /tmp/archsetuperrors.log"
+}

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# temp_search.sh - part of the Arch-Setup project
+# browser.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,19 +16,31 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-bash base.sh
 cd ..
 bash secure.sh
-cd VirtualMachines
+cd MachinePresets
+bash base.sh
 
-ACTION="Install TempSearch packages from the AUR (this may take a while)"
+VIRTUAL_MACHINES_PWD=$PWD
+
+ACTION="Clone, compile, and install yay from the AUR (this may take a while)"
 echo -n "...$ACTION..."
-yay -Sy spice-vdagent librewolf-bin feh --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
+cd # pwd -> $HOME
+git clone https://aur.archlinux.org/yay.git >/dev/null 2>>/tmp/archsetuperrors.log \
+    && cd yay >/dev/null 2>>/tmp/archsetuperrors.log\
+    && makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
+    && sleep 3 \
+    && cd $VIRTUAL_MACHINES_PWD >/dev/null 2>>/tmp/archsetuperrors.log\
+        && echo "[SUCCESS]" \
+        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+
+cd $VIRTUAL_MACHINES_PWD
+
+ACTION="Install librewolf from the AUR (this may take a while)"
+echo -n "...$ACTION..."
+yay -Sy librewolf-bin --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
     || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
-# Start the process in the background
-spice-vdagent &
-
-cd ..
-bash dwm.sh
+cd $HOME
+exec dwm & librewolf

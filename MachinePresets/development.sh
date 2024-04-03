@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# dwm-scripts.sh - part of the Arch-Setup project
+# development.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,10 +16,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-[[ -d $PWD/DoNotRun/scripts/dwm_scripts ]] && {
-    ACTION="Install dwm scripts to /usr/local/bin/"
-    sudo ln -sf $PWD/DoNotRun/scripts/dwm_scripts/* /usr/local/bin >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-} || {
-    echo "Please run script from the Arch-Setup base directory"
-}
+cd ..
+bash secure.sh
+cd MachinePresets
+bash base.sh
+
+ACTION="Install development packages"
+echo -n "...$ACTION..."
+sudo pacman -Sy --noconfirm \
+    python python-pip rustup >/dev/null 2>>/tmp/archsetuperrors.log \
+    && echo "[SUCCESS]" \
+    || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit 1; }
+
+ACTION="Configure Rust"
+rustup default stable >/dev/null 2>>/tmp/archsetuperrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+
+cd $HOME
+exec dwm

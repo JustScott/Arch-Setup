@@ -20,11 +20,6 @@
 # move is a simple and reliable way to backup your system
 #
 
-calcurse_backup() {
-    echo "Backing up calcurse"
-    exit
-}
-
 
 DATA_DIRECTORY=$HOME/.config/move
 BACKUP_PATHS=$DATA_DIRECTORY/backup_paths
@@ -35,7 +30,7 @@ BACKUP_PATHS=$DATA_DIRECTORY/backup_paths
     exit 1
 }
 
-pack() {
+{
     compress() {
         [[ -f $BACKUP_PATHS ]] && {
             source $BACKUP_PATHS # imports the 'paths' array
@@ -68,19 +63,88 @@ pack() {
                 || echo -e "\n - Encryption keys don't match... try again - \n"
         done
     }
+
+    pack() {
+        # unset flag variables before match, for safety
+        local unset skipped_command_input
+
+        #
+        # Capture flags
+        #
+        for arg in "${@}";
+        do
+            case $arg in
+                "--noconfirm" | "-y")
+                    [[ -n "$noconfirm_flag" ]] && {
+                        echo -e "\n - [ERROR] duplicated the 'noconfirm' flag - \n"
+                        exit 1
+                    }
+                    local noconfirm_flag="--noconfirm"
+                ;;
+                *) 
+                    [[ "$arg" == "pack" && -z "$skipped_command_input" ]] && {
+                        skipped_command_input=true
+                        continue
+                    }
+
+                    local package_names+=($arg)
+                ;;
+            esac
+        done
+    }
+
+
+    #
+    # If a supported app is installed, back it up
+    #
+    calurse_pack() {
+        { which calcurse || type calcurse; } &>/dev/null && {
+            [[ -d $HOME/.config/calcurse ]] && {
+
+        }
+    }
+
+    custom_app_pack() {
+        calurse_pack
+    }
 }
 
-#
-# If a supported app is installed, back it up
-#
+{
+    
 
-calcurse --version &>/dev/null && {
-    [[ -d $HOME/.config/calcurse ]] && calcurse_backup
+    unpack() {
+        # unset flag variables before match, for safety
+        local unset skipped_command_input
+
+        #
+        # Capture flags
+        #
+        for arg in "${@}";
+        do
+            case $arg in
+                "--noconfirm" | "-y")
+                    [[ -n "$noconfirm_flag" ]] && {
+                        echo -e "\n - [ERROR] duplicated the 'noconfirm' flag - \n"
+                        exit 1
+                    }
+                    local noconfirm_flag="--noconfirm"
+                ;;
+                *) 
+                    [[ "$arg" == "unpack" && -z "$skipped_command_input" ]] && {
+                        skipped_command_input=true
+                        continue
+                    }
+
+                    local package_names+=($arg)
+                ;;
+            esac
+        done
+    }
 }
 
 case $1 in
     "pack")          check_packages; pack;;
-    "unpack")        check_packages; decompress; decrypt;;
+    "unpack")        check_packages; unpack;;
     "version"|"--version") echo "0.1.0";;
     ""|"--help"|"-h") display_help;;
     *) 
@@ -89,5 +153,3 @@ case $1 in
         exit 1
         ;;
 esac
-compress
-encrypt

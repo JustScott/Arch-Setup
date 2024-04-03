@@ -20,7 +20,6 @@
 # Call other needed scripts
 bash gnome.sh
 bash media.sh
-bash user.sh
 bash secure.sh
 
 git clone https://aur.archlinux.org/yay.git

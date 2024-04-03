@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# vault.sh - part of the Arch-Setup project
+# bluetooth.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,23 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-cd ..
-bash secure.sh
-cd VirtualMachines
+packages=(bluez bluez-utils pulseaudio-bluetooth)
 
-ACTION="Install Vault packages with pacman"
-echo -n "...$ACTION..."
-sudo pacman -Sy keepassxc spice-vdagent --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
-
-# Start the process in the background
-spice-vdagent &
-
-SCRIPT_DIR=../DoNotRun/backup_scripts/vault
-
-sudo ln -sf $PWD/$SCRIPT_DIR/pack /usr/local/bin/pack
-sudo ln -sf $PWD/$SCRIPT_DIR/unpack /usr/local/bin/unpack
-
-cd ..
-bash dwm.sh
+pacman -Q ${packages[@]} &>/dev/null || {
+    ACTION="Install bluetooth packages with pacman"
+    echo -n "...$ACTION..."
+    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
+        && echo "[SUCCESS]" \
+        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
+}

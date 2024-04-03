@@ -27,6 +27,7 @@ update-status-bar() {
     [[ "$(cat $batt_path/status 2> /dev/null)" == "Charging" ]] \
         && charging="+" \
         || charging="-"
+    [[ $batt_percentage -gt 100 ]] && batt_percentage=100
     [[ -n $batt_percentage ]] && battery_display=" batt: $charging$batt_percentage% |"
 
     # 
