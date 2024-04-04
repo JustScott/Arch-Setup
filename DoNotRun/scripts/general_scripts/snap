@@ -71,7 +71,7 @@ display_help() {
     echo -e "\nCommand Flags:\n"
     echo -e "\tlist:"
     printf "\t    %-20s\t %-1s\n" "-e | --enabled" "List enabled packages only"
-    printf "\t    %-20s\t %-1s\n" "-e | --disabled" "List disabled packages only"
+    printf "\t    %-20s\t %-1s\n" "-d | --disabled" "List disabled packages only"
     printf "\t    %-20s\t %-1s\n" "-N | --non-snap" "List all packages not managed by snap"
     echo -e "\tinstall:"
     printf "\t    %-20s\t %-1s\n" "-y | --noconfirm" "Automatically answer default to all pacman prompts"
@@ -84,8 +84,7 @@ display_help() {
     printf "\t    %-20s\t %-1s\n" "-a | --all" "Enable all packages"
     echo -e "\tupgrade:"
     printf "\t    %-20s\t %-1s\n" "-y | --noconfirm" "Automatically answer default to all pacman prompts"
-    printf "\t    %-20s\t %-1s\n" "-a | --all" "Upgrade all packages managed by snap"
-    printf "\t    %-20s\t %-1s\n" "-N | --non-snap" "Use with --all to upgrade all system packages not managed by snap, or alone to upgrade specific packages"
+    printf "\t    %-20s\t %-1s\n" "-N | --non-snap" "Upgrade all system packages not managed by snap, or alone to upgrade specific packages"
     printf "\t    %-20s\t %-1s\n" "-e | --enabled" "Upgrade all enabled packages"
     printf "\t    %-20s\t %-1s\n" "-d | --disabled" "Upgrade all disabled packages"
 
@@ -99,7 +98,7 @@ display_help() {
     echo -e "\t\`snap upgrade python go -y\`"
     echo -e "\t\`snap upgrade --enabled\`"
     echo -e "\t\`snap upgrade --non-snap htop\`"
-    echo -e "\t\`snap upgrade --non-snap --all\`"
+    echo -e "\t\`snap upgrade\`"
 
     echo -e "\nError Codes:"
     printf "\t%-3s %-1s\n" "1" "Invalid command"
@@ -409,7 +408,6 @@ upgrade_packages() {
     # unset flag variables before match, for safety
     local unset noconfirm_flag \
         skipped_command_input \
-        all_flag \
         enabled_flag \
         disabled_flag \
         non_snap_flag \
@@ -426,13 +424,6 @@ upgrade_packages() {
                     exit 1
                 }
                 local noconfirm_flag="--noconfirm"
-            ;;
-            "--all" | "-a")
-                [[ -n "$all_flag" ]] && {
-                    echo -e "\n - [ERROR] duplicated the 'all' flag - \n"
-                    exit 1
-                }
-                local all_flag=true
             ;;
             "--non-snap" | "-N")
                 [[ -n "$non_snap_flag" ]] && {
@@ -466,39 +457,40 @@ upgrade_packages() {
         esac
     done
 
-    [[ $all_flag == true ]] && {
-        populate_enabled_disabled_all
+    [[ $non_snap_flag == true ]] && {
+        [[ -n $package_names ]] && {
+            sudo pacman -Sy $noconfirm_flag ${package_names[@]} && return 0 || return 2
+        } || {
+            packages=($(snap list -e | awk '{print $1}'))
 
-        [[ $non_snap_flag == true ]] && {
-            disable_packages --all
-            sudo pacman -Syu $noconfirm_flag ${package_names[@]} || {
-                echo -e "\n - [ERROR] Failed to upgrade all non-snap packages - \n"
-                exit 2
+            [[ -n $packages ]] && {
+                pacman_args="--ignore $(echo ${packages[@]} | tr '[:blank:]' ',')"
+
+                sudo pacman -Syu $noconfirm_flag $pacman_args && return 0 || return 2
             }
-            enable_packages ${enabled_packages[@]}
-            exit 0
-        } || package_names+=(${all_snap_packages[@]})
+        }
     } || {
-        [[ $non_snap_flag == true ]] && {
-            populate_enabled_disabled_all
-
-            disable_packages --all
-            sudo pacman -Sy $noconfirm_flag ${package_names[@]} || {
-                echo -e "\n - [ERROR] Failed to upgrade specified non-snap packages - \n"
-                exit 2
-            }
-            enable_packages ${enabled_packages[@]}
-            exit 0
-        }
-
         populate_enabled_disabled_all
-        [[ $enabled_flag == true ]] && package_names+=(${enabled_packages[@]}) || {
-            [[ $disabled_flag == true ]] && package_names+=(${disabled_packages[@]})
+        local local_disabled_packages=(${disabled_packages[@]})
+
+        [[ $enabled_flag == true ]] && flagged_package_names=(${enabled_packages[@]})
+
+        [[ $disabled_flag == true ]] && flagged_package_names=(${disabled_packages[@]})
+
+        [[ -z $enabled_flag && -z $disabled_flag ]] && {
+            [[ -z $package_names ]] && package_names=(${all_snap_packages[@]})
         }
+
+        package_names+=(${flagged_package_names[@]})
+
+        echo ${package_names[@]}
+
+        uninstall_packages $noconfirm_flag ${package_names[@]} \
+            && install_packages $noconfirm_flag ${package_names[@]}
+
+        disable_packages ${local_disabled_packages[@]}
     }
 
-    uninstall_packages $noconfirm_flag ${package_names[@]} \
-        && install_packages $noconfirm_flag ${package_names[@]}
 }
 
 populate_enabled_disabled_all() {
@@ -557,7 +549,15 @@ list_packages() {
     done
 
     [[ $non_snap_flag == true ]] && {
-        pacman -Q && exit 0 || {
+        snap_packages=($(snap list | awk '{print $1}'))
+
+        grep_args=""
+        for package in ${snap_packages[@]}
+        do
+            grep_args+="-e \"$package\" "
+        done
+        
+        eval "pacman -Q | grep -v $grep_args" && exit 0 || {
             echo -e "\n - [ERROR] Failed to list pacman packages with \`pacman -Q\`- \n"
             exit 1
         }
