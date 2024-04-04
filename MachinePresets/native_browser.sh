@@ -23,7 +23,7 @@
 }
 
 # Open librewolf at the same time as dwm
-echo $HOME/.xinitrc | grep "exec dwm" && {
+grep "exec dwm" $HOME/.xinitrc &>/dev/null && {
     sed -i "/^exec dwm/c\exec dwm & librewolf" $HOME/.xinitrc
 }
 
