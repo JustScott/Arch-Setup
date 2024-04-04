@@ -79,6 +79,7 @@ echo $HOME/.xinitrc | grep "exec dwm" &>/dev/null \
     || echo -e "\nexec dwm" >> ~/.xinitrc
 # Only start dwm if not already running
 [[ -z "$DISPLAY" ]] && {
+    cd $HOME
     startx >/dev/null 2>>/tmp/archsetuperrors.log \
         || echo "[FAIL] Start X server... wrote error log to /tmp/archsetuperrors.log"
 }

@@ -16,9 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-cd ..
-bash secure.sh
-cd MachinePresets
 bash base.sh
 
 VIRTUAL_MACHINES_PWD=$PWD
@@ -42,5 +39,6 @@ yay -Sy librewolf-bin --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
     || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
-cd $HOME
-exec dwm & librewolf
+cd ..
+bash secure.sh
+bash dwm.sh

@@ -16,9 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-cd ..
-bash secure.sh
-cd MachinePresets
 
 ACTION="Install Vault packages with pacman"
 echo -n "...$ACTION..."
@@ -26,5 +23,7 @@ sudo pacman -Sy keepassxc spice-vdagent --noconfirm >/dev/null 2>>/tmp/archsetup
     && echo "[SUCCESS]" \
     || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
-cd $HOME
-exec dwm
+
+cd ..
+bash secure.sh
+bash dwm.sh

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# native_browser.sh - part of the Arch-Setup project
+# native-browser.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify

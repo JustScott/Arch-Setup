@@ -16,13 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-cd ..
-bash media.sh
-bash secure.sh
-bash qemu.sh
-bash dwm.sh
-bash general-scripts.sh
-cd MachinePresets
 bash base.sh
 
 packages=(newsboat calcurse keepassxc)
@@ -40,5 +33,9 @@ BACKUP_SCRIPT_DIR=../DoNotRun/backup_scripts/host
 sudo ln -sf $PWD/$BACKUP_SCRIPT_DIR/pack /usr/local/bin/pack
 sudo ln -sf $PWD/$BACKUP_SCRIPT_DIR/unpack /usr/local/bin/unpack
 
-cd $HOME
-exec dwm
+cd ..
+bash media.sh
+bash secure.sh
+bash qemu.sh
+bash general-scripts.sh
+bash dwm.sh

@@ -17,10 +17,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-# Call other needed scripts
+cd ..
 bash gnome.sh
 bash media.sh
-bash secure.sh
+bash general-scripts.sh
+cd MachinePresets
+bash base.sh
+
+# Call other needed scripts
 
 git clone https://aur.archlinux.org/yay.git
 cd yay

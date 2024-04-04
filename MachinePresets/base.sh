@@ -24,7 +24,7 @@ packages=(
 )
 
 pacman -Q ${packages[@]} &>/dev/null || {
-    ACTION="Install Virtual Machine base packages with pacman"
+    ACTION="Install packages used by all machine presets"
     echo -n "...$ACTION..."
     sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
