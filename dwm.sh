@@ -26,24 +26,27 @@
 }
 
 # Get the terminal and window manager from suckless
-mkdir -p ~/Git/Hub/ArchProjects
-cd ~/Git/Hub/ArchProjects # pwd -> $HOME/Git/Hub
+ARCH_PROJECTS_ROOT=$HOME/Git/Hub/ArchProjects
+mkdir -p $ARCH_PROJECTS_ROOT
+cd $ARCH_PROJECTS_ROOT # pwd -> $HOME/Git/Hub
 
 { which dwm || type dwm; } &>/dev/null || {
-    ACTION="Clone dwm"
+    ACTION="Clone dwm to $ARCH_PROJECTS_ROOT/dwm"
     git clone https://www.github.com/JustScott/dwm >/dev/null 2>>/tmp/archsetuperrors.log\
         && echo "[SUCCESS] $ACTION" \
         || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit; } 
 
     ACTION="Compile dwm"
-    cd ../dwm # pwd -> $HOME/Git/Hub/ArchProjects/dwm
+    cd dwm # pwd -> $HOME/Git/Hub/ArchProjects/dwm
     sudo make install >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS] $ACTION" \
         || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit;} 
 }
 
 { which st || type st; } &>/dev/null || {
-    ACTION="Clone st"
+    cd $HOME/Git/Hub/ArchProjects
+
+    ACTION="Clone st to $ARCH_PROJECTS_ROOT/st"
     git clone https://www.github.com/JustScott/st >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS] $ACTION" \
         || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
@@ -74,9 +77,8 @@ pacman -Q ${packages[@]} &>/dev/null || {
             || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
 }
 
-cd $HOME
-echo $HOME/.xinitrc | grep "exec dwm" &>/dev/null \
-    || echo -e "\nexec dwm" >> ~/.xinitrc
+grep "exec dwm" $HOME/.xinitrc &>/dev/null \
+    || echo -e "\nexec dwm" >> $HOME/.xinitrc
 # Only start dwm if not already running
 [[ -z "$DISPLAY" ]] && {
     cd $HOME
