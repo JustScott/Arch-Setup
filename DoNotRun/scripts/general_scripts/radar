@@ -20,8 +20,7 @@
 # A list of stations
 #  --> https://www.weather.gov/media/tg/wsr88d-radar-list.pdf
 
-#STATION="XXXX" # Define your location here, or in .bashrc
+# STATION="XXXX" # Define your location here
+# export STATION="XXXX" # or in .bashrc
 
-curl https://radar.weather.gov/ridge/standard/${STATION}_loop.gif -o /tmp/radar.gif 
-
-mpv --loop-file=inf /tmp/radar.gif
+mpv --loop-file=inf <(curl https://radar.weather.gov/ridge/standard/${STATION}_loop.gif)
