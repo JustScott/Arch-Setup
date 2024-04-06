@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# development.sh - part of the Arch-Setup project
+# native-browser.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,20 +16,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-bash base_vm.sh
+# Autologin (user must not have a password)
+[[ -f "/etc/systemd/system/getty.target.wants/getty@tty1.service" ]] && {
+    sudo sed -i "/^ExecStart/c\ExecStart=-/sbin/agetty -a $USER --noclear - \$TERM" \
+        /etc/systemd/system/getty.target.wants/getty@tty1.service
+}
 
-ACTION="Install development packages"
-echo -n "...$ACTION..."
-sudo pacman -Sy --noconfirm \
-    python python-pip rustup >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit 1; }
-
-ACTION="Configure Rust"
-rustup default stable >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+# Open librewolf at the same time as dwm
+grep "exec dwm" $HOME/.xinitrc &>/dev/null && {
+    sed -i "/^exec dwm/c\exec dwm & librewolf" $HOME/.xinitrc
+}
 
 cd ..
-bash secure.sh
-bash dwm.sh
+bash browser.sh

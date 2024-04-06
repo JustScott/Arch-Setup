@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# native-browser.sh - part of the Arch-Setup project
+# lynx.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,15 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# Autologin (user must not have a password)
-[[ -f "/etc/systemd/system/getty.target.wants/getty@tty1.service" ]] && {
-    sudo sed -i "/^ExecStart/c\ExecStart=-/sbin/agetty -a $USER --noclear - \$TERM" \
-        /etc/systemd/system/getty.target.wants/getty@tty1.service
+packages=(lynx)
+
+pacman -Q ${packages[@]} &>/dev/null || {
+    ACTION="Install lynx browser"
+    echo -n "...$ACTION..."
+    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
+        && echo "[SUCCESS]" \
+        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 }
 
-# Open librewolf at the same time as dwm
-grep "exec dwm" $HOME/.xinitrc &>/dev/null && {
-    sed -i "/^exec dwm/c\exec dwm & librewolf" $HOME/.xinitrc
-}
-
-bash browser.sh
+cd ..
+bash base_vm.sh

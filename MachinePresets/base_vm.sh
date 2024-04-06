@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# vm_console_apps.sh - part of the Arch-Setup project
+# base_vm.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,10 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+bash base.sh
 
 # SOURCE: https://serverfault.com/questions/364895/virsh-vm-console-does-not-show-any-output#365007
-
-bash base.sh
 
 original_grub_file_hash=$(sha1sum /etc/default/grub)
 
