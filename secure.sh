@@ -21,21 +21,27 @@
 # Install and configure security tools to harden the system
 #
 
-ACTION="Deny access temporarily after 6 incorrect password attempts instead of 3" # Because its annoying
-sudo bash -c "echo 'deny = 6' >> /etc/security/faillock.conf" >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+sudo -v
+
+grep "deny = 6" /etc/security/faillock.conf &>/dev/null || {
+    ACTION="Deny access temporarily after 6 incorrect password attempts instead of 3" # Because its annoying
+    sudo bash -c "echo 'deny = 6' >> /etc/security/faillock.conf" >/dev/null 2>>/tmp/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+}
 
 ACTION="Disable root login"
 sudo passwd --lock root >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS] $ACTION" \
     || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
 
-ACTION="Disable root login over ssh"
 [[ -d /etc/ssh/ ]] && {
-    sudo bash -c "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config.d/*.conf" >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+    grep "PermitRootLogin no" /etc/ssh/sshd_config.d/*.conf &>/dev/null || {
+        ACTION="Disable root login over ssh"
+        sudo bash -c "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config.d/*.conf" >/dev/null 2>>/tmp/archsetuperrors.log \
+            && echo "[SUCCESS] $ACTION" \
+            || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+    }
 }
 
 ACTION="Update the CPU microcode to avoid vulnerabilities" >/dev/null 2>>/tmp/archsetuperrors.log

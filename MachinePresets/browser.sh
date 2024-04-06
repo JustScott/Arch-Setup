@@ -31,14 +31,13 @@ git clone https://aur.archlinux.org/yay.git >/dev/null 2>>/tmp/archsetuperrors.l
         && echo "[SUCCESS]" \
         || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
-cd $VIRTUAL_MACHINES_PWD
-
 ACTION="Install librewolf from the AUR (this may take a while)"
 echo -n "...$ACTION..."
 yay -Sy librewolf-bin --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
     || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
+cd $VIRTUAL_MACHINES_PWD
 cd ..
 bash secure.sh
 bash dwm.sh

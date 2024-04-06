@@ -30,7 +30,7 @@ get_configs() {
     CONFIGS=($(sudo snapper list-configs | awk 'NR>2 {print $1}'))
 
     [[ ${#CONFIGS[@]} -gt 0 ]] || {
-        echo -e "\n - [ERROR] Must create a config before using snap"
+        echo -e "\n - [ERROR] Must create a config before using snap\n"
         exit 3
     
     }

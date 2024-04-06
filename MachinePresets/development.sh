@@ -16,9 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-cd ..
-bash secure.sh
-cd MachinePresets
 bash base.sh
 
 ACTION="Install development packages"
@@ -33,5 +30,6 @@ rustup default stable >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS] $ACTION" \
     || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
 
-cd $HOME
-exec dwm
+cd ..
+bash secure.sh
+bash dwm.sh
