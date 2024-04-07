@@ -20,12 +20,12 @@ STARTING_PWD=$PWD
 
 packages=(
     neomutt curl isync \
-    msmpt pass ca-certificates \
+    msmtp pass ca-certificates \
     gettext
 )
 
 pacman -Q ${packages[@]} &>/dev/null || {
-    ACTION="Install lynx browser"
+    ACTION="Install neomutt & its dependencies"
     echo -n "...$ACTION..."
     sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
@@ -37,7 +37,7 @@ pacman -Q ${packages[@]} &>/dev/null || {
     cd $HOME
     git clone https://aur.archlinux.org/pam-gnupg.git
     cd pam-gnupg
-    makepkg -si
+    makepkg -si --noconfirm
 }
 
 [[ -d $HOME/mutt-wizard ]] || {

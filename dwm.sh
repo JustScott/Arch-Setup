@@ -60,7 +60,7 @@ cd $ARCH_PROJECTS_ROOT # pwd -> $HOME/Git/Hub
 
 # startx runs .xinitrc on user login
 grep "startx" $HOME/.bash_profile &>/dev/null || \
-    echo -e "\nstartx" >> $HOME/.bash_profile
+    echo -e "\nstartx &>/dev/null" >> $HOME/.bash_profile
 
 packages=(
     xorg-xrandr xorg-server xorg-xinit xorg-xsetroot \
