@@ -47,12 +47,10 @@ pacman -Q ${packages[@]} &>/dev/null || {
     sudo make install
 }
 
-grep "neomutt" $HOME/.bash_profile &>/dev/null || {
-    echo -e "\nneomutt" $HOME/.bash_profile
-}
+grep "neomutt" $HOME/.bash_profile &>/dev/null \
+    || echo -e "\nneomutt" >> $HOME/.bash_profile
 
 cd $STARTING_PWD
 
 cd ..
 bash base_vm.sh
-

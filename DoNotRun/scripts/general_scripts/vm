@@ -152,11 +152,13 @@ open_vm() {
 
         [[ "$open_in_console_flag" == "--console" ]] && {
             virsh console $vm_name
+            true
         } || {
             [[ -n "$virt_viewer_flag" ]] && {
                 nohup virt-viewer -a $fullscreen_virt_viewer_flag "$vm_name" \
                     &> /tmp/${vm_name}_virt_viewer.log &
                 echo "virt-viewer stdin and stdout will be written to /tmp/${vm_name}_virt_viewer.log"
+                true
             } || virt-manager -c qemu:///session --show-domain-console "$vm_name"
         }
     done
@@ -217,7 +219,7 @@ save_vm() {
 
         [[ "${vm_states[$vm_name]}" == "running" || "${vm_states[$VM_NAME]}" == "paused" ]] && {
             [[ $save_to_file_flag == true && -n "$file_path" ]] \
-                && virsh save --verbose $vm_name $file_path \
+                && { virsh save --verbose $vm_name $file_path; true; } \
                 || virsh managedsave --verbose $vm_name
         } || { 
             echo -e "\n - [ERROR] Cannot save VM if it's not running or paused - \n"

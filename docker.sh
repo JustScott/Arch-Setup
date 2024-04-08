@@ -33,6 +33,7 @@ sudo systemctl enable --now docker >/dev/null 2>>/tmp/archsetuperrors.log \
     {
         echo -e "\nexport DOCKER_BUILDKIT=1" >> $HOME/.bashrc
         echo -e "export COMPOSE_DOCKER_CLI_BUILD=1\n" >> $HOME/.bashrc
+        true
     } >/dev/null 2>>/tmp/archconfigurationerrors.log \
         && echo "[SUCCESS] $ACTION" \
         || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"

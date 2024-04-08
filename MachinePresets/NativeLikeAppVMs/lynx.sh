@@ -26,9 +26,8 @@ pacman -Q ${packages[@]} &>/dev/null || {
         || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 }
 
-grep "lynx" $HOME/.bash_profile &>/dev/null || {
-    echo -e "\nlynx" $HOME/.bash_profile
-}
+grep "lynx" $HOME/.bash_profile &>/dev/null \
+    || echo -e "\nlynx https://lite.duckduckgo.com -accept_all_cookies -cookie_file=/dev/null" >> $HOME/.bash_profile
 
 cd ..
 bash base_vm.sh

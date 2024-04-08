@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# slynx - part of the Arch-Setup project
+# ollama.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,5 +16,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+packages=(ollama)
 
-st lynx https://lite.duckduckgo.com -accept_all_cookies -cookie_file=/dev/null
+pacman -Q ${packages[@]} &>/dev/null || {
+    ACTION="Install ollama"
+    echo -n "...$ACTION..."
+    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
+        && echo "[SUCCESS]" \
+        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+}
+
+sudo systemctl enable --now ollama
+
+ollama pull llama2
+ollama pull tinyllama
+
+grep "ollama run tinyllama" $HOME/.bash_profile &>/dev/null \
+    || echo -e "\nollama run tinyllama" >> $HOME/.bash_profile
+
+cd ..
+bash base_vm.sh

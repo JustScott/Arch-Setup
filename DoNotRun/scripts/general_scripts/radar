@@ -23,4 +23,5 @@
 # STATION="XXXX" # Define your location here
 # export STATION="XXXX" # or in .bashrc
 
-mpv --loop-file=inf <(curl https://radar.weather.gov/ridge/standard/${STATION}_loop.gif)
+[[ -n "$DISPLAY" ]] \
+    && mpv --loop-file=inf <(curl https://radar.weather.gov/ridge/standard/${STATION}_loop.gif)

@@ -16,9 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# Allows for playing videos and music from youtube using the terminal or dmenu
-ACTION="Install media packages with pacman"
-echo -n "...$ACTION..."
-sudo pacman -Sy ytfzf fzf mpv yt-dlp --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
-    && echo "[SUCCESS]" \
-    || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+
+packages=(ytfzf fzf mpv yt-dlp)
+
+pacman -Q ${packages[@]} &>/dev/null || {
+    # Allows for playing videos and music from youtube using the terminal or dmenu
+    ACTION="Install media packages with pacman"
+    echo -n "...$ACTION..."
+    sudo pacman -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
+        && echo "[SUCCESS]" \
+        || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+}

@@ -17,7 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 [[ -n "$DISPLAY" ]] && {
-    vm start --virt-viewer --fullscreen NativeBrowser
+    vm start --virt-viewer --fullscreen NativeBrowser; true
 } || {
     echo -e "\n - [ERROR] browser requires a graphical user environment - \n"
 }

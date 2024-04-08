@@ -17,7 +17,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Autologin (user must not have a password)
+#  https://unix.stackexchange.com/questions/42359/how-can-i-autologin-to-desktop-with-systemd#289612
 [[ -f "/etc/systemd/system/getty.target.wants/getty@tty1.service" ]] && {
+    # serial-getty\@ttyS0.service
+    #ExecStart=-/sbin/agetty -a lynx --keep-baud 115200,57600,38400,9600 - $TERM
     sudo sed -i "/^ExecStart/c\ExecStart=-/sbin/agetty -a $USER --noclear - \$TERM" \
         /etc/systemd/system/getty.target.wants/getty@tty1.service
 }

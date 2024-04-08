@@ -30,6 +30,28 @@ update-status-bar() {
     [[ $batt_percentage -gt 99 ]] && { batt_percentage=100; unset charging; } 
     [[ -n $batt_percentage ]] && battery_display=" batt: $charging$batt_percentage% |"
 
+    #
+    # Calculates the rx and tx usage of the network
+    #
+    RX_LOG_FILE=/tmp/net_rx.log
+    TX_LOG_FILE=/tmp/net_tx.log
+
+    [[ -f $RX_LOG_FILE ]] || echo "0" > $RX_LOG_FILE
+    [[ -f $TX_LOG_FILE ]] || echo "0" > $TX_LOG_FILE
+
+    rx_total=$(( $(cat /sys/class/net/*/statistics/rx_bytes | paste -sd '+') ))
+    tx_total=$(( $(cat /sys/class/net/*/statistics/tx_bytes | paste -sd '+') ))
+    rx_last=$(cat $RX_LOG_FILE)
+    tx_last=$(cat $TX_LOG_FILE)
+
+    rx_current=$(( $rx_total-$rx_last ))
+    tx_current=$(( $tx_total-$tx_last ))
+
+    current_combined_usage=$(numfmt --to iec $(( $rx_current+$tx_current )))
+
+    echo $rx_total > $RX_LOG_FILE
+    echo $tx_total > $TX_LOG_FILE
+
     # 
     # Yes, ethernet is suppose to only show if wifi isn't connected to a network
     #
@@ -37,21 +59,19 @@ update-status-bar() {
 
     [[ "$nmcli_device_output" =~ "ethernet " ]] && {
         ethernet_output=$(echo "$nmcli_device_output" | grep 'ethernet ')
-        connection_state=$(echo "$ethernet_output" | awk '{print $3}')
         ssid=$(echo "$ethernet_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
         # If the ethernet interface is connected to a network
         [[ $ssid =~ "--" ]] || {
-            network_display="eth:$connection_state:$ssid |"
+            network_display="eth:$current_combined_usage:$ssid |"
         }
     }
 
     [[ "$nmcli_device_output" =~ "wifi " ]] && {
         wifi_output=$(echo "$nmcli_device_output" | grep 'wifi ')
-        connection_state=$(echo "$wifi_output" | awk '{print $3}')
         ssid=$(echo "$wifi_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
         # If the wifi interface is connected to a network
         [[ $ssid =~ "--" ]] || {
-            network_display="wifi:$connection_state:$ssid |"
+            network_display="wifi:$current_combined_usage:$ssid |"
         }
     }
 
