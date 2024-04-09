@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# lynx - part of the Arch-Setup project
+# vollama - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -20,9 +20,9 @@
 [[ -n "$DISPLAY" ]] && {
     # If called via dwm
     [[ "$TERM" == "xterm-256color" ]] && {
-        st -e vm start -c lynx
+        st -e vm start -c ollama
         exit 0
     } 
 }
 
-vm start -c lynx
+vm start -c ollama

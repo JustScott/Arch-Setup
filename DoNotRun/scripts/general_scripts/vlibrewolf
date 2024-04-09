@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# ollama - part of the Arch-Setup project
+# vlibrewolf - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,13 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 [[ -n "$DISPLAY" ]] && {
-    # If called via dwm
-    [[ "$TERM" == "xterm-256color" ]] && {
-        st -e vm start -c ollama
-        exit 0
-    } 
+    vm start --virt-viewer --fullscreen librewolf; true
+} || {
+    echo -e "\n - [ERROR] browser requires a graphical user environment - \n"
 }
-
-vm start -c ollama
