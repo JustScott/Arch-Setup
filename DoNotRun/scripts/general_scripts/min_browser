@@ -28,29 +28,37 @@ IMAGE_URLS=("jpeg" "jpg" "png")
 
 # Loop through possible video URLs
 for item in "${AUDIO_URLS[@]}"; do
-    [[ $URL =~ $item ]] && { 
+    echo "$URL" | grep -q -i "$item" && { 
         { (which st || type st) && [[ -n $DISPLAY ]]; } &>/dev/null \
-            && { st -e mpv --no-video "$URL"; exit; }  
+            && { st -e mpv --no-video "$URL"; exit 0; }  
     }
 done
 
 # Loop through possible video URLs
 for item in "${VIDEO_URLS[@]}"; do
-    [[ $URL =~ $item ]] && { 
+    echo "$URL" | grep -q -i "$item" && { 
         { which mpv || type mpv; } &>/dev/null \
-            && { mpv "$URL" &>/dev/null; exit; }
+            && { 
+                { mpv "$URL" & } &>/dev/null
+                exit 0
+            }
     }
 done
 
 # Loop through possible image URLs
 for item in "${IMAGE_URLS[@]}"; do
-    [[ $URL =~ $item ]] && { 
+    echo "$URL" | grep -q -i "$item" && { 
         { which feh || type feh; } &>/dev/null \
-            && { feh "$URL" &>/dev/null; exit; }
+            && { 
+                { feh "$URL" & } &>/dev/null
+                exit 0
+            }
         
         { which mpv || type mpv; } &>/dev/null \
-            && { mpv "$URL" &>/dev/null; exit; }
-
+            && { 
+                { mpv "$URL" & } &>/dev/null
+                exit 0
+            }
     }
 done
 
