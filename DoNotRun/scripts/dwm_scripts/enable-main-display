@@ -35,7 +35,8 @@ output_status=$(xrandr --query | awk '/ connected/{print $1,$2}')
 num_monitors=$(echo "$output_status" | wc -l)
 
 # If only the laptop screen is active, turn it on
-[[ "$num_monitors" == 1 ]] && {
+if [[ "$num_monitors" == 1 ]]
+then
     # Get the name of the one connected monitor
     laptop_screen=$(echo "$output_status" | awk '{print $1}')
 
@@ -47,4 +48,4 @@ num_monitors=$(echo "$output_status" | wc -l)
     do
         xrandr --output $monitor --off
     done
-}
+fi

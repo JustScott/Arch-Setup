@@ -57,23 +57,21 @@ update-status-bar() {
     #
     nmcli_device_output=$(nmcli d)
 
-    [[ "$nmcli_device_output" =~ "ethernet " ]] && {
+    if [[ "$nmcli_device_output" =~ "ethernet " ]]
+    then
         ethernet_output=$(echo "$nmcli_device_output" | grep 'ethernet ')
         ssid=$(echo "$ethernet_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
         # If the ethernet interface is connected to a network
-        [[ $ssid =~ "--" ]] || {
-            network_display="eth:$current_combined_usage:$ssid |"
-        }
-    }
+        [[ $ssid =~ "--" ]] || network_display="eth:$current_combined_usage:$ssid |"
+    fi
 
-    [[ "$nmcli_device_output" =~ "wifi " ]] && {
+    if [[ "$nmcli_device_output" =~ "wifi " ]]
+    then
         wifi_output=$(echo "$nmcli_device_output" | grep 'wifi ')
         ssid=$(echo "$wifi_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
         # If the wifi interface is connected to a network
-        [[ $ssid =~ "--" ]] || {
-            network_display="wifi:$current_combined_usage:$ssid |"
-        }
-    }
+        [[ $ssid =~ "--" ]] || network_display="wifi:$current_combined_usage:$ssid |"
+    fi
 
     brightness_percentage=$(brightness)
     [[ -n $brightness_percentage ]] && brightness_display="bri: $brightness_percentage |"

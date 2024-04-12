@@ -23,19 +23,20 @@ sudo pacman -Sy docker docker-compose --noconfirm >/dev/null 2>>/tmp/archsetuper
     || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 
 ACTION="Configure Docker"
-sudo systemctl enable --now docker >/dev/null 2>>/tmp/archsetuperrors.log \
-    && sudo usermod -aG docker $USER >/dev/null 2>>/tmp/archsetuperrors.log \
+if sudo systemctl enable --now docker >/dev/null 2>>/tmp/archsetuperrors.log
+then
+    sudo usermod -aG docker $USER >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS] $ACTION" \
         || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+fi
 
-[[ -f $HOME/.bashrc ]] && {
+if [[ -f $HOME/.bashrc ]]; then
     ACTION="Set Docker defaults in $HOME/.bashrc"
     {
         echo -e "\nexport DOCKER_BUILDKIT=1" >> $HOME/.bashrc
         echo -e "export COMPOSE_DOCKER_CLI_BUILD=1\n" >> $HOME/.bashrc
-        true
     } >/dev/null 2>>/tmp/archconfigurationerrors.log \
         && echo "[SUCCESS] $ACTION" \
         || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-}
+fi
 

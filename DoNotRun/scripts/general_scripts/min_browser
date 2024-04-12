@@ -29,42 +29,47 @@ IMAGE_URLS=("jpeg" "jpg" "png")
 # Loop through possible video URLs
 for item in "${AUDIO_URLS[@]}"; do
     echo "$URL" | grep -q -i "$item" && { 
-        { (which st || type st) && [[ -n $DISPLAY ]]; } &>/dev/null \
-            && { st -e mpv --no-video "$URL"; exit 0; }  
+        if { (which st || type st) && [[ -n $DISPLAY ]]; } &>/dev/null
+        then
+            st -e mpv --no-video "$URL"
+            exit 0
+        fi
     }
 done
 
 # Loop through possible video URLs
 for item in "${VIDEO_URLS[@]}"; do
     echo "$URL" | grep -q -i "$item" && { 
-        { which mpv || type mpv; } &>/dev/null \
-            && { 
-                { mpv "$URL" & } &>/dev/null
-                exit 0
-            }
+        if { which mpv || type mpv; } &>/dev/null
+        then
+            { mpv "$URL" & } &>/dev/null
+            exit 0
+        fi
     }
 done
 
 # Loop through possible image URLs
 for item in "${IMAGE_URLS[@]}"; do
     echo "$URL" | grep -q -i "$item" && { 
-        { which feh || type feh; } &>/dev/null \
-            && { 
-                { feh "$URL" & } &>/dev/null
-                exit 0
-            }
-        
-        { which mpv || type mpv; } &>/dev/null \
-            && { 
-                { mpv "$URL" & } &>/dev/null
-                exit 0
-            }
+        if { which feh || type feh; } &>/dev/null
+        then
+            { feh "$URL" & } &>/dev/null
+            exit 0
+        fi 
+        if { which mpv || type mpv; } &>/dev/null
+        then
+            { mpv "$URL" & } &>/dev/null
+            exit 0
+        fi
     }
 done
 
-# Open url with lynx or python-html2text if all the loops failed
-{ which lynx || type lynx; } &>/dev/null && lynx $URL || {
-    { which html2text || type html2text; } &>/dev/null && {
+# Open url with lynx or python-html2text if all the above loops failed
+if { which lynx || type lynx; } &>/dev/null
+then
+    lynx $URL
+else
+    if { which html2text || type html2text; } &>/dev/null; then
         bat --language=md <(html2text <(curl -L --silent "$URL"))
-    }
-}
+    fi
+fi

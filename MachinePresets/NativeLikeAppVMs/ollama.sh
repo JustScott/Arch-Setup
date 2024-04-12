@@ -18,21 +18,22 @@
 
 packages=(ollama)
 
-pacman -Q ${packages[@]} &>/dev/null || {
+if ! pacman -Q ${packages[@]} &>/dev/null
+then
     ACTION="Install ollama"
     echo -n "...$ACTION..."
     sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
         || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
-}
+fi
 
 sudo systemctl enable --now ollama
 
 ollama pull llama2
 ollama pull tinyllama
 
-grep "ollama run tinyllama" $HOME/.bash_profile &>/dev/null \
-    || echo -e "\nollama run tinyllama" >> $HOME/.bash_profile
+grep "ollama run llama2" $HOME/.bash_profile &>/dev/null \
+    || echo -e "\nollama run llama2" >> $HOME/.bash_profile
 
 cd ..
 bash base_vm.sh

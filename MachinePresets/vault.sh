@@ -17,12 +17,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-ACTION="Install Vault packages with pacman"
-echo -n "...$ACTION..."
-sudo pacman -Sy keepassxc spice-vdagent --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+packages=(keepassxc spice-vdagent)
 
+if ! pacman -Q ${packages[@]} &>/dev/null; then
+    # Allows for playing videos and music from youtube using the terminal or dmenu
+    ACTION="Install Vault packages with pacman"
+    echo -n "...$ACTION..."
+    sudo pacman -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
+        && echo "[SUCCESS]" \
+        || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+fi
 
 cd ..
 bash secure.sh

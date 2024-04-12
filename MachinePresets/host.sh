@@ -20,13 +20,14 @@ bash base.sh
 
 packages=(newsboat calcurse keepassxc)
 
-pacman -Q ${packages[@]} &>/dev/null || {
+if ! pacman -Q ${packages[@]} &>/dev/null
+then
     ACTION="Install host packages with pacman"
     echo -n "...$ACTION..."
     sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
         || { "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
-}
+fi
 
 BACKUP_SCRIPT_DIR=../DoNotRun/backup_scripts/host
 

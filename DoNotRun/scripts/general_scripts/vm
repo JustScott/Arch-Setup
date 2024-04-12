@@ -150,17 +150,19 @@ open_vm() {
             exit 2
         } 
 
-        [[ "$open_in_console_flag" == "--console" ]] && {
+        if [[ "$open_in_console_flag" == "--console" ]]
+        then
             virsh console $vm_name
-            true
-        } || {
-            [[ -n "$virt_viewer_flag" ]] && {
+        else
+            if [[ -n "$virt_viewer_flag" ]]
+            then
                 nohup virt-viewer -a $fullscreen_virt_viewer_flag "$vm_name" \
                     &> /tmp/${vm_name}_virt_viewer.log &
                 echo "virt-viewer stdin and stdout will be written to /tmp/${vm_name}_virt_viewer.log"
-                true
-            } || virt-manager -c qemu:///session --show-domain-console "$vm_name"
-        }
+            else
+                virt-manager -c qemu:///session --show-domain-console "$vm_name"
+            fi
+        fi
     done
 }
 
@@ -217,14 +219,18 @@ save_vm() {
             exit 2
         }
 
-        [[ "${vm_states[$vm_name]}" == "running" || "${vm_states[$VM_NAME]}" == "paused" ]] && {
-            [[ $save_to_file_flag == true && -n "$file_path" ]] \
-                && { virsh save --verbose $vm_name $file_path; true; } \
-                || virsh managedsave --verbose $vm_name
-        } || { 
+        if [[ "${vm_states[$vm_name]}" == "running" || "${vm_states[$VM_NAME]}" == "paused" ]]
+        then
+            if [[ $save_to_file_flag == true && -n "$file_path" ]]
+            then 
+                virsh save --verbose $vm_name $file_path
+            else 
+                virsh managedsave --verbose $vm_name
+            fi
+        else
             echo -e "\n - [ERROR] Cannot save VM if it's not running or paused - \n"
             exit 1
-        }
+        fi
     done
 }
 
@@ -393,15 +399,16 @@ start_vm() {
 
     # file path is only used to restore from file, so no VM name is needed
     #  ! Subject to change to allow other flags
-    [[ -n "$file_path" && -f "$file_path" && -n "${vm_names[@]}" ]] || {
+    if [[ -n "$file_path" && -f "$file_path" && -n "${vm_names[@]}" ]]
+    then
+        echo -e "\n - [ERROR] file path - \n"
+        exit 1
+    else
         [[ $restore_from_file_flag == true && -n "$file_path" ]] && {
             virsh restore "$file_path"
             exit 0
         }
-    } && {
-        echo -e "\n - [ERROR] file path - \n"
-        exit 1
-    }
+    fi
 
     [[ -z ${vm_names[@]} ]] && {
         echo -e "\n - [ERROR] must pass at least one VM name - \n"
@@ -414,14 +421,15 @@ start_vm() {
             exit 2
         }
 
-        [[ "${vm_states[$vm_name]}" = "saved" ]] && {
+        if [[ "${vm_states[$vm_name]}" = "saved" ]]
+        then
             virsh restore ~/.config/libvirt/qemu/save/$vm_name.save \
                 && virsh managedsave-remove "$vm_name" # Only remove if the restore works 
-        } || {
+        else
             [[ "${vm_states[$vm_name]}" = "off" ]] && virsh start "$vm_name" || {
                 echo "VM '$vm_name' already on...applying flags"
             }
-        }
+        fi
 
         #
         # Apply Flags

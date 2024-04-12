@@ -84,7 +84,8 @@ gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" >/dev/null 
 # Get the default terminal profile
 terminal_profile=$(gsettings get org.gnome.Terminal.ProfilesList default | tr -d \')
 
-[[ -n $terminal_profile ]] && {
+if [[ -n $terminal_profile ]]
+then
     # Set the font-name and font-size
     ACTION="Set Font Name & Size"
     gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ font "Source Code Pro 14" >/dev/null 2>>/tmp/archsetuperrors.log \
@@ -105,7 +106,9 @@ terminal_profile=$(gsettings get org.gnome.Terminal.ProfilesList default | tr -d
     gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ audible-bell false >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS] $ACTION" \
         || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-} || echo "[FAIL] Failed to get terminal profile... skipping related commands"
+else
+    echo "[FAIL] Failed to get terminal profile... skipping related commands"
+fi
 
 # ----------- Set Shortcuts & Keybindings -----------
 
@@ -125,4 +128,3 @@ gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/k
 # ----------- Start the gnome desktop environment -----------
 
 sudo systemctl enable --now gdm
-

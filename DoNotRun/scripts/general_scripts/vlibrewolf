@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-[[ -n "$DISPLAY" ]] && {
+if [[ -n "$DISPLAY" ]]; then
     vm start --virt-viewer --fullscreen librewolf; true
-} || {
+else
     echo -e "\n - [ERROR] browser requires a graphical user environment - \n"
-}
+fi

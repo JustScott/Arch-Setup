@@ -18,10 +18,10 @@
 
 packages=(bluez bluez-utils pulseaudio-bluetooth)
 
-pacman -Q ${packages[@]} &>/dev/null || {
+if ! pacman -Q ${packages[@]} &>/dev/null; then
     ACTION="Install bluetooth packages with pacman"
     echo -n "...$ACTION..."
     sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
         || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
-}
+fi

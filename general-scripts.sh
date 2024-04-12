@@ -16,10 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-[[ -d $PWD/DoNotRun/scripts/general_scripts ]] && {
+if [[ -d $PWD/DoNotRun/scripts/general_scripts ]]; then
     ACTION="Install general scripts to /usr/local/bin/"
     sudo ln -sf $PWD/DoNotRun/scripts/general_scripts/* /usr/local/bin >/dev/null 2>>/tmp/archsetuperrors.log\
-        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-} || {
+        && echo "[SUCCESS] $ACTION" \
+        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+else
     echo "Please run script from the Arch-Setup base directory"
-}
+fi

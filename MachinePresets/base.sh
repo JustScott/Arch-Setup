@@ -23,13 +23,13 @@ packages=(
     lf bat feh fzf
 )
 
-pacman -Q ${packages[@]} &>/dev/null || {
+if ! pacman -Q ${packages[@]} &>/dev/null; then
     ACTION="Install packages used by all machine presets"
     echo -n "...$ACTION..."
     sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
         || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
-}
+fi
     
 # Start the process in the background
 spice-vdagent &

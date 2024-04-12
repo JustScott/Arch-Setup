@@ -23,27 +23,31 @@ bash base.sh
 original_grub_file_hash=$(sha1sum /etc/default/grub)
 
 # skip if the line is already in /etc/default/grub
-grep 'GRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0"' /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log || {
+if ! grep 'GRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0"' /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
+then
     # replace the line if exists, otherwise append it
-    grep "GRUB_CMDLINE_LINUX_DEFAULT" /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log && {
+    if grep "GRUB_CMDLINE_LINUX_DEFAULT" /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
+    then
         sudo sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT/c\GRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0"' \
             /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
-        } || {
-            sudo bash -c 'echo -e "\nGRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0"" >> /etc/default/grub' \
-                >/dev/null 2>>/tmp/archsetuperrors.log
-        }
-}
+    else
+        sudo bash -c 'echo -e "\nGRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0"" >> /etc/default/grub' \
+            >/dev/null 2>>/tmp/archsetuperrors.log
+    fi
+fi
 # skip if the line is already in /etc/default/grub
-grep 'GRUB_TERMINAL="serial console"' /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log || {
+if ! grep 'GRUB_TERMINAL="serial console"' /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
+then
     # replace the line if exists, otherwise append it
-    grep "GRUB_TERMINAL" /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log && {
+    if grep "GRUB_TERMINAL" /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
+    then
         sudo sed -i '/^GRUB_TERMINAL/c\GRUB_TERMINAL="serial console"' \
             /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
-        } || {
-            sudo bash -c 'echo -e "\nGRUB_TERMINAL="serial console"" >> /etc/default/grub' \
-                >/dev/null 2>>/tmp/archsetuperrors.log
-        }
-}
+    else
+        sudo bash -c 'echo -e "\nGRUB_TERMINAL="serial console"" >> /etc/default/grub' \
+            >/dev/null 2>>/tmp/archsetuperrors.log
+    fi
+fi
 
 [[ "$original_grub_file_hash" == "$(sha1sum /etc/default/grub)" ]] \
     || sudo grub-mkconfig -o /boot/grub/grub.cfg

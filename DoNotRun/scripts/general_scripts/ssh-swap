@@ -35,23 +35,31 @@ generate_ssh_key() {
 while :
     do
         read -p 'Enter a name for the keyfile: ' key_file
-        [[ -e ~/.ssh/$key_file ]] \
-            && echo -e "\n - keyfile already exists, try another name - \n" \
-            || {
-                ssh-keygen -t rsa -b 4096 -f ~/.ssh/"$key_file" && {
-                    echo "SSH key pair generated."
-                    break
-                } || exit 1
-            }
+        if [[ -e ~/.ssh/$key_file ]]
+        then
+            echo -e "\n - keyfile already exists, try another name - \n"
+        else
+            if ssh-keygen -t rsa -b 4096 -f ~/.ssh/"$key_file"
+            then
+                echo "SSH key pair generated."
+                break
+            else
+                exit 1
+            fi
+        fi
     done
 }
 
 # Swap SSH keys with the remote device
 swap_ssh_keys() {
-    ssh-copy-id -p $ssh_port -i ~/.ssh/"$key_file".pub "$username@$ip_address" && {
+    if ssh-copy-id -p $ssh_port -i ~/.ssh/"$key_file".pub "$username@$ip_address"
+    then
         echo "SSH keys swapped, use this command to connect: "
         echo "ssh -p $ssh_port -i ~/.ssh/$key_file $username@$ip_address"
-    } || { echo -e "\n - [ERROR] Failed to swap SSH keys - \n"; exit 1; } 
+    else
+        echo -e "\n - [ERROR] Failed to swap SSH keys - \n"
+        exit 1
+    fi
 }
 
 

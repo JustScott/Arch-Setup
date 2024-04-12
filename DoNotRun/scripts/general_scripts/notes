@@ -17,14 +17,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ensure_notes_dir() {
-    [[ -d $HOME/notes ]] && {
+    if [[ -d $HOME/notes ]]
+    then
         STARTING_PWD=$PWD
         cd $HOME
-    } || {
+    else
         echo "A 'notes' directory must be place in your home directory, exiting..."
         cd $STARTING_PWD
         exit 1
-    }
+    fi
 }
 
 pack() {
@@ -72,22 +73,24 @@ pack() {
 }
 
 unpack() {
-    [[ -a $HOME/packed_notes.tar.aes ]] && {
+    if [[ -a $HOME/packed_notes.tar.aes ]]
+    then
         STARTING_PWD=$PWD
         cd $HOME
-    } || {
+    else
         echo "packed_notes.tar.aes must be place in your home directory, exiting..."
         cd $STARTING_PWD
         exit 1
-    }
+    fi
 
-    [[ -d $HOME/notes ]] && {
+    if [[ -d $HOME/notes ]]
+    then
         read -p "'$HOME/notes' already exists, are you sure you want to overwrite it? [y/N]: " overwrite_notes
         [[ $overwrite_notes == "y" || $overwrite_notes == "Y" || $overwrite_notes == "yes" ]] || {
             echo "Skipping unpack..."
             exit
         }
-    }
+    fi
 
     echo "Decrypting Notes..."
     # Decrypt the backup
@@ -113,9 +116,13 @@ unpack() {
 
 open_notes() {
     ensure_notes_dir
-    lf --version &>/dev/null \
-        && lf $HOME/notes \
-        || { cd $HOME/notes; ls -l; } 
+    if { which lf || type lf; } &>/dev/null
+    then
+        lf $HOME/notes
+    else
+        echo -e "\n - [ERROR] Must have 'lf' installed to traverse notes - \n"
+        return 1
+    fi
 }
 
 display_help() {
@@ -135,19 +142,10 @@ display_help() {
 
 
 case $1 in
-    "pack")
-        pack $@ 
-        ;;
-    "unpack")
-        unpack
-        ;;
-    "")
-        open_notes
-        ;;
-    # Print the available commands and helpful examples
-    "--help"|"-h")
-        display_help
-        ;;
+    "pack")        pack $@;;
+    "unpack")      unpack;;
+    "")            open_notes;;
+    "--help"|"-h") display_help;;
     *)
         echo -e "\n - Invalid use of the \`notes\` command -";
         display_help

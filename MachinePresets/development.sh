@@ -18,12 +18,16 @@
 
 bash base_vm.sh
 
-ACTION="Install development packages"
-echo -n "...$ACTION..."
-sudo pacman -Sy --noconfirm \
-    python python-pip rustup >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit 1; }
+packages=(python python-pip rustup)
+
+if ! pacman -Q ${packages[@]} &>/dev/null; then
+    # Allows for playing videos and music from youtube using the terminal or dmenu
+    ACTION="Install development packages"
+    echo -n "...$ACTION..."
+    sudo pacman -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
+        && echo "[SUCCESS]" \
+        || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+fi
 
 ACTION="Configure Rust"
 rustup default stable >/dev/null 2>>/tmp/archsetuperrors.log \

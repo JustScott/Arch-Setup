@@ -23,30 +23,34 @@
 
 sudo -v
 
-grep "deny = 6" /etc/security/faillock.conf &>/dev/null || {
+if ! grep "deny = 6" /etc/security/faillock.conf &>/dev/null; then
     ACTION="Deny access temporarily after 6 incorrect password attempts instead of 3" # Because its annoying
     sudo bash -c "echo 'deny = 6' >> /etc/security/faillock.conf" >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS] $ACTION" \
         || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-}
+fi
 
 ACTION="Disable root login"
 sudo passwd --lock root >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS] $ACTION" \
     || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
 
-[[ -d /etc/ssh/ ]] && {
-    grep "PermitRootLogin no" /etc/ssh/sshd_config.d/*.conf &>/dev/null || {
+if [[ -d /etc/ssh/ ]]; then
+    if ! grep "PermitRootLogin no" /etc/ssh/sshd_config.d/*.conf &>/dev/null
+    then
         ACTION="Disable root login over ssh"
         sudo bash -c "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config.d/*.conf" >/dev/null 2>>/tmp/archsetuperrors.log \
             && echo "[SUCCESS] $ACTION" \
             || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-    }
-}
+    fi
+fi
 
 ACTION="Update the CPU microcode to avoid vulnerabilities" >/dev/null 2>>/tmp/archsetuperrors.log
 echo -n "...$ACTION..."
-sudo pacman -Sy intel-ucode --noconfirm &>/dev/null && sudo grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>>/tmp/archsetuperrors.log \
+{
+    sudo pacman -Sy intel-ucode --noconfirm
+    sudo grub-mkconfig -o /boot/grub/grub.cfg
+} >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
     || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
 

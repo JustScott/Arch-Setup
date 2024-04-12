@@ -19,9 +19,12 @@
 
 brightness() {
     screen_status=$(brightnessctl i)
-    echo "$screen_status" | grep -e "Current brightness: 1 (" -e "input1::numlock" &>/dev/null \
-        || echo "$screen_status" | grep "Current" | awk '{print $4}' | sed 's/(//; s/)//' \
-        && return 1
+    if echo "$screen_status" | grep -e "Current brightness: 1 (" -e "input1::numlock" &>/dev/null
+    then 
+        return 1
+    else 
+        echo "$screen_status" | grep "Current" | awk '{print $4}' | sed 's/(//; s/)//'
+    fi
 }
 
 brightness

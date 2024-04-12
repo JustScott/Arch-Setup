@@ -24,13 +24,14 @@ packages=(
     gettext
 )
 
-pacman -Q ${packages[@]} &>/dev/null || {
+if ! pacman -Q ${packages[@]} &>/dev/null
+then
     ACTION="Install neomutt & its dependencies"
     echo -n "...$ACTION..."
     sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
         || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
-}
+fi
 
 
 [[ -d $HOME/pam-gnupg ]] || {

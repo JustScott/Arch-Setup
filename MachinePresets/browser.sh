@@ -20,22 +20,37 @@ bash base_vm.sh
 
 VIRTUAL_MACHINES_PWD=$PWD
 
-ACTION="Clone, compile, and install yay from the AUR (this may take a while)"
-echo -n "...$ACTION..."
-cd # pwd -> $HOME
-git clone https://aur.archlinux.org/yay.git >/dev/null 2>>/tmp/archsetuperrors.log \
-    && cd yay >/dev/null 2>>/tmp/archsetuperrors.log\
-    && makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
-    && sleep 3 \
-    && cd $VIRTUAL_MACHINES_PWD >/dev/null 2>>/tmp/archsetuperrors.log\
-        && echo "[SUCCESS]" \
-        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+if ! { which yay || type yay; } &>/dev/null
+then
+    ACTION="Clone, compile, and install yay from the AUR (this may take a while)"
+    echo -n "...$ACTION..."
+    cd # pwd -> $HOME
+    if git clone https://aur.archlinux.org/yay.git >/dev/null 2>>/tmp/archsetuperrors.log
+    then
+        {
+            cd yay >/dev/null 2>>/tmp/archsetuperrors.log
+            makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log
+            cd $VIRTUAL_MACHINES_PWD
+        } >/dev/null 2>>/tmp/archsetuperrors.log \
+            && echo "[SUCCESS]" \
+            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+    else
+        echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+        exit 1
+    fi
+fi
 
-ACTION="Install librewolf from the AUR (this may take a while)"
-echo -n "...$ACTION..."
-yay -Sy librewolf-bin --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+packages=(librewolf-bin)
+
+if ! yay -Q ${packages[@]} &>/dev/null; then
+    # Allows for playing videos and music from youtube using the terminal or dmenu
+    ACTION="Install librewolf from the AUR (this may take a while)"
+    echo -n "...$ACTION..."
+    sudo yay -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
+        && echo "[SUCCESS]" \
+        || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+fi
+
 
 cd $VIRTUAL_MACHINES_PWD
 cd ..

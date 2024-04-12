@@ -163,7 +163,8 @@ install_packages() {
             sudo snapper -c $config create -d "snap__$package" -t pre
         done
 
-        [[ -n $noconfirm_flag ]] && {
+        if [[ -n $noconfirm_flag ]]
+        then
             echo -n "...installing $package..."
             sudo pacman -S $noconfirm_flag $package &>/dev/null || {
                 pre_number=$(sudo snapper -c $config list | awk '{print $1}' | tail -n 1)
@@ -172,11 +173,13 @@ install_packages() {
                 exit 2
             }
             echo "[DONE]"
-        } || sudo pacman -S $package || {
-            pre_number=$(sudo snapper -c $config list | awk '{print $1}' | tail -n 1)
-            sudo snapper -c $config delete $pre_number
-            exit 2
-        }
+        else
+            sudo pacman -S $package || {
+                pre_number=$(sudo snapper -c $config list | awk '{print $1}' | tail -n 1)
+                sudo snapper -c $config delete $pre_number
+                exit 2
+            }
+        fi
 
         for config in ${CONFIGS[@]}
         do
@@ -241,16 +244,17 @@ uninstall_packages() {
     enable_packages ${package_names[@]}
     for package in ${package_names[@]}
     do
-        [[ -n $noconfirm_flag ]] && {
+        if [[ -n $noconfirm_flag ]]
+        then
             echo -n "...uninstalling $package..."
             sudo pacman -R $noconfirm_flag $package &>/dev/null || {
                 echo -e "\n - [ERROR] pacman failed to uninstall $package... stopping - \n"
                 exit 2
             }
             echo "[DONE]"
-        } || {
+        else
             sudo pacman -R $package || exit 2
-        }
+        fi
     done
     
     disable_packages ${package_names[@]}
@@ -457,10 +461,12 @@ upgrade_packages() {
         esac
     done
 
-    [[ $non_snap_flag == true ]] && {
-        [[ -n $package_names ]] && {
+    if [[ $non_snap_flag == true ]]
+    then
+        if [[ -n $package_names ]]
+        then
             sudo pacman -Sy $noconfirm_flag ${package_names[@]} && return 0 || return 2
-        } || {
+        else
             packages=($(snap list -e | awk '{print $1}'))
 
             [[ -n $packages ]] && {
@@ -468,8 +474,8 @@ upgrade_packages() {
 
                 sudo pacman -Syu $noconfirm_flag $pacman_args && return 0 || return 2
             }
-        }
-    } || {
+        fi
+    else
         populate_enabled_disabled_all
         local local_disabled_packages=(${disabled_packages[@]})
 
@@ -477,9 +483,9 @@ upgrade_packages() {
 
         [[ $disabled_flag == true ]] && flagged_package_names=(${disabled_packages[@]})
 
-        [[ -z $enabled_flag && -z $disabled_flag ]] && {
+        if [[ -z $enabled_flag && -z $disabled_flag ]]; then
             [[ -z $package_names ]] && package_names=(${all_snap_packages[@]})
-        }
+        fi
 
         package_names+=(${flagged_package_names[@]})
 
@@ -489,7 +495,7 @@ upgrade_packages() {
             && install_packages $noconfirm_flag ${package_names[@]}
 
         disable_packages ${local_disabled_packages[@]}
-    }
+    fi
 
 }
 
@@ -548,7 +554,8 @@ list_packages() {
         esac
     done
 
-    [[ $non_snap_flag == true ]] && {
+    if [[ $non_snap_flag == true ]]
+    then
         snap_packages=($(snap list | awk '{print $1}'))
 
         grep_args=""
@@ -561,26 +568,28 @@ list_packages() {
             echo -e "\n - [ERROR] Failed to list pacman packages with \`pacman -Q\`- \n"
             exit 1
         }
-    }
+    fi
 
     # Loop over each row of the snapper list output containing "snap__"
     sudo snapper -c ${CONFIGS[0]} list | grep "snap__" | while IFS= read -r line
     do
         # Only output packages that have pre and post snapshots
-        [[ "$(echo $line | awk -F '|' '{print $2}' )" == " post " ]] && {
+        if [[ "$(echo $line | awk -F '|' '{print $2}' )" == " post " ]]
+        then
             # Grabs the snapshot description
             package_name=$(echo $line | awk -F '|' '{print $7}' | sed 's/snap__//')
-            { which $package_name || type $package_name || pacman -Q $package_name; } &>/dev/null && {
+            if { which $package_name || type $package_name || pacman -Q $package_name; } &>/dev/null
+            then
                 [[ $disabled_flag == true ]] || {
                     readarray -t package_version_array_output < <(pacman -Q $package_name)
                     echo " $package_version_array_output" | tr '[:upper:]' '[:lower:]'
                 }
-            } || {
+            else
                 [[ $enabled_flag == true ]] || {
                     printf "%-20s %-1s\n" "$package_name" "[disabled]" | tr '[:upper:]' '[:lower:]'
                 }
-            }
-        }
+            fi
+        fi
     done
 }
 

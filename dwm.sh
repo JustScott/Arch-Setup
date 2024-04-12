@@ -17,20 +17,22 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Install or update dwm scripts
-[[ -d $PWD/DoNotRun/scripts/dwm_scripts ]] && {
+if [[ -d $PWD/DoNotRun/scripts/dwm_scripts ]]
+then
     ACTION="Install dwm scripts to /usr/local/bin/"
     sudo ln -sf $PWD/DoNotRun/scripts/dwm_scripts/* /usr/local/bin >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-} || {
+else
     echo "Please run script from the Arch-Setup base directory"
-}
+fi
 
 # Get the terminal and window manager from suckless
 ARCH_PROJECTS_ROOT=$HOME/Git/Hub/ArchProjects
 mkdir -p $ARCH_PROJECTS_ROOT
 cd $ARCH_PROJECTS_ROOT # pwd -> $HOME/Git/Hub
 
-{ which dwm || type dwm; } &>/dev/null || {
+if ! { which dwm || type dwm; } &>/dev/null
+then
     ACTION="Clone dwm to $ARCH_PROJECTS_ROOT/dwm"
     git clone https://www.github.com/JustScott/dwm >/dev/null 2>>/tmp/archsetuperrors.log\
         && echo "[SUCCESS] $ACTION" \
@@ -41,9 +43,10 @@ cd $ARCH_PROJECTS_ROOT # pwd -> $HOME/Git/Hub
     sudo make install >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS] $ACTION" \
         || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit;} 
-}
+fi
 
-{ which st || type st; } &>/dev/null || {
+if ! { which st || type st; } &>/dev/null
+then
     cd $HOME/Git/Hub/ArchProjects
 
     ACTION="Clone st to $ARCH_PROJECTS_ROOT/st"
@@ -56,7 +59,7 @@ cd $ARCH_PROJECTS_ROOT # pwd -> $HOME/Git/Hub
     sudo make install >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS] $ACTION" \
         || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-}
+fi
 
 # startx runs .xinitrc on user login
 grep "startx" $HOME/.bash_profile &>/dev/null || \
@@ -69,19 +72,21 @@ packages=(
     dmenu picom xscreensaver
 )
 
-pacman -Q ${packages[@]} &>/dev/null || {
+if ! pacman -Q ${packages[@]} &>/dev/null
+then
     ACTION="Install dwm related packages with pacman (this may take a while)"
     echo -n "...$ACTION..."
     sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
             && echo "[SUCCESS]" \
             || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
-}
+fi
 
 grep "exec dwm" $HOME/.xinitrc &>/dev/null \
     || echo -e "\nexec dwm" >> $HOME/.xinitrc
+
 # Only start dwm if not already running
-[[ -z "$DISPLAY" ]] && {
+if [[ -z "$DISPLAY" ]]; then
     cd $HOME
     startx >/dev/null 2>>/tmp/archsetuperrors.log \
         || echo "[FAIL] Start X server... wrote error log to /tmp/archsetuperrors.log"
-}
+fi

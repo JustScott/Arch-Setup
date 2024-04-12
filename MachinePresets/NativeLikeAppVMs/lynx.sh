@@ -18,16 +18,17 @@
 
 packages=(lynx)
 
-pacman -Q ${packages[@]} &>/dev/null || {
+if ! pacman -Q ${packages[@]} &>/dev/null
+then
     ACTION="Install lynx browser"
     echo -n "...$ACTION..."
     sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
         && echo "[SUCCESS]" \
         || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
-}
+fi
 
 grep "lynx" $HOME/.bash_profile &>/dev/null \
-    || echo -e "\nlynx https://lite.duckduckgo.com -accept_all_cookies -cookie_file=/dev/null" >> $HOME/.bash_profile
+    || echo -e "\nlynx -cfg=$HOME/.config/lynx/lynx.cfg" >> $HOME/.bash_profile
 
 cd ..
 bash base_vm.sh
