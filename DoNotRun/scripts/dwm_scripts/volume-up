@@ -22,7 +22,7 @@ volume-up() {
         volume-up
         sleep 1
     }
-    update-status-bar
+    update-status-bar --volume
 }
 
 volume-up

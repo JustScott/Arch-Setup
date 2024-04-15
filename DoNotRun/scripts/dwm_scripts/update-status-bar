@@ -18,65 +18,150 @@
 
 
 update-status-bar() {
-    # Get all batteries with capacities
-    batt_array=$(ls /sys/class/power_supply/*/capacity)
-    # Take the first battery with a capacity value as the default
-    batt_path=$(dirname ${batt_array[0]})
-    batt_percentage=$(cat $batt_path/capacity)
+    CACHE_DIRECTORY=/tmp/status-bar-variables
+    CACHE_BRIGHTNESS_FILE=$CACHE_DIRECTORY/brightness_display.log
+    CACHE_VOLUME_FILE=$CACHE_DIRECTORY/volume_display.log
+    CACHE_BATTERY_FILE=$CACHE_DIRECTORY/battery_display.log
+    CACHE_NETWORK_FILE=$CACHE_DIRECTORY/network_display.log
+    mkdir -p $CACHE_DIRECTORY 
+    [[ -f $CACHE_DIRECTORY/brightness_display.log ]] \
+        && brightness_display=$(cat $CACHE_BRIGHTNESS_FILE) \
+        || echo "" > $CACHE_BRIGHTNESS_FILE
+    [[ -f $CACHE_DIRECTORY/volume_display.log ]] \
+        && volume_display=$(cat $CACHE_VOLUME_FILE) \
+        || echo "" > $CACHE_VOLUME_FILE
+    [[ -f $CACHE_DIRECTORY/battery_display.log ]] \
+        && battery_display=$(cat $CACHE_BATTERY_FILE) \
+        || echo "" > $CACHE_BATTERY_FILE
+    [[ -f $CACHE_DIRECTORY/network_display.log ]] \
+        && network_display=$(cat $CACHE_NETWORK_FILE) \
+        || echo "" > $CACHE_NETWORK_FILE
 
-    [[ "$(cat $batt_path/status 2> /dev/null)" == "Charging" ]] \
-        && charging="+" \
-        || charging="-"
-    [[ $batt_percentage -gt 99 ]] && { batt_percentage=100; unset charging; } 
-    [[ -n $batt_percentage ]] && battery_display=" batt: $charging$batt_percentage% |"
+    # unset flag variables before match, for safety
+    unset brightness_flag \
+        volume_flag \
+        battery_flag \
+        network_flag
 
     #
-    # Calculates the rx and tx usage of the network
+    # Capture flags
     #
-    RX_LOG_FILE=/tmp/net_rx.log
-    TX_LOG_FILE=/tmp/net_tx.log
+    for arg in "${@}";
+    do
+        case $arg in
+            "--brightness")
+                [[ -n "$brightness_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the brightness flag - \n"
+                    exit 1
+                }
+                brightness_flag=true
+            ;;
+            "--volume")
+                [[ -n "$volume_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the volume flag - \n"
+                    exit 1
+                }
+                volume_flag=true
+            ;;
+            "--battery")
+                [[ -n "$battery_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the battery flag - \n"
+                    exit 1
+                }
+                battery_flag=true
+            ;;
+            "--network")
+                [[ -n "$network_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the network flag - \n"
+                    exit 1
+                }
+                network_flag=true
+            ;;
+        esac
+    done
 
-    [[ -f $RX_LOG_FILE ]] || echo "0" > $RX_LOG_FILE
-    [[ -f $TX_LOG_FILE ]] || echo "0" > $TX_LOG_FILE
-
-    rx_total=$(( $(cat /sys/class/net/*/statistics/rx_bytes | paste -sd '+') ))
-    tx_total=$(( $(cat /sys/class/net/*/statistics/tx_bytes | paste -sd '+') ))
-    rx_last=$(cat $RX_LOG_FILE)
-    tx_last=$(cat $TX_LOG_FILE)
-
-    rx_current=$(( $rx_total-$rx_last ))
-    tx_current=$(( $tx_total-$tx_last ))
-
-    current_combined_usage=$(numfmt --to iec $(( $rx_current+$tx_current )))
-
-    echo $rx_total > $RX_LOG_FILE
-    echo $tx_total > $TX_LOG_FILE
-
-    # 
-    # Yes, ethernet is suppose to only show if wifi isn't connected to a network
-    #
-    nmcli_device_output=$(nmcli d)
-
-    if [[ "$nmcli_device_output" =~ "ethernet " ]]
+    if [[ $brightness_flag == true ]]
     then
-        ethernet_output=$(echo "$nmcli_device_output" | grep 'ethernet ')
-        ssid=$(echo "$ethernet_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
-        # If the ethernet interface is connected to a network
-        [[ $ssid =~ "--" ]] || network_display="eth:$current_combined_usage:$ssid |"
+        brightness_percentage=$(brightness)
+        [[ -n $brightness_percentage ]] && brightness_display="bri: $brightness_percentage |"
+        echo "$brightness_display" > $CACHE_BRIGHTNESS_FILE
     fi
 
-    if [[ "$nmcli_device_output" =~ "wifi " ]]
+
+    if [[ $volume_flag == true ]]
     then
-        wifi_output=$(echo "$nmcli_device_output" | grep 'wifi ')
-        ssid=$(echo "$wifi_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
-        # If the wifi interface is connected to a network
-        [[ $ssid =~ "--" ]] || network_display="wifi:$current_combined_usage:$ssid |"
+        volume_percentage=$(volume)
+        [[ -n $volume_percentage ]] && volume_display="vol: $volume_percentage% |"
+        echo "$volume_display" > $CACHE_VOLUME_FILE
     fi
 
-    brightness_percentage=$(brightness)
-    [[ -n $brightness_percentage ]] && brightness_display="bri: $brightness_percentage |"
-    
-    xsetroot -name "$brightness_display vol: $(volume)% |$battery_display $network_display $(date +"%B %e %H:%M")"
+
+    if [[ $battery_flag == true ]]
+    then
+        # Get all batteries with capacities
+        batt_array=$(ls /sys/class/power_supply/*/capacity)
+        # Take the first battery with a capacity value as the default
+        batt_path=$(dirname ${batt_array[0]})
+        batt_percentage=$(cat $batt_path/capacity)
+
+        [[ "$(cat $batt_path/status 2> /dev/null)" == "Charging" ]] \
+            && charging="+" \
+            || charging="-"
+        [[ $batt_percentage -gt 99 ]] && { batt_percentage=100; unset charging; } 
+        [[ -n $batt_percentage ]] && battery_display="batt: $charging$batt_percentage% |"
+        echo "$battery_display" > $CACHE_BATTERY_FILE
+    fi
+
+
+    if [[ $network_flag == true ]]
+    then
+        #
+        # Calculates the rx and tx usage of the network
+        #
+        RX_LOG_FILE=/tmp/net_rx.log
+        TX_LOG_FILE=/tmp/net_tx.log
+
+        [[ -f $RX_LOG_FILE ]] || echo "0" > $RX_LOG_FILE
+        [[ -f $TX_LOG_FILE ]] || echo "0" > $TX_LOG_FILE
+
+        rx_total=$(( $(cat /sys/class/net/*/statistics/rx_bytes | paste -sd '+') ))
+        tx_total=$(( $(cat /sys/class/net/*/statistics/tx_bytes | paste -sd '+') ))
+        rx_last=$(cat $RX_LOG_FILE)
+        tx_last=$(cat $TX_LOG_FILE)
+
+        rx_current=$(( $rx_total-$rx_last ))
+        tx_current=$(( $tx_total-$tx_last ))
+
+        current_combined_usage=$(numfmt --to iec $(( $rx_current+$tx_current )))
+
+        echo $rx_total > $RX_LOG_FILE
+        echo $tx_total > $TX_LOG_FILE
+
+        # 
+        # Yes, ethernet is suppose to only show if wifi isn't connected to a network
+        #
+        nmcli_device_output=$(nmcli d)
+
+        if [[ "$nmcli_device_output" =~ "ethernet " ]]
+        then
+            ethernet_output=$(echo "$nmcli_device_output" | grep 'ethernet ')
+            ssid=$(echo "$ethernet_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
+            # If the ethernet interface is connected to a network
+            [[ $ssid =~ "--" ]] || network_display="eth:$current_combined_usage:$ssid |"
+        fi
+
+        if [[ "$nmcli_device_output" =~ "wifi " ]]
+        then
+            wifi_output=$(echo "$nmcli_device_output" | grep 'wifi ')
+            ssid=$(echo "$wifi_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
+            # If the wifi interface is connected to a network
+            [[ $ssid =~ "--" ]] || network_display="wifi:$current_combined_usage:$ssid |"
+        fi
+        echo "$network_display" > $CACHE_NETWORK_FILE
+    fi
+
+
+    xsetroot -name "$brightness_display $volume_display $battery_display $network_display $(date +"%B %e %H:%M:%S")"
 }
 
-update-status-bar
+update-status-bar $@

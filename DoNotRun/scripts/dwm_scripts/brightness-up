@@ -18,7 +18,7 @@
 
 brightness-up() {
     brightnessctl set 10%+ &> /dev/null
-    update-status-bar
+    update-status-bar --brightness
 }
 
 brightness-up

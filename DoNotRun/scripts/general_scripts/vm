@@ -243,6 +243,7 @@ display_help() {
     echo "Commands:"
     printf "\t%-15s %-1s\n" "list" "List the VMs and their states"
     printf "\t%-15s %-1s\n" "start" "Start one or more saved or off VMs"
+    printf "\t%-15s %-1s\n" "shutdown" "Shutdown one or more running VMs"
     printf "\t%-15s %-1s\n" "open" "Open one or more VMs with virt-manager or virt-viewer"
     printf "\t%-15s %-1s\n" "save" "Save one or more VM states"
     printf "\t%-15s %-1s\n" "is-running" "Returns 0 if the VMs are running, otherwise returns 1"
@@ -269,6 +270,7 @@ display_help() {
     echo -e "\t\`vm start --virt-viewer <vm_name1> <vm_name2>\`"
     echo -e "\t\`vm start -V <vm_name1>\`"
     echo -e "\t\`vm start --file </some/path/vm_save_file.save>\`"
+    echo -e "\t\`vm shutdown <vm_name1> <vm_name2>\`"
     echo -e "\t\`vm open -V -f <vm_name1> <vm_name2>\`"
     echo -e "\t\`vm save <vm_name1>\`                                   # Will be managed by virsh"
     echo -e "\t\`vm save <vm_name1> -f </some/path/vm_save_file.save>\` # Manage on your own"
@@ -441,6 +443,41 @@ start_vm() {
     done
 }
 
+shutdown_vm() {
+    # unset flag variables before match, for safety
+    unset vm_names \
+        skipped_command_input \
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            *)
+                [[ "$arg" == "shutdown" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+
+                vm_names+=($arg)
+            ;;
+        esac
+    done
+
+    [[ -z ${vm_names[@]} ]] && {
+        echo -e "\n - [ERROR] must pass at least one VM name - \n"
+        exit 1
+    }
+
+    for vm_name in ${vm_names[@]}
+    do
+        if ! virsh shutdown $vm_name 2>/dev/null
+        then
+            echo "[ERROR] VM '$vm_name' either doesn't exist or isn't running...skipping"
+        fi
+    done
+}
+
 check_is_running() {
     populate_vm_states
 
@@ -482,6 +519,7 @@ check_is_running() {
 case $1 in
     "list")       check_packages; list_vms;;
     "start")      check_packages; start_vm $@;;
+    "shutdown")   check_packages; shutdown_vm $@;;
     "open")       check_packages; open_vm $@;;
     "save")       check_packages; save_vm $@;;
     "is-running") check_packages; check_is_running $@;;

@@ -51,6 +51,57 @@ fi
 grep "neomutt" $HOME/.bash_profile &>/dev/null \
     || echo -e "\nneomutt" >> $HOME/.bash_profile
 
+if ! { which yay || type yay; } &>/dev/null
+then
+    ACTION="Clone, compile, and install yay from the AUR (this may take a while)"
+    echo -n "...$ACTION..."
+    cd # pwd -> $HOME
+    if git clone https://aur.archlinux.org/yay.git >/dev/null 2>>/tmp/archsetuperrors.log
+    then
+        {
+            cd yay >/dev/null 2>>/tmp/archsetuperrors.log
+            makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log
+            cd $VIRTUAL_MACHINES_PWD
+        } >/dev/null 2>>/tmp/archsetuperrors.log \
+            && echo "[SUCCESS]" \
+            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+    else
+        echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+        exit 1
+    fi
+fi
+
+
+# SOURCE: https://github.com/LukeSmithxyz/mutt-wizard/issues/981
+
+#yay -Q sentry-native &>/dev/null || yay -Sy --noconfirm sentry-native
+
+#yay -Q protonmail-bridge &>/dev/null || yay -Sy --noconfirm protonmail-bridge
+
+# gpg --full-gen-key
+# pass init <email>
+# protonmail-bridge-core --cli
+    # login
+    # info
+# mw -a <email> -x "<passwd>" -i localhost -I 1143 -s localhost -S 1025 -f
+
+# $HOME/.mbsyncrc
+#
+# SSLType None
+
+# $HOME/.config/msmtp/config
+#
+# tls off
+# tls_starttls off
+# auth plain
+
+#  Make this an alias?
+# protonmail-bridge-core --noninteractive &>/tmp/proton.log &
+
+# pass insert <email>
+# mbysnc <email>
+
+
 cd $STARTING_PWD
 
 cd ..
