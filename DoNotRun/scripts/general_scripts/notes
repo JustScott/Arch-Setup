@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # notes - part of the Arch-Setup project
-# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+# Copyright (C) 2024, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -16,25 +16,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+PACKED_NOTES_BASENAME="packed_notes"
+
 ensure_notes_dir() {
     if [[ -d $HOME/notes ]]
     then
-        STARTING_PWD=$PWD
-        cd $HOME
+        return 0
     else
         echo "A 'notes' directory must be place in your home directory, exiting..."
-        cd $STARTING_PWD
-        exit 1
+        return 1
     fi
 }
 
 pack() {
-    ensure_notes_dir
-
     #
     # Capture flags
     #
-    for arg in "${@:2}";
+    for arg in "${@}";
     do
         case $arg in
             "--clean" | "-c")
@@ -42,45 +40,62 @@ pack() {
                     clean_flag=true
                 }
             ;;
+            *)
+                [[ "$arg" == "pack" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+            ;;
         esac
     done
 
+    ORIGINAL_PWD=$PWD
+    cd $HOME
     echo "Compressing Notes..."
-    tar -czf packed_notes.tar notes
+    tar -czf $PACKED_NOTES_BASENAME.tar.gz notes
+
+    mv $PACKED_NOTES_BASENAME.tar.gz $ORIGINAL_PWD/ &>/dev/null
+    cd $ORIGINAL_PWD
 
     echo "Encrypting Notes..."
-    # Encrypt the backup for transport
-    openssl enc -a -aes-256-cbc -pbkdf2 --iter 1000000 -in packed_notes.tar -out packed_notes.tar.aes 2> /dev/null
 
-    # Exit if the user provides two different encryption keys
-    [[ $? != 0 ]] && {
-        echo "Encryption keys don't match, exiting..."
-        # Remove the unencrypted .tar file
-        shred -uz packed_notes.tar
-        cd $STARTING_PWD
-        exit 1
-    }
+    while :
+    do
+        # Encrypt the backup for transport
+        if openssl enc -a -aes-256-cbc -pbkdf2 --iter 1000000 \
+            -in $PACKED_NOTES_BASENAME.tar.gz \
+            -out $PACKED_NOTES_BASENAME.tar.gz.aes 2> /dev/null
+        then
+            good_encryption=true
+            break
+        else
+            echo -e "\n - Encryption keys don't match... try again - \n"
+        fi
+    done
 
-    # Remove the unencrypted .tar file
-    shred -uz packed_notes.tar
+    # Remove the unencrypted .tar.gz file
+    shred -uz $PACKED_NOTES_BASENAME.tar.gz
 
-    #
-    # Apply Flags
-    #
-    [[ $clean_flag == true ]] && rm -rf notes 
+    if [[ $good_encryption == true ]]
+    then
+        #
+        # Apply Flags
+        #
+        [[ $clean_flag == true ]] && rm -rf $HOME/notes 
 
-    cd $STARTING_PWD
+        echo "Notes packed to '$PACKED_NOTES_BASENAME.tar.gz.aes'"
+        return 0
+    else
+        echo "Had and issue encrypting '$PACKED_NOTES_BASENAME.tar.gz'"
+        return 1
+    fi
 }
 
 unpack() {
-    if [[ -a $HOME/packed_notes.tar.aes ]]
+    if ! [[ -f $PACKED_NOTES_BASENAME.tar.gz.aes ]]
     then
-        STARTING_PWD=$PWD
-        cd $HOME
-    else
-        echo "packed_notes.tar.aes must be place in your home directory, exiting..."
-        cd $STARTING_PWD
-        exit 1
+        echo "No '$PACKED_NOTES_BASENAME.tar.gz.aes' file found, exiting..."
+        return 1
     fi
 
     if [[ -d $HOME/notes ]]
@@ -88,34 +103,39 @@ unpack() {
         read -p "'$HOME/notes' already exists, are you sure you want to overwrite it? [y/N]: " overwrite_notes
         [[ $overwrite_notes == "y" || $overwrite_notes == "Y" || $overwrite_notes == "yes" ]] || {
             echo "Skipping unpack..."
-            exit
+            return 1
         }
     fi
 
     echo "Decrypting Notes..."
-    # Decrypt the backup
-    openssl enc -d -a -aes-256-cbc -pbkdf2 --iter 1000000 -in packed_notes.tar.aes -out packed_notes.tar 2> /dev/null
+    while :
+    do
+        # Decrypt the backup
+        openssl enc -d -a -aes-256-cbc -pbkdf2 --iter 1000000 \
+            -in $PACKED_NOTES_BASENAME.tar.gz.aes \
+            -out $PACKED_NOTES_BASENAME.tar.gz 2> /dev/null
 
-    # Exit if the wrong decryption key is given
-    [[ $? != 0 ]] && {
-        echo "Incorrect Decryption key"
-        # Remove the incorrectly decrypted archive file
-        shred -uz packed_notes.tar
-        cd $STARTING_PWD
-        exit 1
-    } 
+        # Test if the file was decrypted correctly
+        tar --list --file $PACKED_NOTES_BASENAME.tar.gz &>/dev/null \
+            && break \
+            || echo -e "\n - Incorrect decryption key... try again - \n"
+    done
 
-    # Unpack all my files into the current pwd
-    tar -xf packed_notes.tar
+    mv $PACKED_NOTES_BASENAME.tar.gz $HOME/ &>/dev/null
+    cd $HOME
 
-    # Remove the unencrypted .tar file
-    shred -uz packed_notes.tar
-
-    cd $STARTING_PWD
+    if tar -xf $PACKED_NOTES_BASENAME.tar.gz &>/dev/null
+    then
+        shred -uz $PACKED_NOTES_BASENAME.tar.gz
+        echo "Notes unpacked!"
+        return 0
+    else
+        echo "[ERROR] Failed to decompress the unencrypted '$PACKED_NOTES_BASENAME.tar.gz' file"
+        return 1
+    fi
 }
 
 open_notes() {
-    ensure_notes_dir
     if { which lf || type lf; } &>/dev/null
     then
         lf $HOME/notes
@@ -127,24 +147,30 @@ open_notes() {
 
 display_help() {
     echo -e "\nUsage: notes [COMMAND]"
-    echo -e "\nEasy management of encrypted notes in the terminal, with \`lf\` support"
+    echo -e "\nEasy management of encrypted notes in the terminal. Uses \`lf\` for note traversal"
 
-    echo "Commands:"
-    printf "\t%-10s %-10s\n" "pack" "Compress, encrypt, and store '$HOME/notes' in a <packed_notes>.tar.aes file"
-    printf "\t%-10s %-10s\n" "unpack" "Decompress, decrypt, and places <packed_notes>.tar.aes file into the '$HOME/notes' directory"
+    echo -e "\nCommands:"
+    printf "\t%-10s %-10s\n" "pack" "Compress and encrypt '\$HOME/notes' into a packed_notes.tar.gz.aes file"
+    printf "\t%-10s %-10s\n" "unpack" "Decrypt and decompress packed_notes.tar.gz.aes into the '\$HOME/notes' directory"
 
-    echo "Examples:"
-    echo -e "\t\`notes\` # opens notes in lf, or just changes to directory"
+    echo -e "\nCommand Flags:\n"
+    echo -e "\tpack:"
+    printf "\t    %-10s\t %-1s\n" "--clean" "removes '\$HOME/notes' after creating packed_notes.tar.gz.aes"
+
+    echo -e "\nExamples:"
+    echo -e "\t\`notes\` # opens notes in lf"
     echo -e "\t\`notes pack\`"
-    echo -e "\t\`notes pack --clean\` # removes '$HOME/notes' after creating <packed_notes>.tar.aes"
+    echo -e "\t\`notes pack --clean\`"
     echo -e "\t\`notes unpack\`"
+
+    echo ""
 }
 
 
 case $1 in
-    "pack")        pack $@;;
+    "pack")        ensure_notes_dir && pack $@;;
     "unpack")      unpack;;
-    "")            open_notes;;
+    "")            ensure_notes_dir && open_notes;;
     "--help"|"-h") display_help;;
     *)
         echo -e "\n - Invalid use of the \`notes\` command -";

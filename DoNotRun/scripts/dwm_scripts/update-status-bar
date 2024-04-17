@@ -23,6 +23,7 @@ update-status-bar() {
     CACHE_VOLUME_FILE=$CACHE_DIRECTORY/volume_display.log
     CACHE_BATTERY_FILE=$CACHE_DIRECTORY/battery_display.log
     CACHE_NETWORK_FILE=$CACHE_DIRECTORY/network_display.log
+    CACHE_WEATHER_FILE=$CACHE_DIRECTORY/weather_display.log
     mkdir -p $CACHE_DIRECTORY 
     [[ -f $CACHE_DIRECTORY/brightness_display.log ]] \
         && brightness_display=$(cat $CACHE_BRIGHTNESS_FILE) \
@@ -36,6 +37,9 @@ update-status-bar() {
     [[ -f $CACHE_DIRECTORY/network_display.log ]] \
         && network_display=$(cat $CACHE_NETWORK_FILE) \
         || echo "" > $CACHE_NETWORK_FILE
+    [[ -f $CACHE_DIRECTORY/weather_display.log ]] \
+        && weather_display=$(cat $CACHE_WEATHER_FILE) \
+        || echo "" > $CACHE_WEATHER_FILE
 
     # unset flag variables before match, for safety
     unset brightness_flag \
@@ -49,6 +53,19 @@ update-status-bar() {
     for arg in "${@}";
     do
         case $arg in
+            "--all")
+                [[ -n "$all_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the brightness flag - \n"
+                    exit 1
+                }
+                all_flag=true
+
+                brightness_flag=true
+                volume_flag=true
+                battery_flag=true
+                network_flag=true
+                weather_flag=true
+            ;;
             "--brightness")
                 [[ -n "$brightness_flag" ]] && {
                     echo -e "\n - [ERROR] duplicated the brightness flag - \n"
@@ -77,11 +94,19 @@ update-status-bar() {
                 }
                 network_flag=true
             ;;
+            "--weather")
+                [[ -n "$weather_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the weather flag - \n"
+                    exit 1
+                }
+                weather_flag=true
+            ;;
         esac
     done
 
     if [[ $brightness_flag == true ]]
     then
+        unset brightness_display
         brightness_percentage=$(brightness)
         [[ -n $brightness_percentage ]] && brightness_display="bri: $brightness_percentage |"
         echo "$brightness_display" > $CACHE_BRIGHTNESS_FILE
@@ -90,6 +115,7 @@ update-status-bar() {
 
     if [[ $volume_flag == true ]]
     then
+        unset volume_display
         volume_percentage=$(volume)
         [[ -n $volume_percentage ]] && volume_display="vol: $volume_percentage% |"
         echo "$volume_display" > $CACHE_VOLUME_FILE
@@ -98,6 +124,7 @@ update-status-bar() {
 
     if [[ $battery_flag == true ]]
     then
+        unset battery_display
         # Get all batteries with capacities
         batt_array=$(ls /sys/class/power_supply/*/capacity)
         # Take the first battery with a capacity value as the default
@@ -115,6 +142,7 @@ update-status-bar() {
 
     if [[ $network_flag == true ]]
     then
+        unset network_display
         #
         # Calculates the rx and tx usage of the network
         #
@@ -142,26 +170,42 @@ update-status-bar() {
         #
         nmcli_device_output=$(nmcli d)
 
-        if [[ "$nmcli_device_output" =~ "ethernet " ]]
-        then
-            ethernet_output=$(echo "$nmcli_device_output" | grep 'ethernet ')
-            ssid=$(echo "$ethernet_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
-            # If the ethernet interface is connected to a network
-            [[ $ssid =~ "--" ]] || network_display="eth:$current_combined_usage:$ssid |"
-        fi
+        for interface in 'ethernet' 'wifi'
+        do
+            devices="$(echo "$nmcli_device_output" | grep "$interface ")"
+            ssids="$(echo "$devices" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')"
+            while IFS= read -r ssid
+            do
+                if ! echo "$ssid" | grep "\--" &>/dev/null
+                then
+                    network_display="$interface:$current_combined_usage:$ssid |"
+                fi
+            done < <(echo "$ssids")
+        done
 
-        if [[ "$nmcli_device_output" =~ "wifi " ]]
-        then
-            wifi_output=$(echo "$nmcli_device_output" | grep 'wifi ')
-            ssid=$(echo "$wifi_output" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')
-            # If the wifi interface is connected to a network
-            [[ $ssid =~ "--" ]] || network_display="wifi:$current_combined_usage:$ssid |"
-        fi
         echo "$network_display" > $CACHE_NETWORK_FILE
     fi
+    
 
+    if [[ $weather_flag == true && -n "$LOCATION" ]]
+    then
+        unset $weather_display
+        echo "$weather_display" > $CACHE_WEATHER_FILE
 
-    xsetroot -name "$brightness_display $volume_display $battery_display $network_display $(date +"%B %e %H:%M:%S")"
+        weather_data="$(curl -s wttr.in/columbus_nebraska?u\&format=%t+%w)"
+        if [[ $? == 0 ]]
+        then
+            if ! echo "$weather_data" | grep -i "Sorry" &>/dev/null
+            then
+                real_temperature=$(echo "$weather_data" | awk '{print $1}')
+                wind_speed=$(echo "$weather_data" | awk '{print $2}')
+                weather_display="$real_temperature ($wind_speed) |"
+                echo "$weather_display" > $CACHE_WEATHER_FILE
+            fi
+        fi
+    fi
+
+    xsetroot -name "$brightness_display $volume_display $battery_display $network_display $weather_display $(date +"%B %e %H:%M:%S")"
 }
 
 update-status-bar $@
