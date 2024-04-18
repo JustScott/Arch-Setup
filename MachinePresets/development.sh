@@ -30,9 +30,10 @@ if ! pacman -Q ${packages[@]} &>/dev/null; then
 fi
 
 ACTION="Configure Rust"
+echo -n "...$ACTION..."
 rustup default stable >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+    && echo "[SUCCESS]" \
+    || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
 
 cd ..
 bash secure.sh

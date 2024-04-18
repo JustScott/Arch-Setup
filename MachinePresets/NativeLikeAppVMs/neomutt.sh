@@ -21,7 +21,7 @@ STARTING_PWD=$PWD
 packages=(
     neomutt curl isync \
     msmtp pass ca-certificates \
-    gettext
+    gettext lynx
 )
 
 if ! pacman -Q ${packages[@]} &>/dev/null
@@ -72,11 +72,11 @@ then
 fi
 
 
-# SOURCE: https://github.com/LukeSmithxyz/mutt-wizard/issues/981
+#SOURCE: https://github.com/LukeSmithxyz/mutt-wizard/issues/981
 
-#yay -Q sentry-native &>/dev/null || yay -Sy --noconfirm sentry-native
+# yay -Q sentry-native &>/dev/null || yay -Sy --noconfirm sentry-native
 
-#yay -Q protonmail-bridge &>/dev/null || yay -Sy --noconfirm protonmail-bridge
+# yay -Q protonmail-bridge &>/dev/null || yay -Sy --noconfirm protonmail-bridge
 
 # gpg --full-gen-key
 # pass init <email>
@@ -95,11 +95,24 @@ fi
 # tls_starttls off
 # auth plain
 
-#  Make this an alias?
-# protonmail-bridge-core --noninteractive &>/tmp/proton.log &
-
+#Make this an alias?
+# 
 # pass insert <email>
 # mbysnc <email>
+
+# ~/.config/mutt/accounts/<email>.muttrc
+#  mailboxes "=INBOX" "=Folders/ChildFolder" "=Folders/ParentFolder/ChildFolder" "=Folders/ParentFolder/ChildFolder2"
+# Folders are in ~/.local/share/mail/<email>/
+
+#Reorder Accounts
+# mv -r
+
+# ~/.bash_profile
+#  pass ls <email>@protonmail.com >/dev/null
+#  protonmail-bridge-core --noninteractive &>/tmp/proton.log &
+#  sleep 5
+#  neomutt
+#
 
 
 cd $STARTING_PWD

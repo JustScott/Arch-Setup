@@ -20,7 +20,8 @@ packages=(
     spice-vdagent \
     zip unzip xclip \
     vim neovim \
-    lf bat feh fzf
+    lf bat feh fzf \
+    wget
 )
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
