@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# browser.sh - part of the Arch-Setup project
-# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+# thunderbird.sh - part of the Arch-Setup project
+# Copyright (C) 2024, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -16,9 +16,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-bash base_vm.sh
 
-VIRTUAL_MACHINES_PWD=$PWD
+#
+# You should give the VM plenty of processing power during installation for
+#  protonmail & sentry-native compilation
+# 
+
+packages=(
+    thunderbird pass
+)
+
+if ! pacman -Q ${packages[@]} &>/dev/null
+then
+    ACTION="Install Thunderbird"
+    echo -n "...$ACTION..."
+    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
+        && echo "[SUCCESS]" \
+        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+fi
 
 if ! { which yay || type yay; } &>/dev/null
 then
@@ -40,18 +55,22 @@ then
     fi
 fi
 
-packages=(librewolf-bin)
-
-if ! yay -Q ${packages[@]} &>/dev/null; then
-    ACTION="Install librewolf from the AUR (this may take a while)"
-    echo -n "...$ACTION..."
-    yay -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
-        && echo "[SUCCESS]" \
-        || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
-fi
 
 
-cd $VIRTUAL_MACHINES_PWD
+yay -Q sentry-native &>/dev/null || yay -Sy --noconfirm sentry-native
+
+yay -Q protonmail-bridge &>/dev/null || yay -Sy --noconfirm protonmail-bridge
+
+# gpg --full-gen-key
+# pass init <email>
+# protonmail-bridge-core --cli
+    # login
+    # info
+#  127.0.0.1 to avoid error messages
+
+# pass insert <email>
+
+# Run protonmail bridge, login, copy credentials to thunderbird
+
 cd ..
-bash secure.sh
-bash dwm.sh
+bash base_vm.sh

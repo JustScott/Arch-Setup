@@ -24,7 +24,7 @@ URL="$1"
 
 VIDEO_URLS=("youtube.com" "odysee.com" "mp4")
 AUDIO_URLS=("mp3")
-IMAGE_URLS=("jpeg" "jpg" "png")
+IMAGE_URLS=("jpeg" "jpg" "png" "thumbnail")
 
 # Loop through possible video URLs
 for item in "${AUDIO_URLS[@]}"; do

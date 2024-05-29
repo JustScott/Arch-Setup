@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # neomutt.sh - part of the Arch-Setup project
-# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+# Copyright (C) 2024, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -83,7 +83,8 @@ fi
 # protonmail-bridge-core --cli
     # login
     # info
-# mw -a <email> -x "<passwd>" -i localhost -I 1143 -s localhost -S 1025 -f
+#  127.0.0.1 to avoid error messages
+# mw -a <email> -x "<passwd>" -i 127.0.0.1 -I 1143 -s localhost -S 1025 -f
 
 # $HOME/.mbsyncrc
 #

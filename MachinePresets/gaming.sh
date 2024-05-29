@@ -18,31 +18,47 @@
 
 
 cd ..
-bash gnome.sh
 bash media.sh
 bash general-scripts.sh
 cd MachinePresets
 bash base.sh
 
-# Call other needed scripts
 
-git clone https://aur.archlinux.org/yay.git
-cd yay
-makepkg -si
-cd ..
+VIRTUAL_MACHINES_PWD=$PWD
 
-sudo pacman -Sy base-devel vim neovim lf flatpak --noconfirm
+if ! { which yay || type yay; } &>/dev/null
+then
+    ACTION="Clone, compile, and install yay from the AUR (this may take a while)"
+    echo -n "...$ACTION..."
+    cd # pwd -> $HOME
+    if git clone https://aur.archlinux.org/yay.git >/dev/null 2>>/tmp/archsetuperrors.log
+    then
+        {
+            cd yay >/dev/null 2>>/tmp/archsetuperrors.log
+            makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log
+            cd $VIRTUAL_MACHINES_PWD
+        } >/dev/null 2>>/tmp/archsetuperrors.log \
+            && echo "[SUCCESS]" \
+            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+    else
+        echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+        exit 1
+    fi
+fi
 
-yay -Sy optimus-manager-git r2modman-bin --noconfirm
+sudo pacman -Sy --noconfirm base-devel vim neovim lf flatpak 
+
+yay -Sy --noconfirm optimus-manager-git #r2modman-bin 
 
 clear
 
 echo -e "\n\n -- Answer 'y' when asked to confirm replacing gdm related packages -- \n\n"
 
+
 yay -Sy libgdm-prime gdm-prime
 
-
-echo 'optimus-manager --switch nvidia --noconfirm' >> ~/.bash_profile
+# Would be nice if this would automatically switch over 
+#echo 'optimus-manager --switch nvidia --noconfirm' >> ~/.bash_profile
 echo 'export EDITOR=nvim' >> ~/.bashrc
 
 
@@ -75,3 +91,5 @@ sudo ln -s /var/lib/flatpak/exports/bin/com.play0ad.zeroad /usr/local/bin/zeroad
 #sudo grub-install --options
 #sudo grub-mkconfig -o /etc/grub/grub.cfg 
 
+cd ..
+bash dwm.sh

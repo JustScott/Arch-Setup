@@ -1,0 +1,244 @@
+#!/bin/bash
+#
+# bt - part of the Arch-Setup project
+# Copyright (C) 2024, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+#
+# Easy to use wrapper around the basic functionality of bluetoothctl
+#
+
+
+display_help() {
+    echo -e "\nUsage: bt [COMMAND]"
+    echo -e "\nEasy to use wrapper around the basic functionality of bluetoothctl"
+
+    echo "Commands:"
+    printf "\t%-15s %-1s\n" "list" "List all currently scanned bluetooth devices"
+
+    echo -e "\nExamples:"
+    echo -e "\t\`bt list\`"
+    echo -e "\t\`bt con <partial or full device name>\`"
+}
+
+start_service() {
+    if ! systemctl status bluetooth &>/dev/null
+    then
+        sudo systemctl start bluetooth
+        return $?
+    fi
+    return 0
+}
+
+stop_service() {
+    if systemctl status bluetooth &>/dev/null
+    then
+        sudo systemctl stop bluetooth
+        return $?
+    fi
+    return 0
+}
+
+power_on() {
+    for i in {1..5}
+    do
+        sleep 1
+        bluetoothctl power on && return 0
+    done
+}
+
+power_off() {
+    bluetoothctl power off
+}
+
+remove_inactive_devices() {
+    all_devices="$(echo "devices" | bluetoothctl | grep "Device")"
+    connected_devices="$(echo "devices Connected" | bluetoothctl | grep "Device")"
+
+    echo "$connected_devices"
+
+    # Ignore connected devices
+    if [[ -n "$connected_devices" ]]
+    then
+        echo "$connected_devices" | while IFS= read -r device_basic_info
+        do
+            all_devices="$(echo "$all_devices" | grep -i -v "$device_basic_info")"
+        done
+    fi
+
+
+    if [[ -n "$all_devices" ]]
+    then
+        echo "$all_devices" | while IFS= read -r device_basic_info
+        do
+            device_mac="$(echo "$device_basic_info" | awk '{print $2}')"
+            echo "remove $device_mac" | bluetoothctl &>/dev/null
+        done
+    fi
+}
+
+connect() {
+    # unset flag variables before match, for safety
+    unset searched_name \
+        skipped_command_input \
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            *)
+                [[ "$arg" == "con" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+
+                searched_name+=($arg)
+            ;;
+        esac
+    done
+
+    {   printf 'scan off\n\n'
+        sleep 1
+    } | bluetoothctl &>/dev/null
+    remove_inactive_devices # Remove old inactive devices so scan only shows active devices
+
+    echo "Scanning for 10 seconds..."
+
+    {   printf 'scan on\n\n'
+        sleep 10
+    } | bluetoothctl &>/dev/null
+
+    devices="$(echo "devices" | bluetoothctl | grep "Device")"
+
+    if [[ -n "$devices" ]]
+    then
+        if [[ -z "${searched_name[@]}" ]]
+        then
+            device_basic_info="$(echo "$devices" | fzf --reverse)"
+        else
+            matched_devices="$(echo "$devices" | grep -i "${searched_name[@]}")"
+            if [[ -n "$matched_devices" ]]
+            then
+                if [[ $(echo "$matched_devices" | wc -l) -gt 1 ]]
+                then
+                    device_basic_info="$(echo "$matched_devices" | fzf --reverse)"
+                else
+                    device_basic_info="$matched_devices"
+                fi
+            else
+                echo "No devices match the name given...stopping"
+                exit 1
+            fi
+        fi
+    else
+        echo "No Availble Devices...stopping"
+        exit 1
+    fi
+
+    if [[ -z "$device_basic_info" ]]
+    then
+        echo "No device selected...stopping"
+        return 1
+    fi
+
+#    power_off
+#    stop_service
+#    start_service
+#    power_on
+
+    device_mac="$(echo "$device_basic_info" | awk '{print $2}')"
+
+    device_advanced_info="$(echo "info $device_mac" | bluetoothctl)"
+
+    if echo "$device_advanced_info" | grep "Paired: no" &>/dev/null
+    then
+        echo "Pairing with device..."
+        {   printf "pair $device_mac\n\n"
+            sleep 2
+        } | bluetoothctl &>/dev/null && {
+            echo "Paired Successfully"
+        }
+    fi
+
+    if echo "$device_advanced_info" | grep "Connected: no" &>/dev/null
+    then
+        echo "Connecting to device..."
+        {   printf "connect $device_mac\n\n"
+            sleep 2
+        } | bluetoothctl &>/dev/null && {
+            echo "Connected Successfully"
+        }
+    fi
+}
+
+disconnect() {
+    # unset flag variables before match, for safety
+    unset searched_name \
+        skipped_command_input \
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            *)
+                [[ "$arg" == "dis" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+
+                searched_name+=($arg)
+            ;;
+        esac
+    done
+
+    power_off
+    power_on
+
+#    devices="$(echo "devices Connected" | bluetoothctl | grep "Device")"
+#
+#    if [[ -n "$devices" ]]
+#    then
+#        echo "$devices" | while IFS= read -r device_basic_info
+#        do
+#            echo "Disconnecting from -> $device_basic_info"
+#            device_mac="$(echo "$device_basic_info" | awk '{print $2}')"
+#            if echo "disconnect $device_mac" | bluetoothctl &>/dev/null
+#            then
+#                echo "Disconnected Successfully"
+#            else
+#                echo "Issue disconnecting"
+#            fi
+#        done
+#    fi
+}
+
+
+case $1 in
+    "con")      start_service && power_on && connect $@;;
+    "dis")      disconnect $@;;
+    "start")    start_service;;
+    "stop")     stop_service;;
+    "on")       start_service && power_on;;
+    "off")      power_off && stop_service;;
+    "version"|"--version") echo "0.1.0";;
+    ""|"--help"|"-h") display_help;;
+    *) 
+        echo -e "\n - [ERROR] Invalid use of the \`bt\` command -";
+        display_help
+        exit 1
+        ;;
+esac

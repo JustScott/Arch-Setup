@@ -173,14 +173,18 @@ update-status-bar() {
         for interface in 'ethernet' 'wifi'
         do
             devices="$(echo "$nmcli_device_output" | grep "$interface ")"
-            ssids="$(echo "$devices" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')"
-            while IFS= read -r ssid
-            do
-                if ! echo "$ssid" | grep "\--" &>/dev/null
-                then
-                    network_display="$interface:$current_combined_usage:$ssid |"
-                fi
-            done < <(echo "$ssids")
+            if [[ -n "$devices" ]]
+            then
+                ssids="$(echo "$devices" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')"
+                while IFS= read -r ssid
+                do
+                    if ! echo "$ssid" | grep "\--" &>/dev/null
+                    then
+                        [[ -n "$ssid" ]] \
+                            && network_display="$interface:$current_combined_usage:$ssid |"
+                    fi
+                done < <(echo "$ssids")
+            fi
         done
 
         echo "$network_display" > $CACHE_NETWORK_FILE
