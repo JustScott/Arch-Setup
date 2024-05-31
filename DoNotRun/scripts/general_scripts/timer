@@ -1,0 +1,206 @@
+#!/usr/local/script_data/timer/.venv/bin/python3
+#
+# timer.py - part of the timer project
+# Copyright (C) 2024, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+import time
+import os
+import typer
+from datetime import datetime
+import signal
+
+
+__author__ = "JustScott (development@justscott.me)"
+
+__license__ = "GPLv3"
+
+__date__ = "May 30, 2024"
+
+__all__ = []
+
+__doc__ = (
+'''
+A simple visual CLI timer for enhancing productivity
+'''
+)
+
+
+app = typer.Typer(help=__doc__)
+
+
+def signal_handler(sig, frame):
+    '''
+    Manage interrupt signals cleanly. Arguments should automatically be passed
+    when calling signal.signal with this function as the second argument.
+
+    Args:\n
+        sig (int): The number of the signal
+        frame (object): The interrupted stack frame
+
+    Returns: None
+    '''
+    print("\x1b[?25h") # un-hide the cursor
+    exit(1)
+
+
+def horizontal_center_text(text: str) -> None:
+    '''
+    Center the given text on the screen accounting for the texts length 
+
+    Args:\n
+        text (str): The text to center
+
+    Returns: None
+    '''
+    columns, rows = os.get_terminal_size()
+    padding = int((columns - len(text)) / 2)
+    print(" "*padding + text)
+
+def visual_countdown_timer(hours: int=0, minutes: int=0, seconds: int=0, end_message="Timer Finished"):
+    '''
+    Start a visual CLI countdown timer 
+
+    Args:\n
+        hours (int)
+        minutes (int)
+        seconds (int)
+
+        end_message (str): The message you would like to show at the end along with
+                            the total minutes of the session, formatted like so:
+                            f"{int(total_duration/60)} minute {end_message}")
+
+    Returns: None
+    '''
+    if hours == 0 and minutes == 0 and seconds == 0:
+        exit("--hours --minutes and --seconds cannot all be set to 0")
+
+    # Watch for an interrupt signal (like CTRL+c) so the mouse can be
+    #  un-hidden before the program quits
+    signal.signal(signal.SIGINT, signal_handler)
+
+    print("\x1b[?25l") # Hide the cursor for a cleaner output
+
+    total_duration = hours*3600 + minutes*60 + seconds
+    remaining_seconds = total_duration
+    
+    while True:
+        os.system("clear")
+
+        remaining_seconds -= 1
+
+        hours = int(remaining_seconds/3600)
+        minutes = int(remaining_seconds/60) % 60
+        seconds = remaining_seconds % 60
+
+        # Make the time remaining look like this '07:03' instead of '7:3'
+        #
+        hour_filler = ""
+        if hours < 10:
+            hour_filler = "0"
+        minute_filler = ""
+        if minutes < 10:
+            minute_filler = "0"
+        seconds_filler = ""
+        if seconds < 10:
+            seconds_filler = "0"
+
+        columns, rows = os.get_terminal_size()
+
+        hours_output_section=""
+        if hours:
+            hours_output_section = f"{hour_filler}{hours}:"
+        timer_output = f" {hours_output_section}{minute_filler}{minutes}:{seconds_filler}{seconds} "
+        if columns < len(timer_output):
+            raise ValueError('Need a bigger window to output!')
+
+        output_len = len(timer_output) + 4 # 4 characters accounts for '#' and spaces
+
+        print("\n\n")
+        horizontal_center_text("#"*output_len)
+        horizontal_center_text(f"# {timer_output} #")
+        horizontal_center_text("#"*output_len)
+
+        time_elapsed_percentage = (remaining_seconds-1)/(total_duration)
+        # Subtract 10 from the rows to leave some empty space above and below
+        total_visual_filler_length = int((columns * (rows - 10))*time_elapsed_percentage)
+
+        #print(f"{remaining_seconds}/{total_duration*60}")
+        #print(time_elapsed_percentage)
+        #print(total_visual_filler_length)
+
+        print("x"*total_visual_filler_length)
+
+        time.sleep(1)
+        
+        if remaining_seconds <= 0:
+            break
+
+    horizontal_center_text(f"{int(total_duration/60)} minute {end_message}")
+    print("\x1b[?25h") # un-hide the cursor
+
+
+@app.command()
+def pomo(hours: int=0, minutes: int=0, seconds: int=0):
+    '''
+    Start a visual CLI Pomodoro timer
+
+    Args:\n
+        hours (int)
+        minutes (int)
+        seconds (int)
+
+    Returns: None
+    '''
+    visual_countdown_timer(hours, minutes, seconds, end_message="Pomodoro Timer Finished")
+
+
+@app.command()
+def until(future_time: str):
+    '''
+    Start a visual CLI timer that will run until the specified future_time
+
+    Args:\n
+        future_time (str): The future hour (in 24 hour format) to set a timer until
+
+    Returns: None
+    '''
+    if ":" not in future_time:
+        exit("Time must be formatted in 24 hour time like so -> 17:25")
+
+    future_hour, future_minute = future_time.split(':')
+    future_hour = int(future_hour)
+    future_minute = int(future_minute)
+
+    current_time = datetime.now()
+    current_hour = int(current_time.hour)
+    current_minute = int(current_time.minute)
+    current_second = int(current_time.second)
+
+    future_time_in_minutes = (future_hour*60) + future_minute
+    current_time_in_minutes = (current_hour*60) + current_minute
+
+    time_until = future_time_in_minutes-current_time_in_minutes
+    # If the time goes into the next day, subtract the difference by 24 hours (in minutes)
+    if time_until < 0:
+        # Technically you add since time_until would be negative
+        time_until = (24*60) + time_until 
+
+    visual_countdown_timer(minutes=time_until, seconds=60-current_second)
+
+
+if __name__=="__main__":
+    app()

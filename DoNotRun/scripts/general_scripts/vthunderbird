@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# vlibrewolf - part of the Arch-Setup project
+# vthunderbird - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 
 if [[ -n "$DISPLAY" ]]
 then
-    vm start --virt-viewer --fullscreen librewolf
+    vm start --virt-viewer --fullscreen thunderbird
 else
-    echo -e "\n - [ERROR] browser requires a graphical user environment - \n"
+    echo -e "\n - [ERROR] Thunderbird requires a graphical user environment - \n"
 fi

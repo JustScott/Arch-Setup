@@ -16,11 +16,27 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-if [[ -d $PWD/DoNotRun/scripts/general_scripts ]]; then
-    ACTION="Install general scripts to /usr/local/bin/"
-    sudo ln -sf $PWD/DoNotRun/scripts/general_scripts/* /usr/local/bin >/dev/null 2>>/tmp/archsetuperrors.log\
-        && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-else
+if ! [[ -d $PWD/DoNotRun/scripts/general_scripts ]]
+then
     echo "Please run script from the Arch-Setup base directory"
+    exit 1
 fi
+
+ACTION="Install general scripts to /usr/local/bin/"
+sudo ln -sf $PWD/DoNotRun/scripts/general_scripts/* /usr/local/bin >/dev/null 2>>/tmp/archsetuperrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+
+ACTION="Place supporting script data in /usr/local/script_data"
+{
+    if ! [[ -d $PWD/DoNotRun/scripts/script_data/timer/.venv ]]
+    then
+        python3 -m venv DoNotRun/scripts/script_data/timer/.venv
+    fi
+    DoNotRun/scripts/script_data/timer/.venv/bin/pip install -r DoNotRun/scripts/script_data/timer/requirements.txt 
+
+    sudo mkdir -p /usr/local/script_data
+    sudo ln -sf $PWD/DoNotRun/scripts/script_data/timer /usr/local/script_data/timer
+} >/dev/null 2>>/tmp/archsetuperrors.log \
+    && echo "[SUCCESS] $ACTION" \
+    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
