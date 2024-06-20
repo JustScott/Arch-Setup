@@ -24,6 +24,7 @@ update-status-bar() {
     CACHE_BATTERY_FILE=$CACHE_DIRECTORY/battery_display.log
     CACHE_NETWORK_FILE=$CACHE_DIRECTORY/network_display.log
     CACHE_WEATHER_FILE=$CACHE_DIRECTORY/weather_display.log
+    CACHE_BLUETOOTH_FILE=$CACHE_DIRECTORY/bluetooth_display.log
     mkdir -p $CACHE_DIRECTORY 
     [[ -f $CACHE_DIRECTORY/brightness_display.log ]] \
         && brightness_display=$(cat $CACHE_BRIGHTNESS_FILE) \
@@ -40,12 +41,16 @@ update-status-bar() {
     [[ -f $CACHE_DIRECTORY/weather_display.log ]] \
         && weather_display=$(cat $CACHE_WEATHER_FILE) \
         || echo "" > $CACHE_WEATHER_FILE
+    [[ -f $CACHE_DIRECTORY/bluetooth_display.log ]] \
+        && bluetooth_display=$(cat $CACHE_BLUETOOTH_FILE) \
+        || echo "" > $CACHE_BLUETOOTH_FILE
 
     # unset flag variables before match, for safety
     unset brightness_flag \
         volume_flag \
         battery_flag \
-        network_flag
+        network_flag \
+        bluetooth_flag
 
     #
     # Capture flags
@@ -65,6 +70,7 @@ update-status-bar() {
                 battery_flag=true
                 network_flag=true
                 weather_flag=true
+                bluetooth_flag=true
             ;;
             "--brightness")
                 [[ -n "$brightness_flag" ]] && {
@@ -101,14 +107,30 @@ update-status-bar() {
                 }
                 weather_flag=true
             ;;
+            "--bluetooth")
+                [[ -n "$bluetooth_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated the bluetooth flag - \n"
+                    exit 1
+                }
+                bluetooth_flag=true
+            ;;
         esac
     done
 
     if [[ $brightness_flag == true ]]
     then
         unset brightness_display
-        brightness_percentage=$(brightness)
-        [[ -n $brightness_percentage ]] && brightness_display="bri: $brightness_percentage |"
+
+        primary_screen="$(xrandr | grep -i "primary" | awk '{print $1}')"
+
+        if xrandr --listactivemonitors | grep "$primary_screen" &>/dev/null
+        then
+            brightness_percentage=$(brightness)
+            [[ -n $brightness_percentage ]] && brightness_display="bri: $brightness_percentage |"
+        else
+            brightness_display=""
+        fi
+
         echo "$brightness_display" > $CACHE_BRIGHTNESS_FILE
     fi
 
@@ -193,7 +215,7 @@ update-status-bar() {
 
     if [[ $weather_flag == true && -n "$LOCATION" ]]
     then
-        unset $weather_display
+        unset weather_display
         echo "$weather_display" > $CACHE_WEATHER_FILE
 
         weather_data="$(curl -s wttr.in/columbus_nebraska?u\&format=%t+%w)"
@@ -201,7 +223,7 @@ update-status-bar() {
         then
             if ! echo "$weather_data" | grep -i "Sorry" &>/dev/null
             then
-                real_temperature=$(echo "$weather_data" | awk '{print $1}')
+                real_temperature=$(echo "$weather_data" | awk '{print $1}' | tr -d "+")
                 wind_speed=$(echo "$weather_data" | awk '{print $2}')
                 weather_display="$real_temperature ($wind_speed) |"
                 echo "$weather_display" > $CACHE_WEATHER_FILE
@@ -209,7 +231,20 @@ update-status-bar() {
         fi
     fi
 
-    xsetroot -name "$brightness_display $volume_display $battery_display $network_display $weather_display $(date +"%B %e %H:%M:%S")"
+    if [[ $bluetooth_flag == true ]]
+    then
+        unset bluetooth_display
+
+        if systemctl status bluetooth &> /dev/null 
+        then
+            bluetooth_display="bt: ON | "
+            echo "$bluetooth_display" > $CACHE_BLUETOOTH_FILE
+        else
+            echo "$bluetooth_display" > $CACHE_BLUETOOTH_FILE
+        fi
+    fi
+
+    xsetroot -name "$brightness_display $volume_display $battery_display $network_display $weather_display $bluetooth_display $(date +"%B %e %H:%M:%S")"
 }
 
 update-status-bar $@

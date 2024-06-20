@@ -70,6 +70,7 @@ def horizontal_center_text(text: str) -> None:
     padding = int((columns - len(text)) / 2)
     print(" "*padding + text)
 
+
 def visual_countdown_timer(hours: int=0, minutes: int=0, seconds: int=0, end_message="Timer Finished"):
     '''
     Start a visual CLI countdown timer 
@@ -87,6 +88,9 @@ def visual_countdown_timer(hours: int=0, minutes: int=0, seconds: int=0, end_mes
     '''
     if hours == 0 and minutes == 0 and seconds == 0:
         exit("--hours --minutes and --seconds cannot all be set to 0")
+
+    if hours < 0 or minutes < 0 or seconds < 0:
+        exit("Cannot set negative timers")
 
     # Watch for an interrupt signal (like CTRL+c) so the mouse can be
     #  un-hidden before the program quits
@@ -200,6 +204,12 @@ def until(future_time: str):
         time_until = (24*60) + time_until 
 
     visual_countdown_timer(minutes=time_until, seconds=60-current_second)
+
+
+@app.command()
+def track():
+    pass
+
 
 
 if __name__=="__main__":
