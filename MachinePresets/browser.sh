@@ -54,4 +54,3 @@ fi
 cd $VIRTUAL_MACHINES_PWD
 cd ..
 bash secure.sh
-bash dwm.sh

@@ -30,4 +30,3 @@ fi
 
 cd ..
 bash secure.sh
-bash dwm.sh

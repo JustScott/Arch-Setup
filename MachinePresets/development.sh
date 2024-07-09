@@ -37,4 +37,3 @@ rustup default stable >/dev/null 2>>/tmp/archsetuperrors.log \
 
 cd ..
 bash secure.sh
-bash dwm.sh

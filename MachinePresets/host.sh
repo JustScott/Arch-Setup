@@ -39,4 +39,3 @@ bash media.sh
 bash secure.sh
 bash qemu.sh
 bash general-scripts.sh
-bash dwm.sh

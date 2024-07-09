@@ -244,7 +244,12 @@ update-status-bar() {
         fi
     fi
 
-    xsetroot -name "$brightness_display $volume_display $battery_display $network_display $weather_display $bluetooth_display $(date +"%B %e %H:%M:%S")"
+    if which dwl &>/dev/null; then
+        echo "$brightness_display $volume_display $battery_display $network_display $weather_display $bluetooth_display $(date +"%B %e %H:%M:%S")" \
+            > /tmp/status_bar_info
+    elif which dwm &>/dev/null; then
+        xsetroot -name "$brightness_display $volume_display $battery_display $network_display $weather_display $bluetooth_display $(date +"%B %e %H:%M:%S")" 
+    fi
 }
 
 update-status-bar $@

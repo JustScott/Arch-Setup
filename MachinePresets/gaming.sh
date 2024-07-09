@@ -90,6 +90,3 @@ sudo ln -s /var/lib/flatpak/exports/bin/com.play0ad.zeroad /usr/local/bin/zeroad
 #sudo mkinitcpio --allpresets
 #sudo grub-install --options
 #sudo grub-mkconfig -o /etc/grub/grub.cfg 
-
-cd ..
-bash dwm.sh

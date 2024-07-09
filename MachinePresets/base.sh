@@ -18,7 +18,7 @@
 
 packages=(
     spice-vdagent \
-    zip unzip xclip \
+    zip unzip \
     vim neovim \
     lf bat feh fzf \
     wget
