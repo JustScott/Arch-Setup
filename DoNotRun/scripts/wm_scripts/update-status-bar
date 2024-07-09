@@ -121,14 +121,16 @@ update-status-bar() {
     then
         unset brightness_display
 
-        primary_screen="$(xrandr | grep -i "primary" | awk '{print $1}')"
+        if which xrandr &>/dev/null; then
+            primary_screen="$(xrandr | grep -i "primary" | awk '{print $1}')"
 
-        if xrandr --listactivemonitors | grep "$primary_screen" &>/dev/null
-        then
-            brightness_percentage=$(brightness)
-            [[ -n $brightness_percentage ]] && brightness_display="bri: $brightness_percentage |"
-        else
-            brightness_display=""
+            if xrandr --listactivemonitors | grep "$primary_screen" &>/dev/null
+            then
+                brightness_percentage=$(brightness)
+                [[ -n $brightness_percentage ]] && brightness_display="bri: $brightness_percentage |"
+            else
+                brightness_display=""
+            fi
         fi
 
         echo "$brightness_display" > $CACHE_BRIGHTNESS_FILE
@@ -148,10 +150,10 @@ update-status-bar() {
     then
         unset battery_display
         # Get all batteries with capacities
-        batt_array=$(ls /sys/class/power_supply/*/capacity)
+        batt_array=$(ls /sys/class/power_supply/*/capacity 2>/dev/null)
         # Take the first battery with a capacity value as the default
         batt_path=$(dirname ${batt_array[0]})
-        batt_percentage=$(cat $batt_path/capacity)
+        batt_percentage=$(cat $batt_path/capacity 2>/dev/null)
 
         [[ "$(cat $batt_path/status 2> /dev/null)" == "Charging" ]] \
             && charging="+" \
