@@ -16,6 +16,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
+packages=(
+    wayland libinput wlroots wayland-protocols wl-clipboard pkg-config \
+    foot bemenu \
+    pulseaudio pavucontrol brightnessctl pamixer \
+    swayidle waylock \
+    swaybg waybar bemenu-wayland \
+    wlr-randr fcft
+)
+
+if ! pacman -Q ${packages[@]} &>/dev/null
+then
+    ACTION="Install dwl related packages with pacman (this may take a while)"
+    echo -n "...$ACTION..."
+    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
+            && echo "[SUCCESS]" \
+            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
+fi
+
+
 # Install or update wm scripts
 if [[ -d $PWD/DoNotRun/scripts/wm_scripts ]]
 then
@@ -33,7 +53,7 @@ cd $ARCH_PROJECTS_ROOT # pwd -> $HOME/Git/Hub
 if ! { which dwl || type dwl; } &>/dev/null
 then
     ACTION="Clone dwl to $ARCH_PROJECTS_ROOT/dwl"
-    git clone https://www.github.com/JustScott/dwl >/dev/null 2>>/tmp/archsetuperrors.log\
+    git clone https://github.com/JustScott/dwl >/dev/null 2>>/tmp/archsetuperrors.log\
         && echo "[SUCCESS] $ACTION" \
         || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit; } 
 
@@ -45,29 +65,8 @@ then
 fi
 
 # startx runs .xinitrc on user login
-grep "startx" $HOME/.bash_profile &>/dev/null || \
-    echo -e "\nstartx &>/dev/null" >> $HOME/.bash_profile
-
-packages=(
-    wayland libinput wlroots wayland-protocols wl-clipboard pkg-config \
-    foot bemenu \
-    pulseaudio pavucontrol brightnessctl pamixer \
-    swayidle waylock \
-    swaybg waybar bemenu-wayland \
-    wlr-randr
-)
-
-if ! pacman -Q ${packages[@]} &>/dev/null
-then
-    ACTION="Install dwl related packages with pacman (this may take a while)"
-    echo -n "...$ACTION..."
-    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
-            && echo "[SUCCESS]" \
-            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
-fi
-
-grep "init-dwl | dwl" $HOME/.xinitrc &>/dev/null \
-    || echo -e "\ninit-dwl | dwl" >> $HOME/.xinitrc
+grep "init-dwl | dwl" $HOME/.bash_profile &>/dev/null || \
+    echo -e "\ninit-dwl | dwl &>/dev/null" >> $HOME/.bash_profile
 
 # Only start dwl if not already running
 if [[ -z "$DISPLAY" && -z "$WAYLAND_DISPLAY" ]]; then
