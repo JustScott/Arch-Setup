@@ -65,6 +65,8 @@ wlr-randr | grep "Virtual-1 " &>/dev/null && wlr-randr --output Virtual-1 --mode
 WALLPAPER=/home/$USER/.wallpaper
 [[ -f $WALLPAPER ]] && wp $WALLPAPER
 
+swayidle -w timeout 600 'waylock' &>/dev/null &
+
 while true; do
     cat /tmp/status_bar_info
     sleep 1

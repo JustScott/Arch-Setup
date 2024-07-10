@@ -23,7 +23,7 @@ packages=(
     pulseaudio pavucontrol brightnessctl pamixer \
     swayidle waylock \
     swaybg waybar bemenu-wayland \
-    wlr-randr fcft
+    wlr-randr fcft tllist
 )
 
 if ! pacman -Q ${packages[@]} &>/dev/null

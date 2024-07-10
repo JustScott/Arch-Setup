@@ -19,6 +19,10 @@
 
 packages=(keepassxc spice-vdagent)
 
+if which dwl &>/dev/null; then
+    packages+=(qt5-wayland) # required for keepass on wayland
+fi
+
 if ! pacman -Q ${packages[@]} &>/dev/null; then
     # Allows for playing videos and music from youtube using the terminal or dmenu
     ACTION="Install Vault packages with pacman"

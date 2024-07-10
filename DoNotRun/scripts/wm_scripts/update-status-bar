@@ -131,6 +131,8 @@ update-status-bar() {
             else
                 brightness_display=""
             fi
+        elif which wlr-randr &>/dev/null; then
+            test
         fi
 
         echo "$brightness_display" > $CACHE_BRIGHTNESS_FILE

@@ -20,6 +20,10 @@ bash base.sh
 
 packages=(newsboat calcurse keepassxc)
 
+if which dwl &>/dev/null; then
+    packages+=(qt5-wayland) # Required for keepass on wayland
+fi
+
 if ! pacman -Q ${packages[@]} &>/dev/null
 then
     ACTION="Install host packages with pacman"
@@ -28,11 +32,6 @@ then
         && echo "[SUCCESS]" \
         || { "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 fi
-
-BACKUP_SCRIPT_DIR=../DoNotRun/backup_scripts/host
-
-sudo ln -sf $PWD/$BACKUP_SCRIPT_DIR/pack /usr/local/bin/pack
-sudo ln -sf $PWD/$BACKUP_SCRIPT_DIR/unpack /usr/local/bin/unpack
 
 cd ..
 bash media.sh
