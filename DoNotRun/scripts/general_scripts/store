@@ -1,0 +1,192 @@
+#!/bin/bash
+#
+# store - part of the Arch-Setup project
+# Copyright (C) 2024, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+PACKED_STORE_BASENAME="packed_store"
+PASS_STORE_DIR="$HOME/.password-store"
+
+ensure_store_dir() {
+    if [[ -d $PASS_STORE_DIR ]]
+    then
+        return 0
+    else
+        echo "A '.password-store' directory must be placed in your home directory, exiting..."
+        return 1
+    fi
+}
+
+pack() {
+    for arg in "${@}";
+    do
+        case $arg in
+            "--clean" | "-c")
+                [[ -z $clean_flag ]] && {
+                    clean_flag=true
+                }
+            ;;
+            *)
+                [[ "$arg" == "pack" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+            ;;
+        esac
+    done
+
+    ORIGINAL_PWD=$PWD
+    cd $HOME
+
+    # Export keys
+    gpg_keys_id="$(cat $PASS_STORE_DIR/.gpg-id)"
+    gpg --output $PASS_STORE_DIR/public.asc --armor --export $gpg_keys_id
+    gpg --output $PASS_STORE_DIR/private.asc --armor --export-secret-key $gpg_keys_id
+
+    echo "Archiving and Compressing password store and gpg keys..."
+    tar -czf $PACKED_STORE_BASENAME.tar.gz .password-store
+
+    mv $PACKED_STORE_BASENAME.tar.gz $ORIGINAL_PWD/ &>/dev/null
+    cd $ORIGINAL_PWD
+
+    echo "Encrypting Store..."
+
+    while :
+    do
+        # Encrypt the backup for transport
+        if openssl enc -a -aes-256-cbc -pbkdf2 --iter 1000000 \
+            -in $PACKED_STORE_BASENAME.tar.gz \
+            -out $PACKED_STORE_BASENAME.tar.gz.aes 2> /dev/null
+        then
+            good_encryption=true
+            break
+        else
+            echo -e "\n - Encryption keys don't match... try again - \n"
+        fi
+    done
+
+    # Remove the unencrypted .tar.gz file
+    shred -uz $PACKED_STORE_BASENAME.tar.gz
+
+    if [[ $good_encryption == true ]]
+    then
+        #
+        # Apply Flags
+        #
+        if [[ $clean_flag == true ]]; then
+            gpg --yes --delete-secret-key $gpg_keys_id 
+            gpg --yes --delete-key $gpg_keys_id 
+            rm -rf $PASS_STORE_DIR 
+        fi
+
+        echo "Store packed to '$PACKED_STORE_BASENAME.tar.gz.aes'"
+        return 0
+    else
+        echo "Had and issue encrypting '$PACKED_STORE_BASENAME.tar.gz'"
+        return 1
+    fi
+}
+
+unpack() {
+    if ! [[ -f $PACKED_STORE_BASENAME.tar.gz.aes ]]
+    then
+        echo "No '$PACKED_STORE_BASENAME.tar.gz.aes' file found, exiting..."
+        return 1
+    fi
+
+    if [[ -d $PASS_STORE_DIR ]]
+    then
+        read -p "'$PASS_STORE_DIR' already exists, are you sure you want to overwrite it? [y/N]: " overwrite_store
+        [[ $overwrite_store == "y" || $overwrite_store == "Y" || $overwrite_store == "yes" ]] || {
+            echo "Skipping unpack..."
+            return 1
+        }
+    fi
+
+    echo "Decrypting Store..."
+    while :
+    do
+        # Decrypt the backup
+        openssl enc -d -a -aes-256-cbc -pbkdf2 --iter 1000000 \
+            -in $PACKED_STORE_BASENAME.tar.gz.aes \
+            -out $PACKED_STORE_BASENAME.tar.gz 2> /dev/null
+
+        # Test if the file was decrypted correctly
+        tar --list --file $PACKED_STORE_BASENAME.tar.gz &>/dev/null \
+            && break \
+            || echo -e "\n - Incorrect decryption key... try again - \n"
+    done
+
+    mv $PACKED_STORE_BASENAME.tar.gz $HOME/ &>/dev/null
+    cd $HOME
+
+    if tar -xf $PACKED_STORE_BASENAME.tar.gz &>/dev/null
+    then
+        shred -uz $PACKED_STORE_BASENAME.tar.gz
+        echo "Store unpacked!"
+    else
+        echo "[ERROR] Failed to decompress the unencrypted '$PACKED_STORE_BASENAME.tar.gz' file"
+        return 1
+    fi
+
+    # Import and increase trust of keys
+    gpg --import $PASS_STORE_DIR/private.asc &>/dev/null
+    gpg --import $PASS_STORE_DIR/public.asc &>/dev/null
+
+    rm $PASS_STORE_DIR/private.asc
+    rm $PASS_STORE_DIR/public.asc
+
+    echo -e "\n----"
+    echo "Keys imported! Now we must increase their trust level, in the"
+    echo "the prompts below type: 'trust', '5', 'y', 'save'. Then you're done!"
+    echo -e "----\n"
+
+    gpg_keys_id="$(cat $PASS_STORE_DIR/.gpg-id)"
+    gpg --edit-key $gpg_keys_id
+
+    return 0
+}
+
+display_help() {
+    echo -e "\nUsage: store [COMMAND]"
+    echo -e "\nEasy encrypted backup of your password store and its correlated gpg keys."
+
+    echo -e "\nCommands:"
+    printf "\t%-10s %-10s\n" "pack" "Export gpg keys and zip & encrypt them with '\$HOME/.password-store' into a packed_store.tar.gz.aes file"
+    printf "\t%-10s %-10s\n" "unpack" "Decrypt, unzip, and import the gpg keys and place the password store back in '\$HOME/.password-store'"
+
+    echo -e "\nCommand Flags:\n"
+    echo -e "\tpack:"
+    printf "\t    %-10s\t %-1s\n" "--clean" "removes '\$HOME/.password-store' and the gpg keys after creating packed_store.tar.gz.aes"
+
+    echo -e "\nExamples:"
+    echo -e "\t\`store pack\`"
+    echo -e "\t\`store pack --clean\`"
+    echo -e "\t\`store unpack\`"
+
+    echo ""
+}
+
+
+case $1 in
+    "pack")        ensure_store_dir && pack $@;;
+    "unpack")      unpack;;
+    " "|"--help"|"-h") display_help;;
+    *)
+        echo -e "\n - Invalid use of the \`store\` command -";
+        display_help
+        exit 1
+        ;;
+esac

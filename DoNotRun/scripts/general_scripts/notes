@@ -23,7 +23,7 @@ ensure_notes_dir() {
     then
         return 0
     else
-        echo "A 'notes' directory must be place in your home directory, exiting..."
+        echo "A 'notes' directory must be placed in your home directory, exiting..."
         return 1
     fi
 }
