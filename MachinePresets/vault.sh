@@ -16,12 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+bash base_vm.sh
 
-packages=(keepassxc spice-vdagent pass)
-
-if which dwl &>/dev/null; then
-    packages+=(qt5-wayland) # required for keepass on wayland
-fi
+packages=(pass)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
     # Allows for playing videos and music from youtube using the terminal or dmenu

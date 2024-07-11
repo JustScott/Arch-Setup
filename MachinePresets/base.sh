@@ -17,12 +17,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 packages=(
-    spice-vdagent \
     zip unzip \
     vim neovim \
     lf bat feh fzf \
     wget
 )
+
+if which dwl &>/dev/null; then
+    packages+=(spice-vdagent)
+    # Start the process in the background
+    spice-vdagent &
+fi
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
     ACTION="Install packages used by all machine presets"
@@ -31,6 +36,3 @@ if ! pacman -Q ${packages[@]} &>/dev/null; then
         && echo "[SUCCESS]" \
         || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
 fi
-    
-# Start the process in the background
-spice-vdagent &
