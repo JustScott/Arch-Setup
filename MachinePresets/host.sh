@@ -18,7 +18,7 @@
 
 bash base.sh
 
-packages=(newsboat calcurse keepassxc)
+packages=(newsboat calcurse keepassxc pass)
 
 if which dwl &>/dev/null; then
     packages+=(qt5-wayland) # Required for keepass on wayland

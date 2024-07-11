@@ -17,7 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-packages=(keepassxc spice-vdagent)
+packages=(keepassxc spice-vdagent pass)
 
 if which dwl &>/dev/null; then
     packages+=(qt5-wayland) # required for keepass on wayland
