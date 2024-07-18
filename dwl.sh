@@ -18,8 +18,8 @@
 
 
 packages=(
-    wayland libinput wlroots wayland-protocols wl-clipboard pkg-config \
-    foot bemenu \
+    libinput wayland wlroots wayland-protocols libxkbcommon wl-clipboard pkg-config \
+    foot \
     pulseaudio pavucontrol brightnessctl pamixer \
     swayidle waylock \
     swaybg waybar bemenu-wayland \
@@ -64,7 +64,7 @@ then
         || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit;} 
 fi
 
-# startx runs .xinitrc on user login
+# .bash_profile runs dwl on user login
 grep "init-dwl | dwl" $HOME/.bash_profile &>/dev/null || \
     echo -e "\ninit-dwl | dwl &>/dev/null" >> $HOME/.bash_profile
 

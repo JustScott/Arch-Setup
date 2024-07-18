@@ -63,7 +63,7 @@ wlr-randr | grep "Virtual-1 " &>/dev/null && wlr-randr --output Virtual-1 --mode
 
 # Set wallpaper
 WALLPAPER=/home/$USER/.wallpaper
-[[ -f $WALLPAPER ]] && wp $WALLPAPER
+[[ -f $WALLPAPER ]] && swaybg --mode fit --image $WALLPAPER &
 
 swayidle -w timeout 600 'waylock' &>/dev/null &
 

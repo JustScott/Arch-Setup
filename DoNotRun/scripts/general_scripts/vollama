@@ -17,10 +17,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-if [[ -n "$DISPLAY" ]]; then
+if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
     # If called via dwm
     [[ "$TERM" == "xterm-256color" ]] && {
-        st -e vm start -c ollama
+        which st &>/dev/null && st -e vm start -c ollama
+        which foot &>/dev/null && foot -e vm start -c ollama
         exit 0
     } 
 fi
