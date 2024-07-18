@@ -18,7 +18,7 @@
 
 
 packages=(
-    river foot wl-clipboard bemenu-wayland \
+    wayland-protocols river foot wl-clipboard bemenu-wayland \
     swaybg wlr-randr \
     swayidle waylock \
     pulseaudio pavucontrol brightnessctl pamixer
@@ -43,6 +43,26 @@ then
 else
     echo "Please run script from the Arch-Setup base directory"
 fi
+
+
+AUR_PROJECTS_ROOT=$HOME/.raw_aur
+mkdir -p $AUR_PROJECTS_ROOT
+cd $AUR_PROJECTS_ROOT # pwd -> $HOME/Git/Hub
+
+if ! { which creek || type creek; } &>/dev/null
+then
+    ACTION="Clone river-creek to $AUR_PROJECTS_ROOT/river-creek"
+    git clone https://aur.archlinux.org/river-creek.git >/dev/null 2>>/tmp/archsetuperrors.log\
+        && echo "[SUCCESS] $ACTION" \
+        || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit; } 
+
+    ACTION="Compile river-creek"
+    cd river-creek # pwd -> $HOME/.raw_aur/river-creek
+    makepkg -si --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
+        && echo "[SUCCESS] $ACTION" \
+        || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit;} 
+fi
+
 
 ## .bash_profile runs river on user login
 #grep "exec river" $HOME/.bash_profile &>/dev/null || \

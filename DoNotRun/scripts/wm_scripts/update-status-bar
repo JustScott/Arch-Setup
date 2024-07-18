@@ -248,11 +248,9 @@ update-status-bar() {
         fi
     fi
 
-    if which dwl &>/dev/null; then
+    if [[ -n "$WAYLAND_DISPLAY" ]]; then
         echo "$brightness_display $volume_display $battery_display $network_display $weather_display $bluetooth_display $(date +"%B %e %H:%M:%S")" \
             > /tmp/status_bar_info
-    elif which river &>/dev/null; then
-        echo -e "\n\t[ $brightness_display $volume_display $battery_display $network_display $weather_display $bluetooth_display $(date +"%B %e %H:%M:%S") ]\n"
     elif which dwm &>/dev/null; then
         xsetroot -name "$brightness_display $volume_display $battery_display $network_display $weather_display $bluetooth_display $(date +"%B %e %H:%M:%S")" 
     fi
