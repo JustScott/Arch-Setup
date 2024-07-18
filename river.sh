@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# dwl.sh - part of the Arch-Setup project
+# river.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,17 +18,15 @@
 
 
 packages=(
-    libinput wayland wlroots wayland-protocols libxkbcommon wl-clipboard pkg-config \
-    foot \
-    pulseaudio pavucontrol brightnessctl pamixer \
+    river foot wl-clipboard bemenu-wayland \
+    swaybg wlr-randr \
     swayidle waylock \
-    swaybg bemenu-wayland \
-    wlr-randr fcft tllist
+    pulseaudio pavucontrol brightnessctl pamixer
 )
 
 if ! pacman -Q ${packages[@]} &>/dev/null
 then
-    ACTION="Install dwl related packages with pacman (this may take a while)"
+    ACTION="Install river and related packages with pacman (this may take a while)"
     echo -n "...$ACTION..."
     sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
             && echo "[SUCCESS]" \
@@ -46,31 +44,13 @@ else
     echo "Please run script from the Arch-Setup base directory"
 fi
 
-ARCH_PROJECTS_ROOT=$HOME/Git/Hub/ArchProjects
-mkdir -p $ARCH_PROJECTS_ROOT
-cd $ARCH_PROJECTS_ROOT # pwd -> $HOME/Git/Hub
+## .bash_profile runs river on user login
+#grep "exec river" $HOME/.bash_profile &>/dev/null || \
+#    echo -e "\nexec river &>/dev/null" >> $HOME/.bash_profile
 
-if ! { which dwl || type dwl; } &>/dev/null
-then
-    ACTION="Clone dwl to $ARCH_PROJECTS_ROOT/dwl"
-    git clone https://github.com/JustScott/dwl >/dev/null 2>>/tmp/archsetuperrors.log\
-        && echo "[SUCCESS] $ACTION" \
-        || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit; } 
-
-    ACTION="Compile dwl"
-    cd dwl # pwd -> $HOME/Git/Hub/ArchProjects/dwl
-    sudo make install >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit;} 
-fi
-
-# .bash_profile runs dwl on user login
-grep "init-dwl | dwl" $HOME/.bash_profile &>/dev/null || \
-    echo -e "\ninit-dwl | dwl &>/dev/null" >> $HOME/.bash_profile
-
-# Only start dwl if not already running
-if [[ -z "$DISPLAY" && -z "$WAYLAND_DISPLAY" ]]; then
-    cd $HOME
-    init-dwl | dwl >/dev/null 2>>/tmp/archsetuperrors.log \
-        || echo "[FAIL] Starting dwl... wrote error log to /tmp/archsetuperrors.log"
-fi
+## Only start river if not already running
+#if [[ -z "$DISPLAY" && -z "$WAYLAND_DISPLAY" ]]; then
+#    cd $HOME
+#    exec river >/dev/null 2>>/tmp/archsetuperrors.log \
+#        || echo "[FAIL] Starting river... wrote error log to /tmp/archsetuperrors.log"
+#fi
