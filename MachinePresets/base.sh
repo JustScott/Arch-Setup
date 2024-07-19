@@ -23,7 +23,7 @@ packages=(
     wget
 )
 
-if which dwl &>/dev/null; then
+if which dwm &>/dev/null; then
     packages+=(spice-vdagent)
     # Start the process in the background
     spice-vdagent &
