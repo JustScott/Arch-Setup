@@ -16,14 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
-    # If called via dwm
-    [[ "$TERM" == "xterm-256color" ]] && {
+    # If called via dwm (st)
+    if [[ "$TERM" == "xterm-256color" ]]; then
         which st &>/dev/null && st -e vm start -c neomutt
+    # Wayland river
+    elif [[ "$TERM" == "linux" ]]; then
         which foot &>/dev/null && foot -e vm start -c neomutt
-        exit 0
-    } 
+    fi
+else
+    vm start -c neomutt
 fi
-
-vm start -c neomutt

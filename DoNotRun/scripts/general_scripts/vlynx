@@ -18,12 +18,14 @@
 
 
 if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
-    # If called via dwm
-    [[ "$TERM" == "xterm-256color" ]] && {
+    # If called via dwm (st)
+    if [[ "$TERM" == "xterm-256color" ]]; then
         which st &>/dev/null && st -e vm start -c lynx
+    # Wayland river
+    elif [[ "$TERM" == "linux" ]]; then
         which foot &>/dev/null && foot -e vm start -c lynx
-        exit 0
-    } 
+    fi
+else
+    vm start -c lynx
 fi
 
-vm start -c lynx
