@@ -1,0 +1,417 @@
+#!/bin/bash
+#
+# wi - part of the Arch-Setup project
+# Copyright (C) 2024, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+# Check that the required packages are installed
+check_packages() {
+    required_packages=(nmcli fzf)
+
+    for package in ${required_packages[@]}; do 
+        which $package &>/dev/null \
+            || { echo -e "\n - [ERROR] $package must be installed - \n"; missing_packages=true; } 
+    done
+
+    [[ $missing_packages = true ]] && exit 2
+
+    if ! systemctl status NetworkManager &>/dev/null
+    then
+        sudo systemctl start NetworkManager
+    fi
+}
+
+display_help() {
+    echo -e "\nUsage: wi [COMMAND]"
+    echo -e "\nSimplify the usage of NetworkManager (nmcli) with easy commands and fzf."
+
+    echo "Commands:"
+    printf "\t%-15s %-1s\n" "info" "Displays the current WiFi network name and ip addresses"
+    printf "\t%-15s %-1s\n" "up" "Connect to a nearby saved WiFi network"
+    printf "\t%-15s %-1s\n" "down" "Disconnect from the current WiFi network"
+    printf "\t%-15s %-1s\n" "on" "Turn on WiFi radio"
+    printf "\t%-15s %-1s\n" "off" "Turn off WiFi radio"
+    printf "\t%-15s %-1s\n" "new" "Connect to a new nearby WiFi network"
+    printf "\t%-15s %-1s\n" "make-safe" "Turn off autoconnect and change dns to quad9 for all networks"
+    printf "\t%-15s %-1s\n" "manual" "Set the current WiFi network to manual with an IPv4, or to auto/DHCP."
+    printf "\t%-15s %-1s\n" "version" "Returns version information"
+
+    echo -e "\nCommand Flags:\n"
+    echo -e "\tup:"
+    printf "\t    %-20s\t %-1s\n" "-q | --quiet" "No stdout, only a return code."
+    printf "\t    %-20s\t %-1s\n" "-s | --silent" "Same as --quiet"
+    echo -e "\tdown:"
+    printf "\t    %-20s\t %-1s\n" "-q | --quiet" "No stdout, only a return code."
+    printf "\t    %-20s\t %-1s\n" "-s | --silent" "Same as --quiet"
+    echo -e "\tmanual:"
+    printf "\t    %-20s\t %-1s\n" "-q | --quiet" "No stdout, only a return code."
+    printf "\t    %-20s\t %-1s\n" "-s | --silent" "Same as --quiet"
+    printf "\t    %-20s\t %-1s\n" "--off" "Set the IPv4 method to Auto/DHCP"
+    
+    echo -e "\nExamples (most use fzf and don't need flags or arguments):"
+    echo -e "\t\`wi info\`"
+    echo -e "\t\`wi up\` # Print the current network name and IP addresses"
+    echo -e "\t\`wi up My Network\` # greps for matching SSIDs to 'My Network'"
+    echo -e "\t\`wi down\`"
+    echo -e "\t\`wi on\`"
+    echo -e "\t\`wi new\`"
+    echo -e "\t\`wi make-safe\`"
+    echo -e "\t\`wi manual 192.168.15.73/24\`"
+    echo -e "\t\`wi manual --off\`"
+
+    echo -e "\nError Codes:"
+    printf "\t%-3s %-1s\n" "1" "General Error"
+    printf "\t%-3s %-1s\n" "2" "Missing Packages"
+}
+
+validate_ipv4 ()
+{
+    ipv4=$(echo $1 | cut -f1 -d'/') # Allow any subnet
+
+    if [ -z "$ipv4" ]; then
+        exit 1
+    fi
+
+    OFS=$IFS
+    IFS=.
+
+    set -- $ipv4
+
+    IFS=$OFS
+
+    if [ $# -ne 4 ]; then
+        return 1
+    fi
+
+    for i; do
+        # not a number
+        case "$i" in
+            ''|*[!0-9]*)
+                return 1
+                ;;
+        esac
+
+        # not in range 0-255
+        if [ "$i" -lt 0 -o "$i" -gt 255 ]; then
+            return 1
+        fi
+    done
+}
+
+print_ip_addresses() {
+    private_ip=$(
+        ip a | grep 'state UP' -A3 | tail -n1 | awk -F'[/ ]+' '{print $3}'
+    )
+
+    echo -e "\n IP Addresses"
+    echo " ------------"
+    echo "  Private (v4): $private_ip"
+    echo -n "   Public (v4): "
+
+    public_ip=$(
+        curl --fail ip.me 2>/dev/null || echo "Network has no internet access"
+    )
+
+    echo -n "$public_ip"
+    echo -e "\n"
+}
+
+display_info() {
+    connected_ssid=$(
+        nmcli -f CONNECTION,TYPE,STATE d | grep -v "\--" | tail -n +2 | \
+            grep "wifi " | grep "connected" | awk -F'  ' '{print $1}'
+    )
+
+    if [[ -n "$connected_ssid" ]]
+    then
+        echo -e "\n Connected to:  '$connected_ssid'"
+        print_ip_addresses
+    else
+        echo -e "\n Not connected to a WiFi network.\n"
+    fi
+}
+
+up() {
+    unset searched_name \
+        skipped_command_input \
+        quiet_flag
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            "--quiet" | "--silent" | "-q" | "-s")
+                [[ -n "$quiet_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated quiet flag - \n"
+                    exit 1
+                }
+                quiet_flag=true
+            ;;
+            *)
+                [[ "$arg" == "up" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+
+                searched_name+=($arg)
+            ;;
+        esac
+    done
+
+    nmcli radio wifi on
+
+    [[ "$quiet_flag" == true ]] || echo -e "\n Scanning Available Networks..."
+    nmcli device wifi list --rescan yes &>/dev/null
+
+    choices=$(
+    nmcli connection show | grep "wifi" | awk -F'  ' '{print $1}' | while IFS= read -r ssid
+    do
+        if nmcli -f SSID device wifi list --rescan no | tail -n +2 | grep "$ssid" &>/dev/null
+        then
+            echo "$ssid"
+        fi
+    done
+    )
+
+    if [[ -n "$choices" ]]
+    then
+        if [[ -n "$searched_name" ]]
+        then
+            matched_network_names="$(echo "$choices" | grep -i "${searched_name[@]}")"
+            if [[ $(echo "$matched_network_names" | wc -l) -gt 1 ]]
+            then
+                choice=$(echo "$matched_network_names" | fzf --reverse)
+                [[ -n "$choice" ]] && nmcli connection up "$choice" &>/dev/null
+            elif [[ $(echo "$matched_network_names" | wc -l) == 1 ]]
+            then
+                choice="$matched_network_names"
+                nmcli connection up "$matched_network_names" &>/dev/null
+            fi
+        else
+            choice=$(echo "$choices" | fzf --reverse)
+            [[ -n "$choice" ]] && nmcli connection up "$choice" &>/dev/null
+        fi
+    else
+        echo -e "\n  No saved networks within range... try 'wi new' to connect to a new nearby network\n"
+    fi
+
+    if [[ -n "$choice" ]]
+    then
+        if ! [[ "$quiet_flag" == true ]]
+        then
+            echo -e "\n Connected to: '$choice'"
+            print_ip_addresses
+        fi
+    else
+        [[ "$quiet_flag" == true ]] \
+            || echo -e "\n - [ERROR] Trouble Connecting to WiFi Network! - \n" 
+        return 1
+    fi
+}
+
+down() {
+    unset skipped_command_input \
+        quiet_flag
+    #
+    # Capture flags
+    #
+    for arg in "${@}";
+    do
+        case $arg in
+            "--quiet" | "--silent" | "-q" | "-s")
+                [[ -n "$quiet_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated quiet flag - \n"
+                    exit 1
+                }
+                quiet_flag=true
+            ;;
+            *)
+                [[ "$arg" == "up" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+            ;;
+        esac
+    done
+
+    connected_ssid=$(
+        nmcli -f CONNECTION,TYPE,STATE d | grep -v "\--" | tail -n +2 | \
+            grep "wifi " | grep "connected" | awk -F'  ' '{print $1}'
+    )
+
+    if [[ -n "$connected_ssid" ]]
+    then
+        if nmcli connection down "$connected_ssid" &>/dev/null
+        then
+            [[ "$quiet_flag" == true ]] \
+                || echo "Disconnected from '$connected_ssid'"
+        else
+            [[ "$quiet_flag" == true ]] \
+                || echo "Error disconnecting from '$connected_ssid'"
+            return 1
+        fi
+    else
+        [[ "$quiet_flag" == true ]] \
+            || echo "Not connected to a network"
+    fi
+}
+
+new() {
+    ssid_choices=$(
+    nmcli -f SSID device wifi list --rescan yes | tail -n +2 | grep --invert-match "\--"
+    )
+
+    if [[ -n "$ssid_choices" ]]
+    then
+        ssid_choice=$(echo "$ssid_choices" | fzf --reverse | awk -F'  ' '{print $1}')
+        if [[ -n "$ssid_choice" ]]
+        then
+            if [[ $(nmcli -f NAME c show | tail -n +2 | grep "$ssid_choice") ]]
+            then
+                echo -e "\n  Network already saved... try 'wi up' instead\n"
+            else
+                nmcli device wifi connect "$ssid_choice" --ask 2>/dev/null \
+                    || echo -e "\n  Issue connecting... did you use the right password?\n"
+            fi
+        fi
+    fi
+}
+
+delete() {
+    saved_ssids=$(nmcli c show | grep "wifi" | awk -F'  ' '{print $1}')
+
+    if [[ -n "$saved_ssids" ]]
+    then
+        ssid_choice=$(echo "$saved_ssids" | fzf --reverse)
+        [[ -n "$ssid_choice" ]] && nmcli connection delete "$ssid_choice"
+    fi
+}
+
+make-safe() {
+    echo -e "\n  Creating safe defaults for all saved networks...\n"
+    nmcli connection show | grep "wifi" | awk -F'  ' '{print $1}' | while IFS= read -r ssid
+    do
+        printf "\t%-20s %-1s\n" "'$ssid'" ":    autoconnect=off   ipv4.dns=9.9.9.9"
+        nmcli connection modify "$ssid" connection.autoconnect no
+        nmcli connection modify "$ssid" ipv4.dns 9.9.9.9
+    done
+    echo ""
+
+    sudo nmcli general reload
+}
+
+manual() {
+    unset ipv4_address \
+        skipped_command_input \
+        manual_off_flag \
+        quiet_flag
+
+    for arg in "${@}";
+    do
+        case $arg in
+            "--quiet" | "--silent" | "-q" | "-s")
+                [[ -n "$quiet_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated quiet flag - \n"
+                    exit 1
+                }
+                quiet_flag=true
+            ;;
+            "--off")
+                [[ -n "$manual_off_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated manual_off flag - \n"
+                    exit 1
+                }
+                manual_off_flag=true
+            ;;
+            *)
+                [[ "$arg" == "manual" && -z "$skipped_command_input" ]] && {
+                    skipped_command_input=true
+                    continue
+                }
+
+                ipv4_arg="$arg"
+            ;;
+        esac
+    done
+
+    if [[ -n "$ipv4_arg" ]]
+    then
+        if validate_ipv4 "$ipv4_arg"
+        then
+            ipv4_address="$ipv4_arg"
+        else
+            [[ "$quiet_flag" == true ]] \
+                || echo -e "\n  - [ERROR] Invalid IPv4 address -\n"
+            return 1
+        fi
+    fi
+
+    connected_ssid=$(
+        nmcli -f CONNECTION,TYPE,STATE d | tail -n +2 | \
+            grep "wifi " | grep "connected" | awk -F'  ' '{print $1}'
+    )
+
+    if [[ $manual_off_flag == true ]]
+    then
+        if nmcli connection modify "$connected_ssid" ipv4.method auto &>/dev/null
+        then
+            [[ "$quiet_flag" == true ]] || echo -e "\n Set to Auto/DHCP!\n"
+        else
+            [[ "$quiet_flag" == true ]] || echo -e "\n Error Setting to Auto/DHCP\n"
+            return 1
+        fi
+    else
+        [[ -n "$connected_ssid" ]] && \
+            if nmcli connection modify "$connected_ssid" \
+                ipv4.method manual ipv4.addr "$ipv4_address" &>/dev/null
+            then
+                [[ "$quiet_flag" == true ]] || echo -e "\n Set to Manual!\n"
+            else
+                [[ "$quiet_flag" == true ]] || echo -e "\n Error Setting to Manual\n"
+                return 1
+            fi
+    fi
+
+    sudo nmcli general reload
+    down --quiet
+    up --quiet "$connected_ssid"
+
+    unset quiet_flag
+
+    [[ "$quiet_flag" == true ]] || print_ip_addresses
+
+    return 0
+}
+
+case $1 in
+    ""|"info")   check_packages; display_info;;
+    "up")        check_packages; up $@;;
+    "down")      check_packages; down $@;;
+    "on")        check_packages; nmcli radio wifi on;;
+    "off")       check_packages; nmcli radio wifi off;;
+    "new")       check_packages; new;;
+    "delete")    check_packages; delete;;
+    "make-safe") check_packages; make-safe;;
+    "manual")    check_packages; manual $@;;
+    "version"|"--version") echo "0.1.0";;
+    "--help"|"-h") display_help;;
+    *) 
+        echo -e "\n - [ERROR] Invalid use of the \`wi\` command -";
+        display_help
+        exit 1
+        ;;
+esac
