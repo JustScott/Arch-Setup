@@ -308,6 +308,8 @@ list_vms() {
     for vm_name in $off; do
         printf " %-30s   %-10s\n" "$vm_name" "off"
     done
+
+    echo ""
 }
 
 start_vm() {
@@ -517,14 +519,14 @@ check_is_running() {
 }
 
 case $1 in
-    "list")       check_packages; list_vms;;
+    ""|"list")       check_packages; list_vms;;
     "start")      check_packages; start_vm $@;;
     "shutdown")   check_packages; shutdown_vm $@;;
     "open")       check_packages; open_vm $@;;
     "save")       check_packages; save_vm $@;;
     "is-running") check_packages; check_is_running $@;;
     "version"|"--version") echo "0.1.0";;
-    ""|"--help"|"-h") display_help;;
+    "--help"|"-h") display_help;;
     *) 
         echo -e "\n - [ERROR] Invalid use of the \`vm\` command -";
         display_help

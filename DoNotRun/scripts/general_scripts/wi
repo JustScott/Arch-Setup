@@ -112,9 +112,15 @@ validate_ipv4 ()
 }
 
 print_ip_addresses() {
+    wifi_interface=$(nmcli -f DEVICE,TYPE d | grep 'wifi ' | awk '{print $1}')
+
     private_ip=$(
-        ip a | grep 'state UP' -A3 | tail -n1 | awk -F'[/ ]+' '{print $3}'
+        ip a | grep 'state UP' -A3 | grep "$wifi_interface" | tail -n1 | awk -F'[/ ]+' '{print $3}'
     )
+
+    if ! validate_ipv4 $private_ip; then
+        private_ip="Error"
+    fi
 
     echo -e "\n IP Addresses"
     echo " ------------"
@@ -125,8 +131,13 @@ print_ip_addresses() {
         curl --fail ip.me 2>/dev/null || echo "Network has no internet access"
     )
 
-    echo -n "$public_ip"
-    echo -e "\n"
+    if validate_ipv4 $public_ip; then
+        echo -n "$public_ip"
+        echo -e "\n"
+    else
+        echo -n "Network has no internet access"
+        echo -e "\n"
+    fi
 }
 
 display_info() {
