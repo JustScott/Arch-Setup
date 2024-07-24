@@ -17,13 +17,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
-    # If called via dwm (st)
-    if [[ "$TERM" == "xterm-256color" ]]; then
-        which st &>/dev/null && st -e vm start -c ollama
-    # Wayland river
-    elif [[ "$TERM" == "linux" ]]; then
-        which foot &>/dev/null && foot -e vm start -c ollama
-    fi
+    which st &>/dev/null && st -e vm start -c ollama
+    which foot &>/dev/null && foot -e vm start -c ollama
 else
     vm start -c ollama
 fi
