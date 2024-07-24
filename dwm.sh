@@ -16,14 +16,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# Install or update dwm scripts
-if [[ -d $PWD/DoNotRun/scripts/wm_scripts ]]
+bash wm-scripts.sh
+
+packages=(
+    xorg-xrandr xorg-server xorg-xinit xorg-xsetroot xclip\
+    libx11 libxinerama libxft \
+    pulseaudio pavucontrol brightnessctl pamixer \
+    dmenu picom xscreensaver
+)
+
+if ! pacman -Q ${packages[@]} &>/dev/null
 then
-    ACTION="Install dwm scripts to /usr/local/bin/"
-    sudo ln -sf $PWD/DoNotRun/scripts/wm_scripts/* /usr/local/bin >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-else
-    echo "Please run script from the Arch-Setup base directory"
+    ACTION="Install dwm related packages with pacman (this may take a while)"
+    echo -n "...$ACTION..."
+    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
+            && echo "[SUCCESS]" \
+            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
 fi
 
 # Get the terminal and window manager from suckless
@@ -64,22 +72,6 @@ fi
 # startx runs .xinitrc on user login
 grep "startx" $HOME/.bash_profile &>/dev/null || \
     echo -e "\nstartx &>/dev/null" >> $HOME/.bash_profile
-
-packages=(
-    xorg-xrandr xorg-server xorg-xinit xorg-xsetroot xclip\
-    libx11 libxinerama libxft \
-    pulseaudio pavucontrol brightnessctl pamixer \
-    dmenu picom xscreensaver
-)
-
-if ! pacman -Q ${packages[@]} &>/dev/null
-then
-    ACTION="Install dwm related packages with pacman (this may take a while)"
-    echo -n "...$ACTION..."
-    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
-            && echo "[SUCCESS]" \
-            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
-fi
 
 grep "exec dwm" $HOME/.xinitrc &>/dev/null \
     || echo -e "\nexec dwm" >> $HOME/.xinitrc
