@@ -133,6 +133,7 @@ update-status-bar() {
             fi
         elif which wlr-randr &>/dev/null; then
             main_display="eDP-1"
+            uname -r | grep "pinetab2" &>/dev/null && main_display="DSI-1"
             enabled=$(wlr-randr | grep "$main_display" -A5 | grep 'Enabled' | awk -F': ' '{print $2}')
 
             if [[ $enabled == "yes" ]]

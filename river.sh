@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+bash wm-scripts.sh
 
 packages=(
     wayland-protocols river foot wl-clipboard bemenu-wayland \
@@ -23,6 +24,16 @@ packages=(
     swayidle waylock \
     pulseaudio pavucontrol brightnessctl pamixer
 )
+
+if ! pacman -Q pulseaudio zig &>/dev/null
+then
+    if uname -r | grep 'pinetab2' &>/dev/null
+    then
+        echo -e "\n - Answer yes to the pulseaudio conflict - \n"
+        sudo pacman -S pulseaudio
+        sudo pacman -S --noconfirm zig
+    fi
+fi
 
 if ! pacman -Q ${packages[@]} &>/dev/null
 then
@@ -33,17 +44,7 @@ then
             || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
 fi
 
-
-# Install or update wm scripts
-if [[ -d $PWD/DoNotRun/scripts/wm_scripts ]]
-then
-    ACTION="Install window manager scripts to /usr/local/bin/"
-    sudo ln -sf $PWD/DoNotRun/scripts/wm_scripts/* /usr/local/bin >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-else
-    echo "Please run script from the Arch-Setup base directory"
-fi
-
+ARCH_SETUP_DIR=$PWD
 
 AUR_PROJECTS_ROOT=$HOME/.raw_aur
 mkdir -p $AUR_PROJECTS_ROOT
@@ -51,16 +52,31 @@ cd $AUR_PROJECTS_ROOT # pwd -> $HOME/Git/Hub
 
 if ! { which creek || type creek; } &>/dev/null
 then
-    ACTION="Clone river-creek to $AUR_PROJECTS_ROOT/river-creek"
-    git clone https://aur.archlinux.org/river-creek.git >/dev/null 2>>/tmp/archsetuperrors.log\
-        && echo "[SUCCESS] $ACTION" \
-        || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit; } 
+    # creek in the aur doesn't support aarch64, so compile it with zig
+    if uname -r | grep 'pinetab2' &>/dev/null
+    then
+        ACTION="Build creek from source with zig"
+        [[ -d "creek" ]] || git clone https://github.com/nmeum/creek.git
+        cd creek
+        if zig build; then
+            ln -s $PWD/zig-out/bin/creek $ARCH_SETUP_DIR/DoNotRun/scripts/wm_scripts/
+            echo "[SUCCESS] $ACTION"
+        else
+            echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+            exit 1
+        fi
+    else
+        ACTION="Clone river-creek to $AUR_PROJECTS_ROOT/river-creek"
+        git clone https://aur.archlinux.org/river-creek.git >/dev/null 2>>/tmp/archsetuperrors.log\
+            && echo "[SUCCESS] $ACTION" \
+            || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit; } 
 
-    ACTION="Compile river-creek"
-    cd river-creek # pwd -> $HOME/.raw_aur/river-creek
-    makepkg -si --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit;} 
+        ACTION="Compile river-creek"
+        cd river-creek # pwd -> $HOME/.raw_aur/river-creek
+        makepkg -si --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
+            && echo "[SUCCESS] $ACTION" \
+            || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit;} 
+    fi
 fi
 
 

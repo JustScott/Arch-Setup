@@ -27,6 +27,12 @@ packages=(
     wlr-randr fcft tllist
 )
 
+if uname -r | grep 'pinetab2' &>/dev/null
+then
+    echo -e "\n - Answer yes to the pulseaudio conflict - \n"
+    sudo pacman -S pulseaudio
+fi
+
 if ! pacman -Q ${packages[@]} &>/dev/null
 then
     ACTION="Install dwl related packages with pacman (this may take a while)"

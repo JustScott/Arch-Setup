@@ -19,15 +19,9 @@
 packages=(
     zip unzip \
     vim neovim \
-    lf bat feh fzf \
-    wget
+    lf bat fzf \
+    wget base-devel
 )
-
-if which dwm &>/dev/null; then
-    packages+=(spice-vdagent)
-    # Start the process in the background
-    spice-vdagent &
-fi
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
     ACTION="Install packages used by all machine presets"

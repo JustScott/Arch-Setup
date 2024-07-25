@@ -22,8 +22,9 @@ packages=(
     xorg-xrandr xorg-server xorg-xinit xorg-xsetroot xclip\
     libx11 libxinerama libxft \
     pulseaudio pavucontrol brightnessctl pamixer \
-    dmenu picom xscreensaver
+    dmenu picom xscreensaver feh spice-vdagent
 )
+
 
 if ! pacman -Q ${packages[@]} &>/dev/null
 then

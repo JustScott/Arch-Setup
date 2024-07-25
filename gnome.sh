@@ -127,4 +127,4 @@ gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/k
 
 # ----------- Start the gnome desktop environment -----------
 
-sudo systemctl enable --now gdm
+sudo systemctl start gdm

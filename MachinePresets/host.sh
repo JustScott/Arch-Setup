@@ -32,5 +32,6 @@ fi
 cd ..
 bash media.sh
 bash secure.sh
-bash qemu.sh
+uname -r | grep "pinetab2" &>/dev/null || bash qemu.sh
 bash general-scripts.sh
+bash wm-scripts.sh
