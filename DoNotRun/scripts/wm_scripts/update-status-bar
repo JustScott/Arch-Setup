@@ -132,7 +132,16 @@ update-status-bar() {
                 brightness_display=""
             fi
         elif which wlr-randr &>/dev/null; then
-            test
+            main_display="eDP-1"
+            enabled=$(wlr-randr | grep "$main_display" -A5 | grep 'Enabled' | awk -F': ' '{print $2}')
+
+            if [[ $enabled == "yes" ]]
+            then
+                brightness_percentage=$(brightness)
+                [[ -n $brightness_percentage ]] && brightness_display="bri: $brightness_percentage |"
+            else
+                brightness_display=""
+            fi
         fi
 
         echo "$brightness_display" > $CACHE_BRIGHTNESS_FILE
