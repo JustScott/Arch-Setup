@@ -23,9 +23,16 @@
 #   terminal easy
 #
 
+#
+# Use `declare -g <var>` as a way to indicate which variables will be
+#  changed in the global scope during that function.
+# `local <var>` indicates the variables scoped strictly within the function
+#
+
+
 # Check that the required packages are installed
 check_packages() {
-    required_packages=(virsh virt-manager)
+    required_packages=(virsh virt-manager fzf)
 
     for package in ${required_packages[@]}; do 
         $package --version &>/dev/null \
@@ -39,13 +46,19 @@ check_packages() {
 declare -A vm_states=()
 
 parse_vm_states() {
+    declare -g running="" paused="" saved="" off="" all_vms=""
+
     running=$(virsh list --state-running | awk 'NR > 2 { print $2 }')
     paused=$(virsh list --state-paused | awk 'NR > 2 { print $2 }')
     saved=$(virsh list --all --with-managed-save | awk 'NR > 2 { print $2 }' )
     off=$(virsh list --inactive --without-managed-save | awk 'NR > 2 { print $2 }')
+
+    all_vms=$(virsh list --all | awk 'NR>2 {print $2}')
 }
 
 populate_vm_states() {
+    declare -g vm_states
+
     parse_vm_states
 
     for vm_name in $running; do
@@ -69,7 +82,7 @@ open_vm() {
     populate_vm_states
 
     # unset flag variables before match, for safety
-    unset fullscreen_virt_viewer_flag \
+    local fullscreen_virt_viewer_flag \
         virt_viewer_flag \
         vm_names \
         skipped_command_input \
@@ -139,10 +152,13 @@ open_vm() {
         esac
     done
 
-    [[ -z ${vm_names[@]} ]] && {
-        echo -e "\n - [ERROR] must pass at least one VM name - \n"
-        exit 1
-    }
+    if [[ -z ${vm_names[@]} ]]; then
+        vm_names+=($(virsh list --all | awk 'NF>0' | awk 'NR>2 {print $2}' | fzf --reverse))
+        if [[ -z ${vm_names[@]} ]]; then
+            echo -e "\n - [ERROR] must pass at least one VM name - \n"
+            exit 1
+        fi
+    fi
 
     for vm_name in ${vm_names[@]}; do
         [[ -n "${vm_states[$vm_name]}" ]] || { 
@@ -170,7 +186,7 @@ save_vm() {
     populate_vm_states
 
     # unset flag variables before match, for safety
-    unset save_to_file_flag \
+    local save_to_file_flag \
         vm_names \
         skipped_command_input \
         save_to_file_flag \
@@ -203,10 +219,13 @@ save_vm() {
         esac
     done
 
-    [[ -z ${vm_names[@]} ]] && {
-        echo -e "\n - [ERROR] must pass at least one VM name - \n"
-        exit 1
-    }
+    if [[ -z ${vm_names[@]} ]]; then
+        vm_names+=($(list_vms | grep "running" | awk '{print $1}' | fzf --reverse))
+        if [[ -z ${vm_names[@]} ]]; then
+            echo -e "\n - [ERROR] must pass at least one VM name - \n"
+            exit 1
+        fi
+    fi
     
     [[ ${#vm_names[@]} > 1 && -n "$file_path" ]] && {
         echo -e "\n - [ERROR] Cannot pass multiple VM names while manually setting file path - \n"
@@ -238,7 +257,8 @@ display_help() {
     echo -e "\nUsage: vm [COMMAND]"
     echo -e "\nAbstracts commands from virsh, virt-manager, and"
     echo -e " optionally virt-viewer, to more easily manage Virtual"
-    echo -e " Machines from the terminal.\n"
+    echo -e " Machines from the terminal. Most options will use fzf"
+    echo -e " to select a VM if you don't pass a name as an argument.\n"
 
     echo "Commands:"
     printf "\t%-15s %-1s\n" "list" "List the VMs and their states"
@@ -262,6 +282,8 @@ display_help() {
     printf "\t    %-20s\t %-1s\n" "-c | --console" "Open the VMs serial console in your terminal."
     echo -e "\tsave:"
     printf "\t    %-20s\t %-1s\n" "-F | --file" "Manually save VM state to a file. Only the VM name and location should be passed with no additional flags."
+    echo -e "\tshutdown:"
+    printf "\t    %-20s\t %-1s\n" "-D | --destroy" "Force the machine off immediately... could VM cause corruption, use with CAUTION."
 
     echo -e "\nExamples:"
     echo -e "\t\`vm list\`"
@@ -315,8 +337,7 @@ list_vms() {
 start_vm() {
     populate_vm_states
 
-    # unset flag variables before match, for safety
-    unset open_flag \
+    local open_flag \
         virt_viewer_flag \
         fullscreen_virt_viewer_flag \
         vm_names \
@@ -414,10 +435,13 @@ start_vm() {
         }
     fi
 
-    [[ -z ${vm_names[@]} ]] && {
-        echo -e "\n - [ERROR] must pass at least one VM name - \n"
-        exit 1
-    }
+    if [[ -z ${vm_names[@]} ]]; then
+        vm_names+=($(list_vms | grep -e "saved" -e "paused" -e "off" | awk '{print $1}' | fzf --reverse))
+        if [[ -z ${vm_names[@]} ]]; then
+            echo -e "\n - [ERROR] must pass at least one VM name - \n"
+            exit 1
+        fi
+    fi
 
     for vm_name in ${vm_names[@]}; do
         [[ -n "${vm_states[$vm_name]}" ]] || {
@@ -446,15 +470,23 @@ start_vm() {
 }
 
 shutdown_vm() {
-    # unset flag variables before match, for safety
-    unset vm_names \
+    local vm_names \
         skipped_command_input \
+        destroy_flag \
+        shutdown_command \
     #
     # Capture flags
     #
     for arg in "${@}";
     do
         case $arg in
+            "--destroy" | "-D")
+                [[ -n "$destroy_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated destroy flag - \n"
+                    exit 1
+                }
+                destroy_flag=true
+            ;;
             *)
                 [[ "$arg" == "shutdown" && -z "$skipped_command_input" ]] && {
                     skipped_command_input=true
@@ -466,14 +498,20 @@ shutdown_vm() {
         esac
     done
 
-    [[ -z ${vm_names[@]} ]] && {
-        echo -e "\n - [ERROR] must pass at least one VM name - \n"
-        exit 1
-    }
+    if [[ -z ${vm_names[@]} ]]; then
+        vm_names+=($(list_vms | grep "running" | awk '{print $1}' | fzf --reverse))
+        if [[ -z ${vm_names[@]} ]]; then
+            echo -e "\n - [ERROR] must pass at least one VM name - \n"
+            exit 1
+        fi
+    fi
+
+    shutdown_command=shutdown
+    [[ $destroy_flag == true ]] && shutdown_command=destroy 
 
     for vm_name in ${vm_names[@]}
     do
-        if ! virsh shutdown $vm_name 2>/dev/null
+        if ! virsh $shutdown_command $vm_name 2>/dev/null
         then
             echo "[ERROR] VM '$vm_name' either doesn't exist or isn't running...skipping"
         fi
@@ -483,8 +521,7 @@ shutdown_vm() {
 check_is_running() {
     populate_vm_states
 
-    # unset flag variables before match, for safety
-    unset vm_names \
+    local vm_names \
         skipped_command_input
 
     for arg in "${@}"; do
@@ -519,7 +556,7 @@ check_is_running() {
 }
 
 case $1 in
-    ""|"list")       check_packages; list_vms;;
+    ""|"list")    check_packages; list_vms;;
     "start")      check_packages; start_vm $@;;
     "shutdown")   check_packages; shutdown_vm $@;;
     "open")       check_packages; open_vm $@;;

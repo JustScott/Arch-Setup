@@ -21,7 +21,7 @@
 
 if { which nvim || type nvim; } &>/dev/null
 then
-    nvim -c "set nonumber norelativenumber| set laststatus=0 | :startinsert | :term" \
+    nvim -c "set nonumber norelativenumber| set laststatus=0 | :startinsert | :term"
 else
     echo -e "\n - Neovim isn't installed"
     exit 1
