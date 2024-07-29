@@ -23,5 +23,51 @@
 # STATION="XXXX" # Define your location here
 # export STATION="XXXX" # or in .bashrc
 
-[[ -n "$DISPLAY" ]] \
-    && mpv --loop-file=inf <(curl https://radar.weather.gov/ridge/standard/${STATION}_loop.gif)
+source $HOME/.bashrc
+
+STATION_FILE="/tmp/radar_stations"
+
+if [[ -z "$STATION" ]]; then
+    if ! cat /tmp/radar_stations | grep -e "@context" -e "@id" &>/dev/null; then
+        echo "Downloading list of radar stations to '$STATION_FILE'..."
+        curl --silent https://api.weather.gov/radar/stations > /tmp/radar_stations
+    fi
+
+    station_name=$(
+        cat $STATION_FILE | grep "\"name\"" | awk -F":" '{print $2}' | \
+            awk -F'"' '{print $2}' | fzf --reverse
+    )
+
+
+    if [[ -n "$station_name" ]]; then
+        station_id=$(
+            cat $STATION_FILE | grep "\"name\": \"$station_name\"" -B1 | \
+                grep "\"id\"" | awk -F":" '{print $2}' | awk -F'"' '{print $2}'
+        )
+    fi
+
+    if [[ -n $station_id ]]; then
+        if ! cat $HOME/.bashrc | grep -e "^export STATION='$station_id'" \
+        -e "^export STATION=\"$station_id\"" &>/dev/null; then
+            echo -e "\nexport STATION='$station_id'" >> $HOME/.bashrc
+        fi
+        STATION="$station_id"
+    else
+        echo "No station chosen"
+        exit 1
+    fi
+fi
+
+if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
+    if [[ -n "$STATION" ]]; then
+        echo "Getting radar GIF for the $STATION station..."
+        mpv --loop-file=inf \
+            <(curl https://radar.weather.gov/ridge/standard/${STATION}_loop.gif --silent)
+    else
+        echo -e "\n - No station set - \n"
+        exit 1
+    fi
+else
+    echo -e "\n - Need a GUI environment to display radar - \n"
+    exit 1
+fi
