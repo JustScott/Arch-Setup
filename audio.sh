@@ -16,7 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-packages=(pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse)
+packages=(
+    pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse \
+    pavucontrol pamixer
+)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
     ACTION="Install pipewire audio packages with pacman"
@@ -27,7 +30,7 @@ if ! pacman -Q ${packages[@]} &>/dev/null; then
 fi
 
 
-systemctl --user disable --now pulseaudio
+systemctl --user disable --now pulseaudio 2>/dev/null
 
 systemctl --user enable --now pipewire
 systemctl --user enable --now pipewire-pulse

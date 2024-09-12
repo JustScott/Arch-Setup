@@ -21,7 +21,7 @@ bash wm-scripts.sh
 packages=(
     xorg-xrandr xorg-server xorg-xinit xorg-xsetroot xclip\
     libx11 libxinerama libxft \
-    pulseaudio pavucontrol brightnessctl pamixer \
+    brightnessctl \
     dmenu picom xscreensaver feh spice-vdagent
 )
 

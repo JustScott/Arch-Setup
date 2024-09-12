@@ -21,7 +21,7 @@ bash wm-scripts.sh
 packages=(
     libinput wayland wlroots wayland-protocols libxkbcommon wl-clipboard pkg-config \
     foot \
-    pulseaudio pavucontrol brightnessctl pamixer \
+    brightnessctl \
     swayidle waylock \
     swaybg bemenu-wayland \
     wlr-randr fcft tllist
