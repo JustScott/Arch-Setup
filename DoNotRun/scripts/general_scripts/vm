@@ -190,7 +190,8 @@ save_vm() {
         vm_names \
         skipped_command_input \
         save_to_file_flag \
-        file_path
+        file_path \
+        save_all_flag
     #
     # Capture flags
     #
@@ -203,6 +204,13 @@ save_vm() {
                     exit 1
                 }
                 save_to_file_flag=true
+            ;;
+            "--all" | "-a")
+                [[ -n "$save_all_flag" ]] && {
+                    echo -e "\n - [ERROR] duplicated save all flag - \n"
+                    exit 1
+                }
+                save_all_flag=true
             ;;
             *) 
                 [[ "$arg" == "save" && -z "$skipped_command_input" ]] && {
@@ -219,18 +227,24 @@ save_vm() {
         esac
     done
 
-    if [[ -z ${vm_names[@]} ]]; then
-        vm_names+=($(list_vms | grep "running" | awk '{print $1}' | fzf --reverse))
+    vm_names=()
+
+    if [[ $save_all_flag == true ]];then
+        vm_names+=($running)
+    else
         if [[ -z ${vm_names[@]} ]]; then
-            echo -e "\n - [ERROR] must pass at least one VM name - \n"
-            exit 1
+            vm_names+=($(list_vms | grep "running" | awk '{print $1}' | fzf --reverse))
+            if [[ -z ${vm_names[@]} ]]; then
+                echo -e "\n - [ERROR] must pass at least one VM name - \n"
+                exit 1
+            fi
         fi
+        
+        [[ ${#vm_names[@]} > 1 && -n "$file_path" ]] && {
+            echo -e "\n - [ERROR] Cannot pass multiple VM names while manually setting file path - \n"
+            exit 1
+        }
     fi
-    
-    [[ ${#vm_names[@]} > 1 && -n "$file_path" ]] && {
-        echo -e "\n - [ERROR] Cannot pass multiple VM names while manually setting file path - \n"
-        exit 1
-    }
 
     for vm_name in ${vm_names[@]}; do
         [[ -n "${vm_states[$vm_name]}" ]] || {
@@ -282,6 +296,7 @@ display_help() {
     printf "\t    %-20s\t %-1s\n" "-c | --console" "Open the VMs serial console in your terminal."
     echo -e "\tsave:"
     printf "\t    %-20s\t %-1s\n" "-F | --file" "Manually save VM state to a file. Only the VM name and location should be passed with no additional flags."
+    printf "\t    %-20s\t %-1s\n" "-a | --all" "Save all running VMs"
     echo -e "\tshutdown:"
     printf "\t    %-20s\t %-1s\n" "-D | --destroy" "Force the machine off immediately... could VM cause corruption, use with CAUTION."
 
@@ -295,6 +310,7 @@ display_help() {
     echo -e "\t\`vm shutdown <vm_name1> <vm_name2>\`"
     echo -e "\t\`vm open -V -f <vm_name1> <vm_name2>\`"
     echo -e "\t\`vm save <vm_name1>\`                                   # Will be managed by virsh"
+    echo -e "\t\`vm save --all\`                                   # Saves all running virtual machines"
     echo -e "\t\`vm save <vm_name1> -f </some/path/vm_save_file.save>\` # Manage on your own"
     echo -e "\t\`vm is-running <vm_name1> <vm_name2> && echo 'all VMs running!'\`"
 
