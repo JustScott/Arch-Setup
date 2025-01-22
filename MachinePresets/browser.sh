@@ -16,29 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-bash base_vm.sh
+#
+# Increase Librewolf search bar and tab size:
+#  about:config -> devp -> layout.css.devPixelsPerPx=1.25
+#
 
-VIRTUAL_MACHINES_PWD=$PWD
-
-if ! { which yay || type yay; } &>/dev/null
-then
-    ACTION="Clone, compile, and install yay from the AUR (this may take a while)"
-    echo -n "...$ACTION..."
-    cd # pwd -> $HOME
-    if git clone https://aur.archlinux.org/yay.git >/dev/null 2>>/tmp/archsetuperrors.log
-    then
-        {
-            cd yay >/dev/null 2>>/tmp/archsetuperrors.log
-            makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log
-            cd $VIRTUAL_MACHINES_PWD
-        } >/dev/null 2>>/tmp/archsetuperrors.log \
-            && echo "[SUCCESS]" \
-            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
-    else
-        echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
-        exit 1
-    fi
-fi
+cd ..
+bash secure.sh
+bash aur.sh
 
 packages=(librewolf-bin)
 
@@ -49,8 +34,3 @@ if ! yay -Q ${packages[@]} &>/dev/null; then
         && echo "[SUCCESS]" \
         || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
 fi
-
-
-cd $VIRTUAL_MACHINES_PWD
-cd ..
-bash secure.sh
