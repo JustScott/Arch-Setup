@@ -22,7 +22,7 @@ packages=(
     wayland-protocols river foot wl-clipboard bemenu-wayland \
     swaybg wlr-randr \
     swayidle waylock \
-    brightnessctl
+    brightnessctl noto-fonts-emoji
 )
 
 if ! pacman -Q pulseaudio zig &>/dev/null
