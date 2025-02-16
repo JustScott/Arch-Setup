@@ -26,9 +26,9 @@ bash development.sh
 
 packages=( \
     android-ndk android-sdk android-sdk-build-tools android-sdk-cmdline-tools-latest \
-    sdkmanager android-sdk-platform-tools android-tools android-platform android-emulator \
+    android-sdk-platform-tools android-tools android-platform android-emulator \
     jdk21-openjdk webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module \
-    libappindicator-gtk3 librsvg xdotool \
+    libappindicator-gtk3 librsvg xdotool libbsd \
 )
 
 echo -e "\n-----------------------\n| Packages To Install |\n-----------------------\n\n${packages[@]}\n\n"
@@ -41,9 +41,9 @@ if ! yay -Q ${packages[@]} &>/dev/null; then
         || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
 fi
 
-ACTION="Install dioxus-cli (This might take a while)"
-echo -n "...$ACTION..."
-echo cargo install dioxus-cli >/dev/null 2>>/tmp/archsetuperrors.log \
+ACTION="Install dioxus-cli"
+echo -n "...$ACTION... (this may take a while)"
+cargo install dioxus-cli >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
     || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
 
@@ -56,12 +56,18 @@ echo "export PATH=\"\$PATH:/home/$USER/.cargo/bin\"" >> $HOME/.bashrc 2>>/tmp/ar
 ACTION="Add the android-sdk to Path"
 echo -n "...$ACTION..."
 {
-    export ANDROID_NDK_HOME=/opt/android-ndk
-    export ANDROID_HOME=/opt/android-sdk
-    export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
-    export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-    export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
-    export PATH=$PATH:$JAVA_HOME/bin
+    cat $HOME/.bashrc | grep "export ANDROID_NDK_HOME=/opt/android-ndk" &>/dev/null || \
+        echo "export ANDROID_NDK_HOME=/opt/android-ndk" >> $HOME/.bashrc
+    cat $HOME/.bashrc | grep "ANDROID_HOME=/opt/android-sdk" &>/dev/null || \
+        echo "export ANDROID_HOME=/opt/android-sdk" >> $HOME/.bashrc
+    cat $HOME/.bashrc | grep "PATH=\$PATH:\$ANDROID_HOME/tools:\$ANDROID_HOME/platform-tools" &>/dev/null || \
+        echo "export PATH=\$PATH:\$ANDROID_HOME/tools:\$ANDROID_HOME/platform-tools" >> $HOME/.bashrc
+    cat $HOME/.bashrc | grep "PATH=\$PATH:\$ANDROID_HOME/cmdline-tools/latest/bin" &>/dev/null || \
+        echo "export PATH=\$PATH:\$ANDROID_HOME/cmdline-tools/latest/bin" >> $HOME/.bashrc
+    cat $HOME/.bashrc | grep "JAVA_HOME=/usr/lib/jvm/java-21-openjdk" &>/dev/null || \
+        echo "export JAVA_HOME=/usr/lib/jvm/java-21-openjdk" >> $HOME/.bashrc
+    cat $HOME/.bashrc | grep "PATH=\$PATH:\$JAVA_HOME/bin" &>/dev/null || \
+        echo "export PATH=\$PATH:\$JAVA_HOME/bin" >> $HOME/.bashrc
 } >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
     || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
@@ -78,21 +84,23 @@ echo -n "...$ACTION..."
 {
     sudo groupadd android-sdk
     sudo gpasswd -a $USER android-sdk
-    sudo setfacl -R -m g:android-sdk:rwx /opt/android-sdk
-    sudo setfacl -d -m g:android-sdk:rwX /opt/android-sdk  
+    sudo chown -R :android-sdk /opt/android-sdk
+    sudo chmod -R g+rwx /opt/android-sdk
+#    sudo setfacl -R -m g:android-sdk:rwx /opt/android-sdk
+#    sudo setfacl -d -m g:android-sdk:rwX /opt/android-sdk
 } >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
     || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
 
-newgrp libvirt android-sdk <<EOF
+newgrp android-sdk <<EOF
 ACTION="Accept Android SDK Licenses"
-echo -n "...$ACTION..."
+echo -n "...\$ACTION..."
 yes | sdkmanager --licenses >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
     || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
 
 ACTION="Install & Set-up emulator with qemu"
-echo -n "...$ACTION..."
+echo -n "...\$ACTION..."
 {
     yes | sdkmanager "system-images;android-30;default;x86_64"
     sdkmanager "emulator"
@@ -101,13 +109,12 @@ echo -n "...$ACTION..."
     || echo "[FAIL] wrote error log to /tmp/arThsetuperrors.log"
 
 ACTION="Set system java version to java-21-openjdk"
-echo -n "...$ACTION..."
+echo -n "...\$ACTION..."
 sudo archlinux-java set java-21-openjdk >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
     || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
 
 cd ..
-bash gnome.sh
 EOF
 
 
