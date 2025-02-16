@@ -34,10 +34,9 @@ packages=( \
 echo -e "\n-----------------------\n| Packages To Install |\n-----------------------\n\n${packages[@]}\n\n"
 
 if ! yay -Q ${packages[@]} &>/dev/null; then
-    echo e "\n----\nPackages to install: \n\n$packages\n\n----"
     ACTION="Install Dioxus development packages"
     echo -n "...$ACTION..."
-    sudo pacman -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
+    yay -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
         && echo "[SUCCESS]" \
         || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
 fi
