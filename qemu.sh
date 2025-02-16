@@ -35,11 +35,15 @@ fi
 
 ACTION="Configure QEMU"
 {
-    sudo bash -c 'echo -e "\nunix_sock_group = "libvirt"" >> /etc/libvirt/libvirtd.conf'
-    sudo bash -c 'echo "unix_sock_rw_perms = "0770"" >> /etc/libvirt/libvirtd.conf'
+    cat /etc/libvirt/libvirtd.conf | grep 'unix_sock_group = libvirt' &>/dev/null || \
+        sudo bash -c 'echo -e "\nunix_sock_group = libvirt" >> /etc/libvirt/libvirtd.conf'
+    cat /etc/libvirt/libvirtd.conf | grep 'unix_sock_rw_perms = 0770' &>/dev/null || \
+        sudo bash -c 'echo "unix_sock_rw_perms = 0770" >> /etc/libvirt/libvirtd.conf'
     CURRENT_USER=$USER # Must set this since $USER in the echo command below will be ran by root
-    sudo usermod -aG libvirt $CURRENT_USER
-    sudo bash -c 'echo "group="$CURRENT_USER"" >> /etc/libvirt/qemu.conf'
+    groups | grep "libvirt" &>/dev/null || \
+        sudo usermod -aG libvirt $CURRENT_USER
+    cat /etc/libvirt/qemu.conf | grep "group=$CURRENT_USER" &>/dev/null || \
+        sudo bash -c "echo 'group=$CURRENT_USER' >> /etc/libvirt/qemu.conf"
 } >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS] $ACTION" \
     || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
