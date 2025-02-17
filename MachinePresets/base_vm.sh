@@ -16,42 +16,53 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-bash base.sh
 
 # SOURCE: https://serverfault.com/questions/364895/virsh-vm-console-does-not-show-any-output#365007
 
-original_grub_file_hash=$(sha1sum /etc/default/grub)
+bash base.sh
 
-# skip if the line is already in /etc/default/grub
-if ! grep 'GRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0"' /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
+# If in a QEMU virtual machine
+if [[ $(cat /sys/class/dmi/id/sys_vendor 2>/dev/null) == "QEMU" ]]
 then
-    # replace the line if exists, otherwise append it
-    if grep "GRUB_CMDLINE_LINUX_DEFAULT" /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
+    original_grub_file_hash=$(sha1sum /etc/default/grub)
+
+    # skip if the line is already in /etc/default/grub
+    if ! grep 'GRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0"' /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
     then
-        sudo sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT/c\GRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0"' \
-            /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
-    else
-        sudo bash -c 'echo -e "\nGRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0"" >> /etc/default/grub' \
-            >/dev/null 2>>/tmp/archsetuperrors.log
+        # replace the line if exists, otherwise append it
+        if grep "GRUB_CMDLINE_LINUX_DEFAULT" /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
+        then
+            sudo sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT/c\GRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0"' \
+                /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
+        else
+            sudo bash -c 'echo -e "\nGRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0"" >> /etc/default/grub' \
+                >/dev/null 2>>/tmp/archsetuperrors.log
+        fi
     fi
-fi
-# skip if the line is already in /etc/default/grub
-if ! grep 'GRUB_TERMINAL="serial console"' /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
-then
-    # replace the line if exists, otherwise append it
-    if grep "GRUB_TERMINAL" /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
+    # skip if the line is already in /etc/default/grub
+    if ! grep 'GRUB_TERMINAL="serial console"' /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
     then
-        sudo sed -i '/^GRUB_TERMINAL/c\GRUB_TERMINAL="serial console"' \
-            /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
-    else
-        sudo bash -c 'echo -e "\nGRUB_TERMINAL="serial console"" >> /etc/default/grub' \
-            >/dev/null 2>>/tmp/archsetuperrors.log
+        # replace the line if exists, otherwise append it
+        if grep "GRUB_TERMINAL" /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
+        then
+            sudo sed -i '/^GRUB_TERMINAL/c\GRUB_TERMINAL="serial console"' \
+                /etc/default/grub >/dev/null 2>>/tmp/archsetuperrors.log
+        else
+            sudo bash -c 'echo -e "\nGRUB_TERMINAL="serial console"" >> /etc/default/grub' \
+                >/dev/null 2>>/tmp/archsetuperrors.log
+        fi
     fi
+
+    if [[ "$original_grub_file_hash" == "$(sha1sum /etc/default/grub)" ]]
+    then
+        ACTION="Remake grub config to allow VM serial access"
+        sudo grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>>/tmp/archsetuperrors.log \
+            && echo "[SUCCESS]" \
+            || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+    fi
+
+    systemctl status serial-getty@ttyS0 &>/dev/null \
+        || sudo systemctl enable --now serial-getty@ttyS0
+else
+    echo "Not in a QEMU Virtual Machine, skipping 'base_vm.sh'"
 fi
-
-[[ "$original_grub_file_hash" == "$(sha1sum /etc/default/grub)" ]] \
-    || sudo grub-mkconfig -o /boot/grub/grub.cfg
-
-
-systemctl status serial-getty@ttyS0 &>/dev/null \
-    || sudo systemctl enable --now serial-getty@ttyS0
