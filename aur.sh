@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-OLD_PWD=$PWD
-
 if ! { which yay || type yay; } &>/dev/null
 then
     ACTION="Clone, compile, and install yay from the AUR (this may take a while)"
@@ -28,7 +26,6 @@ then
         {
             cd yay >/dev/null 2>>/tmp/archsetuperrors.log
             makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log
-            cd $OLD_PWD
         } >/dev/null 2>>/tmp/archsetuperrors.log \
             && echo "[SUCCESS]" \
             || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
@@ -37,5 +34,3 @@ then
         exit 1
     fi
 fi
-
-cd $OLD_PWD

@@ -18,9 +18,9 @@
 
 SCRIPT_DIR="$PWD/DoNotRun/scripts/vm_shortcut_scripts"
 
-if ! [[ -d "DoNotRun/scripts/vm_shortcut_scripts" ]]
+if ! [[ $(basename "$PWD") == "Arch-Setup" ]]
 then
-    echo "Please run script from the Arch-Setup base directory"
+    echo "Must be in the Arch-Setup base directory to run this script!"
     exit 1
 fi
 

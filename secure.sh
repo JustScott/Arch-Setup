@@ -21,6 +21,12 @@
 # Install and configure security tools to harden the system
 #
 
+if ! [[ $(basename "$PWD") == "Arch-Setup" ]]
+then
+    echo "Must be in the Arch-Setup base directory to run this script!"
+    exit 1
+fi
+
 sudo -v
 
 if ! grep "deny = 6" /etc/security/faillock.conf &>/dev/null; then
