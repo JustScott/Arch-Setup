@@ -19,6 +19,12 @@
 
 # SOURCE: https://serverfault.com/questions/364895/virsh-vm-console-does-not-show-any-output#365007
 
+if ! [[ $(basename "$PWD") == "MachinePresets" ]]
+then
+    echo "Must be in the Arch-Setup/MachinePresets directory to run this script!"
+    exit 1
+fi
+
 bash base.sh
 
 # If in a QEMU virtual machine

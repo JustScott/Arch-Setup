@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# development.sh - part of the Arch-Setup project
+# rust.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,12 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-bash base_vm.sh
-
-packages=(python python-pip rustup)
+packages=(rustup)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
-    ACTION="Install development packages"
+    ACTION="Install rust development packages"
     echo -n "...$ACTION..."
     sudo pacman -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
         && echo "[SUCCESS]" \
@@ -33,6 +31,3 @@ echo -n "...$ACTION..."
 rustup default stable >/dev/null 2>>/tmp/archsetuperrors.log \
     && echo "[SUCCESS]" \
     || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
-
-cd ..
-bash secure.sh

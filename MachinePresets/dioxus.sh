@@ -16,13 +16,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-CURRENT_PWD="$PWD"
+if ! [[ $(basename "$PWD") == "MachinePresets" ]]
+then
+    echo "Must be in the Arch-Setup/MachinePresets directory to run this script!"
+    exit 1
+fi
+
 cd ..
 bash aur.sh
 bash qemu.sh
 
-cd $CURRENT_PWD
-bash development.sh
+cd Development
+bash rust.sh
+bash secure
 
 packages=( \
     android-ndk android-sdk android-sdk-build-tools android-sdk-cmdline-tools-latest \

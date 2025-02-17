@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# browser.sh - part of the Arch-Setup project
+# python.sh - part of the Arch-Setup project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,27 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#
-# Increase Librewolf search bar and tab size:
-#  about:config -> devp -> layout.css.devPixelsPerPx=1.25
-#
+packages=(python python-pip)
 
-if ! [[ $(basename "$PWD") == "MachinePresets" ]]
-then
-    echo "Must be in the Arch-Setup/MachinePresets directory to run this script!"
-    exit 1
-fi
-
-cd ..
-bash secure.sh
-bash aur.sh
-
-packages=(librewolf-bin)
-
-if ! yay -Q ${packages[@]} &>/dev/null; then
-    ACTION="Install librewolf from the AUR (this may take a while)"
+if ! pacman -Q ${packages[@]} &>/dev/null; then
+    ACTION="Install python development packages"
     echo -n "...$ACTION..."
-    yay -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
+    sudo pacman -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
         && echo "[SUCCESS]" \
         || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
 fi
