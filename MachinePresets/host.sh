@@ -40,4 +40,6 @@ bash media.sh
 bash secure.sh
 uname -r | grep "pinetab2" &>/dev/null || bash qemu.sh
 bash general-scripts.sh
+
+cd GUIs
 bash wm-scripts.sh
