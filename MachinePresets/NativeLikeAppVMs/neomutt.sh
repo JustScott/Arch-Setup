@@ -16,6 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+if ! [[ $(basename "$PWD") == "NativeLikeAppVMs" ]]
+then
+    echo "Must be in the Arch-Setup/MachinePresets/NativeLikeAppVMs directory to run this script!"
+    exit 1
+fi
+
 STARTING_PWD=$PWD
 
 packages=(

@@ -22,6 +22,12 @@
 #  protonmail & sentry-native compilation
 # 
 
+if ! [[ $(basename "$PWD") == "NativeLikeAppVMs" ]]
+then
+    echo "Must be in the Arch-Setup/MachinePresets/NativeLikeAppVMs directory to run this script!"
+    exit 1
+fi
+
 packages=(
     thunderbird pass
 )

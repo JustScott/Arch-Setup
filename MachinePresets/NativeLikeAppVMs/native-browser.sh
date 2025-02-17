@@ -29,6 +29,12 @@
 #        /etc/systemd/system/getty.target.wants/getty@tty1.service
 #}
 
+if ! [[ $(basename "$PWD") == "NativeLikeAppVMs" ]]
+then
+    echo "Must be in the Arch-Setup/MachinePresets/NativeLikeAppVMs directory to run this script!"
+    exit 1
+fi
+
 # Open librewolf at the same time as dwm
 grep "exec dwm" $HOME/.xinitrc &>/dev/null && {
     sed -i "/^exec dwm/c\exec dwm & librewolf" $HOME/.xinitrc
