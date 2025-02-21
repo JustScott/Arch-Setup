@@ -22,50 +22,34 @@
 #  protonmail & sentry-native compilation
 # 
 
-if ! [[ $(basename "$PWD") == "NativeLikeAppVMs" ]]
+if [[ $(basename $PWD) != "NativeLikeAppVMs" ]]
 then
-    echo "Must be in the Arch-Setup/MachinePresets/NativeLikeAppVMs directory to run this script!"
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup/MachinePresets/NativeLikeAppVMs directory"
     exit 1
 fi
 
+source ../../shared_lib
+
+cd ..
+bash base_vm.sh
+cd ..
+bash aur.sh
+
 packages=(
-    thunderbird pass
+    thunderbird pass sentry-native protonmail-bridge
 )
 
-if ! pacman -Q ${packages[@]} &>/dev/null
+if ! yay -Q ${packages[@]} &>/dev/null
 then
     ACTION="Install Thunderbird"
     echo -n "...$ACTION..."
-    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS]" \
-        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+    sudo pacman -Sy --noconfirm ${packages[@]} \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" \
+        "Download and install thunderbird and protonmail-bridge"
+    [[ $? -ne 0 ]] && exit 1
 fi
-
-if ! { which yay || type yay; } &>/dev/null
-then
-    ACTION="Clone, compile, and install yay from the AUR (this may take a while)"
-    echo -n "...$ACTION..."
-    cd # pwd -> $HOME
-    if git clone https://aur.archlinux.org/yay.git >/dev/null 2>>/tmp/archsetuperrors.log
-    then
-        {
-            cd yay >/dev/null 2>>/tmp/archsetuperrors.log
-            makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log
-            cd $VIRTUAL_MACHINES_PWD
-        } >/dev/null 2>>/tmp/archsetuperrors.log \
-            && echo "[SUCCESS]" \
-            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
-    else
-        echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
-        exit 1
-    fi
-fi
-
-
-
-yay -Q sentry-native &>/dev/null || yay -Sy --noconfirm sentry-native
-
-yay -Q protonmail-bridge &>/dev/null || yay -Sy --noconfirm protonmail-bridge
 
 # gpg --full-gen-key
 # pass init <email>
@@ -78,5 +62,3 @@ yay -Q protonmail-bridge &>/dev/null || yay -Sy --noconfirm protonmail-bridge
 
 # Run protonmail bridge, login, copy credentials to thunderbird
 
-cd ..
-bash base_vm.sh

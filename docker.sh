@@ -16,24 +16,29 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+if [[ $(basename $PWD) != "Arch-Setup" ]]
+then
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup base directory"
+    exit 1
+fi
+
+source ./shared_lib
 
 packages=(docker docker-compose)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
-    ACTION="Install docker and docker-compose"
-    echo -n "...$ACTION..."
-    sudo pacman -Sy  --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS]" \
-        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+    sudo pacman -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Download and install docker and docker-compose with pacman"
+    [[ $? -ne 0 ]] && exit 1
 fi
 
-ACTION="Configure Docker"
-if sudo systemctl enable --now docker >/dev/null 2>>/tmp/archsetuperrors.log
-then
-    sudo usermod -aG docker $USER >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-fi
+{
+    sudo systemctl enable --now docker
+    sudo usermod -aG docker $USER
+} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" "Configure Docker"
+[[ $? -ne 0 ]] && exit 1
 
 if [[ -f $HOME/.bashrc ]]; then
     ACTION="Set Docker defaults in $HOME/.bashrc"
@@ -42,8 +47,8 @@ if [[ -f $HOME/.bashrc ]]; then
             echo -e "\nexport DOCKER_BUILDKIT=1" >> $HOME/.bashrc
         cat $HOME/.bashrc | grep "export COMPOSE_DOCKER_CLI_BUILD=1" >/dev/null || \
             echo -e "export COMPOSE_DOCKER_CLI_BUILD=1\n" >> $HOME/.bashrc
-    } >/dev/null 2>>/tmp/archconfigurationerrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+    } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Append docker variables to .bashrc"
+    [[ $? -ne 0 ]] && exit 1
 fi
 

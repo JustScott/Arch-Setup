@@ -16,11 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-if ! [[ $(basename "$PWD") == "MachinePresets" ]]
+if [[ $(basename $PWD) != "MachinePresets" ]]
 then
-    echo "Must be in the Arch-Setup/MachinePresets directory to run this script!"
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup/MachinePresets directory"
     exit 1
 fi
+
+source ../shared_lib
 
 bash base.sh
 

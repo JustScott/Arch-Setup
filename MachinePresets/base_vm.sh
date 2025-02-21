@@ -19,11 +19,14 @@
 
 # SOURCE: https://serverfault.com/questions/364895/virsh-vm-console-does-not-show-any-output#365007
 
-if ! [[ $(basename "$PWD") == "MachinePresets" ]]
+if [[ $(basename $PWD) != "MachinePresets" ]]
 then
-    echo "Must be in the Arch-Setup/MachinePresets directory to run this script!"
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup/MachinePresets directory"
     exit 1
 fi
+
+source ../shared_lib
 
 bash base.sh
 
@@ -61,14 +64,11 @@ then
 
     if [[ "$original_grub_file_hash" == "$(sha1sum /etc/default/grub)" ]]
     then
-        ACTION="Remake grub config to allow VM serial access"
-        sudo grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>>/tmp/archsetuperrors.log \
-            && echo "[SUCCESS]" \
-            || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+        sudo grub-mkconfig -o /boot/grub/grub.cfg >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Remake grub config to allow VM serial access"
+        [[ $? -ne 0 ]] && exit 1
     fi
 
     systemctl status serial-getty@ttyS0 &>/dev/null \
         || sudo systemctl enable --now serial-getty@ttyS0
-else
-    echo "Not in a QEMU Virtual Machine, skipping 'base_vm.sh'"
 fi

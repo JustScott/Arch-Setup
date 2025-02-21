@@ -16,12 +16,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+if [[ $(basename $PWD) != "Arch-Setup" ]]
+then
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup base directory"
+    exit 1
+fi
+
+source ./shared_lib
+
 packages=(bluez bluez-utils pulseaudio-bluetooth)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
-    ACTION="Install bluetooth packages with pacman"
-    echo -n "...$ACTION..."
-    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS]" \
-        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
+    sudo pacman -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Download and install bluetooth packages with pacman"
+    [[ $? -ne 0 ]] && exit 1
 fi

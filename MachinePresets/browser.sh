@@ -21,11 +21,14 @@
 #  about:config -> devp -> layout.css.devPixelsPerPx=1.25
 #
 
-if ! [[ $(basename "$PWD") == "MachinePresets" ]]
+if [[ $(basename $PWD) != "MachinePresets" ]]
 then
-    echo "Must be in the Arch-Setup/MachinePresets directory to run this script!"
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup/MachinePresets directory"
     exit 1
 fi
+
+source ../shared_lib
 
 cd ..
 bash secure.sh
@@ -34,9 +37,8 @@ bash aur.sh
 packages=(librewolf-bin)
 
 if ! yay -Q ${packages[@]} &>/dev/null; then
-    ACTION="Install librewolf from the AUR (this may take a while)"
-    echo -n "...$ACTION..."
-    yay -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
-        && echo "[SUCCESS]" \
-        || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+    yay -Sy ${packages[@]} --noconfirm >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" \
+        "Download and install librewolf binary from the AUR (this may take a while)"
+    [[ $? -ne 0 ]] && exit 1
 fi

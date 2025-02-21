@@ -16,6 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+if [[ $(basename $PWD) != "GUIs" ]]
+then
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup/GUIs directory"
+    exit 1
+fi
+
+source ../shared_lib
+
 set_keybindings() {
     declare -A shortcut_keybinds=(
         ["Terminal"]="<Ctrl><Alt>t"
@@ -35,26 +44,29 @@ set_keybindings() {
         [[ $count == $((${#shortcut_keybinds[@]}-1)) ]] && keybind_locations+="]" || keybind_locations+=", "
     done
 
-    ACTION="Set Keybind locations"
-    gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$keybind_locations" >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+    gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \
+        "$keybind_locations" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Set Keybinds Location"
+    [[ $? -ne 0 ]] && exit 1
 
     keybind_index=0
     for name in "${!shortcut_keybinds[@]}"; do
         binding="${shortcut_keybinds[$name]}"
         command="${shortcut_commands[$name]}"
 
-        ACTION="Set Desktop Shortcut for '$name'"
+        ACTION=""
         gsettings set \
-            org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom$keybind_index/ binding "$binding" \
-            >/dev/null 2>>/tmp/archsetuperrors.log \
-        && gsettings set \
-            org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom$keybind_index/ command "$command" \
-            >/dev/null 2>>/tmp/archsetuperrors.log \
-        && gsettings set \
-            org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom$keybind_index/ name "$name" \
-            >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+            org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom$keybind_index/ binding "$binding" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Set Desktop Shortcut for '$name'"
+        [[ $? -ne 0 ]] && exit 1
+
+        gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom$keybind_index/ name "$name" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Set Keybind: '$binding'"
+        [[ $? -ne 0 ]] && exit 1
+
+        gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom$keybind_index/ command "$command" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Set Keybind Command: '$command'"
+        [[ $? -ne 0 ]] && exit 1
         
         ((keybind_index++))
     done
@@ -63,68 +75,82 @@ set_keybindings() {
 
 # ----------- Configure terminal settings -----------
 
-sudo pacman -Sy --noconfirm \
+packages=(
     gnome-control-center gnome-backgrounds gnome-terminal \
     gnome-keyring gnome-logs gnome-settings-daemon \
     gnome-calculator gnome-software gvfs malcontent mutter \
     gdm nautilus xdg-user-dirs-gtk xorg
+)
+
+if ! pacman -Q ${packages[@]} &>/dev/null; then
+    sudo pacman -Sy --noconfirm ${packages[@]} \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" \
+        "Download and install gnome packages with pacman (this may take awhile)"
+    [[ $? -ne 0 ]] && exit 1
+fi
 
 
 # ----------- Configure terminal settings -----------
 
-echo -e "\n#Opens new tabs in the current working directory" >> ~/.bashrc
-echo "source /etc/profile.d/vte.sh" >> ~/.bashrc
+if ! grep "source /etc/profile.d/vte.sh" $HOME/.bashrc &>/dev/null
+then
+    echo -e "\n#Opens new tabs in the current working directory" >> ~/.bashrc
+    echo "source /etc/profile.d/vte.sh" >> ~/.bashrc
+fi
 
-# Set the color theme to dark for the system
-ACTION="Set Desktop Color Theme to Dark"
-gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" \
+    >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" "Set Desktop Color Theme to Dark"
+[[ $? -ne 0 ]] && exit 1
 
-# Get the default terminal profile
 terminal_profile=$(gsettings get org.gnome.Terminal.ProfilesList default | tr -d \')
 
 if [[ -n $terminal_profile ]]
 then
-    # Set the font-name and font-size
-    ACTION="Set Font Name & Size"
-    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ font "Source Code Pro 14" >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ \
+        font "Source Code Pro 14" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Set Font Name & Size"
+    [[ $? -ne 0 ]] && exit 1
 
-    ACTION="Set Terminal Size in Columns"
-    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ default-size-columns 88 >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ \
+        default-size-columns 88 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Set Terminal Size in Columns"
+    [[ $? -ne 0 ]] && exit 1
 
-    ACTION="Set Terminal Size in Rows"
-    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ default-size-rows 20 >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ \
+        default-size-rows 20 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Set Terminal Size in Rows"
+    [[ $? -ne 0 ]] && exit 1
 
-    ACTION="Turn off the Terminal Bell"
-    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ audible-bell false >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS] $ACTION" \
-        || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+    gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:"$terminal_profile"/ \
+        audible-bell false >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Turn off the Terminal Bell"
+    [[ $? -ne 0 ]] && exit 1
 else
-    echo "[FAIL] Failed to get terminal profile... skipping related commands"
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Failed to get terminal profile... skipping related commands"
 fi
 
 # ----------- Set Shortcuts & Keybindings -----------
 
 set_keybindings
 
-ACTION="Set Keybind: Switch to the Next Terminal Tab = <Control>Return"
-gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/ next-tab '<Control>Return' >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-# Switch to previous tab
-ACTION="Set Keybind: Switch to the Previous Terminal Tab = <Control>BackSpace"
-gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/ prev-tab '<Control>BackSpace' >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/ \
+    next-tab '<Control>Return' >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" \
+    "Set Keybind: Switch to the Next Terminal Tab = <Control>Return"
+[[ $? -ne 0 ]] && exit 1
+
+ACTION=""
+gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/ \
+    prev-tab '<Control>BackSpace' >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" \
+    "Set Keybind: Switch to the Previous Terminal Tab = <Control>BackSpace"
+[[ $? -ne 0 ]] && exit 1
 
 
 # ----------- Start the gnome desktop environment -----------
 
+cd $HOME
 sudo systemctl start gdm

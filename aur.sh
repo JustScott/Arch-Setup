@@ -16,21 +16,28 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
+if [[ $(basename $PWD) != "Arch-Setup" ]]
+then
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup base directory"
+    exit 1
+fi
+
+source ./shared_lib
+
 if ! { which yay || type yay; } &>/dev/null
 then
-    ACTION="Clone, compile, and install yay from the AUR (this may take a while)"
-    echo -n "...$ACTION..."
     cd # pwd -> $HOME
-    if git clone https://aur.archlinux.org/yay.git >/dev/null 2>>/tmp/archsetuperrors.log
-    then
-        {
-            cd yay >/dev/null 2>>/tmp/archsetuperrors.log
-            makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log
-        } >/dev/null 2>>/tmp/archsetuperrors.log \
-            && echo "[SUCCESS]" \
-            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
-    else
-        echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
-        exit 1
-    fi
+    git clone https://aur.archlinux.org/yay.git \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Clone yay from the AUR"
+    [[ $? -ne 0 ]] && exit 1
+
+    {
+        cd yay >/dev/null 2>>/tmp/archsetuperrors.log
+        makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log
+    } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Install yay with makepkg"
+    [[ $? -ne 0 ]] && exit 1
 fi

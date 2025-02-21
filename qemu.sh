@@ -16,6 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+if [[ $(basename $PWD) != "Arch-Setup" ]]
+then
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup base directory"
+    exit 1
+fi
+
+source ./shared_lib
+
 # Allows for mounting USB media to the virtual machines
 sudo chmod g+rwx -R /dev/bus/usb
 
@@ -25,15 +34,13 @@ packages=(
 )
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
-    ACTION="Install QEMU related packages with pacman"
-    echo -n "...$ACTION..."
-    sudo pacman -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
-        && echo "[SUCCESS]" \
-        || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+    sudo pacman -Sy ${packages[@]} --noconfirm \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Download and install QEMU related packages with pacman"
+    [[ $? -ne 0 ]] && exit 1
 fi
 
 
-ACTION="Configure QEMU"
 {
     cat /etc/libvirt/libvirtd.conf | grep 'unix_sock_group = libvirt' &>/dev/null || \
         sudo bash -c 'echo -e "\nunix_sock_group = libvirt" >> /etc/libvirt/libvirtd.conf'
@@ -44,6 +51,6 @@ ACTION="Configure QEMU"
         sudo usermod -aG libvirt $CURRENT_USER
     cat /etc/libvirt/qemu.conf | grep "group=$CURRENT_USER" &>/dev/null || \
         sudo bash -c "echo 'group=$CURRENT_USER' >> /etc/libvirt/qemu.conf"
-} >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
+} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" "Configure QEMU"
+[[ $? -ne 0 ]] && exit 1

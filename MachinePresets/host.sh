@@ -16,11 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-if ! [[ $(basename "$PWD") == "MachinePresets" ]]
+if [[ $(basename $PWD) != "MachinePresets" ]]
 then
-    echo "Must be in the Arch-Setup/MachinePresets directory to run this script!"
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup/MachinePresets directory"
     exit 1
 fi
+
+source ../shared_lib
 
 bash base.sh
 
@@ -28,11 +31,9 @@ packages=(newsboat calcurse pass)
 
 if ! pacman -Q ${packages[@]} &>/dev/null
 then
-    ACTION="Install host packages with pacman"
-    echo -n "...$ACTION..."
-    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS]" \
-        || { "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+    sudo pacman -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Download and install host packages with pacman"
+    [[ $? -ne 0 ]] && exit 1
 fi
 
 cd ..
@@ -40,6 +41,3 @@ bash media.sh
 bash secure.sh
 uname -r | grep "pinetab2" &>/dev/null || bash qemu.sh
 bash general-scripts.sh
-
-cd GUIs
-bash wm-scripts.sh

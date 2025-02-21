@@ -16,21 +16,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-SCRIPT_DIR="$PWD/DoNotRun/scripts/vm_shortcut_scripts"
-
-if ! [[ $(basename "$PWD") == "Arch-Setup" ]]
+if [[ $(basename $PWD) != "Arch-Setup" ]]
 then
-    echo "Must be in the Arch-Setup base directory to run this script!"
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup base directory"
     exit 1
 fi
 
-ACTION="Add the Virtual Machine shortcut scripts to \$PATH in .bashrc"
+source ./shared_lib
+
+SCRIPT_DIR="$PWD/DoNotRun/scripts/vm_shortcut_scripts"
+
 { 
     if ! cat $HOME/.bashrc | grep "export PATH=" | grep "$SCRIPT_DIR" &>/dev/null
     then
         echo "export PATH=\"\$PATH:$SCRIPT_DIR"\" >> $HOME/.bashrc
     fi
-} >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS] $ACTION" \
-    || echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-
+} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" "Add the Virtual Machine shortcut scripts to \$PATH in .bashrc"
+[[ $? -ne 0 ]] && exit 1
