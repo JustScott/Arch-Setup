@@ -16,23 +16,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-if ! [[ $(basename "$PWD") == "MachinePresets" ]]
+if [[ $(basename $PWD) != "MachinePresets" ]]
 then
-    echo "Must be in the Arch-Setup/MachinePresets directory to run this script!"
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup/MachinePresets directory"
     exit 1
 fi
+
+source ../shared_lib
 
 bash base_vm.sh
 
 packages=(pass)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
-    # Allows for playing videos and music from youtube using the terminal or dmenu
-    ACTION="Install Vault packages with pacman"
-    echo -n "...$ACTION..."
-    sudo pacman -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
-        && echo "[SUCCESS]" \
-        || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+    sudo pacman -Sy ${packages[@]} --noconfirm >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Download and install Vault packages with pacman"
+    [[ $? -ne 0 ]] && exit 1
 fi
 
 cd ..

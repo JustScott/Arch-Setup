@@ -16,13 +16,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-if ! [[ $(basename "$PWD") == "NativeLikeAppVMs" ]]
+if [[ $(basename $PWD) != "NativeLikeAppVMs" ]]
 then
-    echo "Must be in the Arch-Setup/MachinePresets/NativeLikeAppVMs directory to run this script!"
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup/MachinePresets/NativeLikeAppVMs directory"
     exit 1
 fi
 
+source ../../shared_lib
+
 STARTING_PWD=$PWD
+
+cd ..
+bash base_vm.sh
+cd ..
+bash aur.sh
 
 packages=(
     neomutt curl isync \
@@ -32,51 +40,44 @@ packages=(
 
 if ! pacman -Q ${packages[@]} &>/dev/null
 then
-    ACTION="Install neomutt & its dependencies"
+    ACTION=""
     echo -n "...$ACTION..."
-    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
-        && echo "[SUCCESS]" \
-        || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
+    sudo pacman -Sy --noconfirm ${packages[@]} \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" \
+        "Download and install neomutt & its dependencies"
+    [[ $? -ne 0 ]] && exit 1
 fi
 
 
 [[ -d $HOME/pam-gnupg ]] || {
     cd $HOME
-    git clone https://aur.archlinux.org/pam-gnupg.git
+    git clone https://aur.archlinux.org/pam-gnupg.git \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Clone pam-gnupg"
+    [[ $? -ne 0 ]] && exit 1
     cd pam-gnupg
-    makepkg -si --noconfirm
-}
+    makepkg -si --noconfirm >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Make pam-gnupg"
+    [[ $? -ne 0 ]] && exit 1
+} 
 
 [[ -d $HOME/mutt-wizard ]] || {
     cd $HOME
-    git clone https://github.com/LukeSmithxyz/mutt-wizard
+    git clone https://github.com/LukeSmithxyz/mutt-wizard \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Clone mutt-wizard"
+    [[ $? -ne 0 ]] && exit 1
     cd mutt-wizard
-    sudo make install
+    sudo make install >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Install mutt-wizard"
+    [[ $? -ne 0 ]] && exit 1
 }
 
 grep "neomutt" $HOME/.bash_profile &>/dev/null \
     || echo -e "\nneomutt" >> $HOME/.bash_profile
 
-if ! { which yay || type yay; } &>/dev/null
-then
-    ACTION="Clone, compile, and install yay from the AUR (this may take a while)"
-    echo -n "...$ACTION..."
-    cd # pwd -> $HOME
-    if git clone https://aur.archlinux.org/yay.git >/dev/null 2>>/tmp/archsetuperrors.log
-    then
-        {
-            cd yay >/dev/null 2>>/tmp/archsetuperrors.log
-            makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log
-            cd $VIRTUAL_MACHINES_PWD
-        } >/dev/null 2>>/tmp/archsetuperrors.log \
-            && echo "[SUCCESS]" \
-            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit; }
-    else
-        echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
-        exit 1
-    fi
-fi
-
+cd $STARTING_PWD
 
 #SOURCE: https://github.com/LukeSmithxyz/mutt-wizard/issues/981
 
@@ -120,9 +121,3 @@ fi
 #  sleep 5
 #  neomutt
 #
-
-
-cd $STARTING_PWD
-
-cd ..
-bash base_vm.sh

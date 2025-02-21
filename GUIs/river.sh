@@ -16,32 +16,32 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+if [[ $(basename $PWD) != "GUIs" ]]
+then
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup/GUIs directory"
+    exit 1
+fi
+
+source ../shared_lib
+
 bash wm-scripts.sh
+cd ..
+bash audio.sh
+bash aur.sh
 
 packages=(
     wayland-protocols river foot wl-clipboard bemenu-wayland \
-    swaybg wlr-randr \
+    swaybg wlr-randr river-creek \
     swayidle waylock \
     brightnessctl noto-fonts-emoji
 )
 
-if ! pacman -Q pulseaudio zig &>/dev/null
+if ! yay -Q ${packages[@]} &>/dev/null
 then
-    if uname -r | grep 'pinetab2' &>/dev/null
-    then
-        echo -e "\n - Answer yes to the pulseaudio conflict - \n"
-        sudo pacman -S pulseaudio
-        sudo pacman -S --noconfirm zig
-    fi
-fi
-
-if ! pacman -Q ${packages[@]} &>/dev/null
-then
-    ACTION="Install river and related packages with pacman (this may take a while)"
-    echo -n "...$ACTION..."
-    sudo pacman -Sy --noconfirm ${packages[@]} >/dev/null 2>>/tmp/archsetuperrors.log \
-            && echo "[SUCCESS]" \
-            || { echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"; exit;} 
+    yay -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Download and install river packages with pacman"
+    [[ $? -ne 0 ]] && exit 1 
 fi
 
 ARCH_SETUP_DIR=$PWD
@@ -50,32 +50,32 @@ AUR_PROJECTS_ROOT=$HOME/.raw_aur
 mkdir -p $AUR_PROJECTS_ROOT
 cd $AUR_PROJECTS_ROOT # pwd -> $HOME/Git/Hub
 
-if ! { which creek || type creek; } &>/dev/null
+if uname -r | grep 'pinetab2' &>/dev/null
 then
     # creek in the aur doesn't support aarch64, so compile it with zig
-    if uname -r | grep 'pinetab2' &>/dev/null
+    if ! { which creek || type creek; } &>/dev/null
     then
-        ACTION="Build creek from source with zig"
-        [[ -d "creek" ]] || git clone https://github.com/nmeum/creek.git
-        cd creek
-        if zig build; then
-            ln -s $PWD/zig-out/bin/creek $ARCH_SETUP_DIR/DoNotRun/scripts/wm_scripts/
-            echo "[SUCCESS] $ACTION"
-        else
-            echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"
-            exit 1
+        if ! pacman -Q zig &>/dev/null
+        then
+            sudo pacman -Sy --noconfirm zig >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Download and install zig with pacman"
+            [[ $? -ne 0 ]] && exit 1
         fi
-    else
-        ACTION="Clone river-creek to $AUR_PROJECTS_ROOT/river-creek"
-        git clone https://aur.archlinux.org/river-creek.git >/dev/null 2>>/tmp/archsetuperrors.log\
-            && echo "[SUCCESS] $ACTION" \
-            || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit; } 
 
-        ACTION="Compile river-creek"
-        cd river-creek # pwd -> $HOME/.raw_aur/river-creek
-        makepkg -si --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log \
-            && echo "[SUCCESS] $ACTION" \
-            || { echo "[FAIL] $ACTION... wrote error log to /tmp/archsetuperrors.log"; exit;} 
+        ACTION="Build creek from source with zig"
+        git clone https://github.com/nmeum/creek.git >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Clone Creek"
+        [[ $? -ne 0 ]] && exit 1
+
+        cd creek
+        zig build >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Compile Creek"
+        [[ $? -ne 0 ]] && exit 1
+            
+        ln -s $PWD/zig-out/bin/creek $ARCH_SETUP_DIR/DoNotRun/scripts/wm_scripts/ \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Install Creek to wm_scripts"
+        [[ $? -ne 0 ]] && exit 1
     fi
 fi
 

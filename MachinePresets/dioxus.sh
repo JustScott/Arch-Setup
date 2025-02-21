@@ -16,19 +16,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-if ! [[ $(basename "$PWD") == "MachinePresets" ]]
+if [[ $(basename $PWD) != "MachinePresets" ]]
 then
-    echo "Must be in the Arch-Setup/MachinePresets directory to run this script!"
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup/MachinePresets directory"
     exit 1
 fi
+
+source ../shared_lib
 
 cd ..
 bash aur.sh
 bash qemu.sh
+bash secure.sh
 
 cd Development
 bash rust.sh
-bash secure
 
 packages=( \
     android-ndk android-sdk android-sdk-build-tools android-sdk-cmdline-tools-latest \
@@ -40,27 +43,21 @@ packages=( \
 echo -e "\n-----------------------\n| Packages To Install |\n-----------------------\n\n${packages[@]}\n\n"
 
 if ! yay -Q ${packages[@]} &>/dev/null; then
-    ACTION="Install Dioxus development packages"
-    echo -n "...$ACTION..."
-    yay -Sy ${packages[@]} --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log\
-        && echo "[SUCCESS]" \
-        || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+    yay -Sy ${packages[@]} --noconfirm >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Install Dioxus development packages"
+    [[ $? -ne 0 ]] && exit 1
 fi
 
-ACTION="Install dioxus-cli"
-echo -n "...$ACTION... (this may take a while)"
-cargo install dioxus-cli >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+cargo install dioxus-cli --noconfirm >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" \
+    "Download and compile dioxus-cli (this may take awhile)"
+[[ $? -ne 0 ]] && exit 1
 
-ACTION="Add cargo binaries to system path"
-echo -n "...$ACTION..."
-echo "export PATH=\"\$PATH:/home/$USER/.cargo/bin\"" >> $HOME/.bashrc 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+echo "export PATH=\"\$PATH:/home/$USER/.cargo/bin\"" \
+    >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" "Add cargo binaries to system path"
+[[ $? -ne 0 ]] && exit 1
 
-ACTION="Add the android-sdk to Path"
-echo -n "...$ACTION..."
 {
     cat $HOME/.bashrc | grep "export ANDROID_NDK_HOME=/opt/android-ndk" &>/dev/null || \
         echo "export ANDROID_NDK_HOME=/opt/android-ndk" >> $HOME/.bashrc
@@ -74,19 +71,16 @@ echo -n "...$ACTION..."
         echo "export JAVA_HOME=/usr/lib/jvm/java-21-openjdk" >> $HOME/.bashrc
     cat $HOME/.bashrc | grep "PATH=\$PATH:\$JAVA_HOME/bin" &>/dev/null || \
         echo "export PATH=\$PATH:\$JAVA_HOME/bin" >> $HOME/.bashrc
-} >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Add the android-sdk to Path"
+    [[ $? -ne 0 ]] && exit 1
 
-ACTION="Add android build targets with rustup"
-echo -n "...$ACTION..."
 rustup target add aarch64-linux-android armv7-linux-androideabi \
-    i686-linux-android x86_64-linux-android >> $HOME/.bashrc 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+    i686-linux-android x86_64-linux-android \
+    >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" "Add android build targets with rustup"
+[[ $? -ne 0 ]] && exit 1
 
-ACTION="Create android-sdk group"
-echo -n "...$ACTION..."
 {
     sudo groupadd android-sdk
     sudo gpasswd -a $USER android-sdk
@@ -94,31 +88,34 @@ echo -n "...$ACTION..."
     sudo chmod -R g+rwx /opt/android-sdk
 #    sudo setfacl -R -m g:android-sdk:rwx /opt/android-sdk
 #    sudo setfacl -d -m g:android-sdk:rwX /opt/android-sdk
-} >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" "Create android-sdk group"
+[[ $? -ne 0 ]] && exit 1
 
 newgrp android-sdk <<EOF
-ACTION="Accept Android SDK Licenses"
-echo -n "...\$ACTION..."
-yes | sdkmanager --licenses >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+if ! [[ $(basename $PWD) != "MachinePresets" ]] &>/dev/null
+then
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] Please run script from the Arch-Setup/Development directory"
+    exit 1
+fi
 
-ACTION="Install & Set-up emulator with qemu"
-echo -n "...\$ACTION..."
+source ../shared_lib
+
+yes | sdkmanager --licenses >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" "Accept Android SDK Licenses"
+[[ $? -ne 0 ]] && exit 1
+
 {
     yes | sdkmanager "system-images;android-30;default;x86_64"
     sdkmanager "emulator"
-} >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || echo "[FAIL] wrote error log to /tmp/arThsetuperrors.log"
+} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" "Install & Set-up emulator with qemu"
+[[ $? -ne 0 ]] && exit 1
 
-ACTION="Set system java version to java-21-openjdk"
-echo -n "...\$ACTION..."
-sudo archlinux-java set java-21-openjdk >/dev/null 2>>/tmp/archsetuperrors.log \
-    && echo "[SUCCESS]" \
-    || echo "[FAIL] wrote error log to /tmp/archsetuperrors.log"
+sudo archlinux-java set java-21-openjdk >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" "Set system java version to java-21-openjdk"
+[[ $? -ne 0 ]] && exit 1
 
 cd ..
 EOF
