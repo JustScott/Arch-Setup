@@ -1,0 +1,274 @@
+#!/bin/bash
+#
+# cloud - part of the Arch-Setup project
+# Copyright (C) 2025, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+#
+# Only for synchronizing files to the cloud machine. Retrieving files
+#  must be done manually
+#
+# TODO: Add command `cloud cron` for auto syncing files in the background
+#       only if SSH_KEYFILE_PATH exists
+#   * Adds a cron command (if cron installed) that calls `cloud sync`
+#     * Not sure how often it should be, or if I should let the user choose
+
+STDOUT_LOG_PATH="/dev/null"
+STDERR_LOG_PATH="/tmp/cloud.log"
+
+DATA_DIRECTORY=$HOME/.config/cloud
+SYNC_PATHS_FILE=$DATA_DIRECTORY/sync_paths
+
+SSH_KEYFILE_PATH="$HOME/.ssh/file_server"
+
+verify_ipv4_format() {
+    local ip=$1
+    local regex='^([0-9]{1,3}\.){3}[0-9]{1,3}$'
+
+    if [[ $ip =~ $regex ]]; then
+        IFS='.' read -r -a octets <<< "$ip"
+        for octet in "${octets[@]}"; do
+            if ((octet < 0 || octet > 255)); then
+                echo "Invalid IP address: Octet $octet out of range"
+                return 1
+            fi
+        done
+        return 0
+    else
+        return 1
+    fi
+}
+
+get_ipv4() {
+    declare -g ipv4=""
+    local ipv4_verify
+
+    while : 
+    do
+        read -p "Enter Cloud IPv4: " ipv4
+        read -p "Verify IPv4: " ipv4_verify
+
+        if [[ -z "$ipv4" ]]
+        then
+            echo -e "\n - IPv4 Can't Be Empty - \n"
+            continue
+        fi
+
+        if [[ $ipv4 == $ipv4_verify ]]
+        then
+            if ! verify_ipv4_format "$ipv4"
+            then
+                echo -e "\n - Incorrect IPv4 format - \n"
+                continue
+            fi
+            break
+        else 
+            echo -e "\n - IP addresses Don't Match - \n"
+        fi
+    done
+}
+
+get_name() {
+    declare -g cloud_username=""
+    local cloud_username_verify
+
+    while : 
+    do
+        read -p "Enter Cloud user: " cloud_username
+        read -p "Verify user: " cloud_username_verify
+
+        if [[ -z "$cloud_username" ]]
+        then
+            echo -e "\n - Name Can't Be Empty - \n"
+            continue
+        fi
+
+        if [[ $cloud_username == $cloud_username_verify ]]
+        then
+            break
+        else 
+            echo -e "\n - Names addresses Don't Match - \n"
+        fi
+    done
+}
+
+# Show a spinner and handle exit status
+task_output() {
+    local pid=$1
+    local stderr_path=$2
+    local task_message="$3"
+
+    local spin_chars="/-\|"
+
+    while kill -0 "$pid" 2>/dev/null; do
+        for i in $(seq 0 3); do
+            printf "\r\e[36m[%s]\e[0m %s" "${spin_chars:$i:1}" "$task_message"
+            sleep 0.1
+        done
+    done
+
+    # Capture the exit code of the background process
+    wait $pid
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        printf "\r\e[32m[Success]\e[0m %s\n" "$task_message"
+        return 0
+    else
+        printf "\r\e[31m[Error]\e[0m %s (Exit code: %d)\n" "$task_message" "$exit_code"
+        printf "\e[31m[!] Check error log: %s\e[0m\n" "$stderr_path"
+        return 1
+    fi
+}
+
+update_cloud_ip() {
+    get_ipv4
+
+    local new_cloud_ip="$ipv4"
+    sed -i "/^export CLOUD_IP/c\export CLOUD_IP='$new_cloud_ip'" $HOME/.bashrc
+
+    echo -e "\nRun the 'newgrp' command for subsequent 'cloud' commands to use new IP\n"
+}
+
+check_for_cloud_ip_variable() {
+    if [[ -z "$CLOUD_IP" ]]
+    then
+        echo "No CLOUD_IP variable set.. you can set one now"
+
+        get_ipv4
+
+        export CLOUD_IP="$ipv4"
+
+        if cat $HOME/.bashrc | grep "export CLOUD_IP=" &>/dev/null
+        then
+            echo -e "\n  - Entered IP doesn't match the IP set in .bashrc... try running 'cloud update-ip'"
+            exit 1
+        else
+            echo "Adding CLOUD_IP variable to your .bashrc"
+            echo -e "\nexport CLOUD_IP='$CLOUD_IP'" >> $HOME/.bashrc
+        fi
+    fi
+}
+
+update_cloud_username() {
+    get_name
+
+    local new_cloud_username="$cloud_username"
+    sed -i "/^export CLOUD_USERNAME/c\export CLOUD_USERNAME='$new_cloud_username'" $HOME/.bashrc
+
+    echo -e "\nRun the 'newgrp' command for subsequent 'cloud' commands to use new name\n"
+}
+
+check_for_cloud_username_variable() {
+    if [[ -z "$CLOUD_USERNAME" ]]
+    then
+        echo "No CLOUD_USERNAME variable set.. you can set one now"
+
+        get_name
+
+        export CLOUD_USERNAME="$cloud_username"
+
+        if cat $HOME/.bashrc | grep "export CLOUD_USERNAME=" &>/dev/null
+        then
+            echo -e "\n  - Entered Name doesn't match the Name set in .bashrc... try running 'cloud update-name'"
+            exit 1
+        else
+            echo "Adding CLOUD_USERNAME variable to your .bashrc"
+            echo -e "\nexport CLOUD_USERNAME='$CLOUD_USERNAME'" >> $HOME/.bashrc
+        fi
+    fi
+}
+
+ensure_cloud_online() {
+    check_for_cloud_ip_variable
+
+    ping -c 4 $CLOUD_IP >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Ensure the cloud computer is online at $CLOUD_IP"
+    [[ $? -ne 0 ]] && exit 1 
+}
+
+if ! { which rsync || type rsync; } &>/dev/null
+then
+    echo -e "\n - The rsync package is required to run this script - \n"
+    exit 1
+fi
+
+sync_to_cloud() {
+    [[ -d $DATA_DIRECTORY ]] || {
+        echo -e "\n - [ERROR] $DATA_DIRECTORY doesn't exist... creating & exiting - \n"
+        mkdir -p $DATA_DIRECTORY
+        exit 1
+    }
+
+    if ! [[ -f $SYNC_PATHS_FILE ]]
+    then
+        echo "[ERROR] Must create a '$SYNC_PATHS_FILE' file first"
+        return 1
+    fi
+
+    source $SYNC_PATHS_FILE
+
+    ORIGINAL_PWD=$PWD
+    cd / # Ensure the user provided full paths from root
+    # Verify all paths exist
+    for path in ${paths[@]}
+    do
+        if ! [[ -d $path || -f $path ]]
+        then
+            echo -e "\n - [ERROR] $path from '$SYNC_PATHS_FILE' doesn't exist (must provide full path from '/') - \n"
+            exit 1
+        fi
+    done
+    cd $ORIGINAL_PWD
+
+    check_for_cloud_username_variable
+    ensure_cloud_online
+
+    if [[ -f "$SSH_KEYFILE_PATH" ]]
+    then
+        rsync -avz -L --progress -e "ssh -i $SSH_KEYFILE_PATH" \
+            ${paths[@]} $CLOUD_USERNAME@$CLOUD_IP:cloud_sync/
+    else
+        rsync -avz -L --progress ${paths[@]} $CLOUD_USERNAME@$CLOUD_IP:cloud_sync/
+    fi
+}
+
+display_help() {
+    echo -e "\nUsage: cloud [COMMAND]"
+    echo -e "\nEasy management of encrypted notes in the terminal. Uses \`lf\` for note traversal"
+
+    echo -e "\nCommands:"
+    printf "\t%-10s %-10s\n" "status" "Check if your cloud device is online"
+    printf "\t%-10s %-10s\n" "sync" "Synchronize the paths from $HOME/.config/cloud/sync_paths to the cloud PC"
+    printf "\t%-10s %-10s\n" "update-ip" "Update the CLOUD_IP variable in .bashrc"
+    printf "\t%-10s %-10s\n" "update-username" "Update the CLOUD_USERNAME variable in .bashrc"
+
+    echo ""
+}
+
+
+case $1 in
+    "status")             ensure_cloud_online;;
+    "sync")               sync_to_cloud;;
+    "update-ip")          update_cloud_ip;;
+    "update-username")    update_cloud_username;;
+    "")                   ensure_cloud_online;;
+    "--help"|"-h")        display_help;;
+    *)
+        echo -e "\n - Invalid use of the \`cloud\` command -";
+        display_help
+        exit 1
+        ;;
+esac
