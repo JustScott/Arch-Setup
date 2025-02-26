@@ -21,16 +21,15 @@
 #  about:config -> devp -> layout.css.devPixelsPerPx=1.25
 #
 
-if [[ $(basename $PWD) != "MachinePresets" ]]
+if [[ $(basename $PWD) != "Arch-Setup" ]]
 then
     printf "\e[31m%s\e[0m\n" \
-        "[Error] Please run script from the Arch-Setup/MachinePresets directory"
+        "[Error] Please run script from the Arch-Setup base directory"
     exit 1
 fi
 
-source ../shared_lib
+source ./shared_lib
 
-cd ..
 bash secure.sh
 bash aur.sh
 
