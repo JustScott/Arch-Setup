@@ -25,6 +25,8 @@ fi
 
 source ./shared_lib
 
+#sudo -v
+
 SCRIPT_DIR="$PWD/DoNotRun/scripts/general_scripts"
 
 # Gives all users access to the scripts
@@ -38,8 +40,7 @@ SCRIPT_DIR="$PWD/DoNotRun/scripts/general_scripts"
 #
 if ! cat $HOME/.bashrc | grep "export PATH=" | grep "$SCRIPT_DIR" &>/dev/null
 then
-    echo "export PATH=\"\$PATH:$SCRIPT_DIR"\" >> $HOME/.bashrc \
-        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    echo "export PATH=\"\$PATH:$SCRIPT_DIR"\" >> $HOME/.bashrc 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Add the general script directory to \$PATH in .bashrc"
     [[ $? -ne 0 ]] && exit 1
 fi
@@ -48,15 +49,15 @@ fi
 # Will leave this for now as I'm not sure how to dynamically change the shebang
 #  in scripts
 #
-{
-    if ! [[ -d $PWD/DoNotRun/scripts/script_data/timer/.venv ]]
-    then
-        python3 -m venv DoNotRun/scripts/script_data/timer/.venv
-    fi
-    DoNotRun/scripts/script_data/timer/.venv/bin/pip install -r DoNotRun/scripts/script_data/timer/requirements.txt 
-
-    sudo mkdir -p /usr/local/script_data
-    sudo ln -sf $PWD/DoNotRun/scripts/script_data/timer /usr/local/script_data/timer
-} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-task_output $! "$STDERR_LOG_PATH" "Place supporting script data in /usr/local/script_data"
-[[ $? -ne 0 ]] && exit 1
+#{
+#    if ! [[ -d $PWD/DoNotRun/scripts/script_data/timer/.venv ]]
+#    then
+#        python3 -m venv DoNotRun/scripts/script_data/timer/.venv
+#    fi
+#    DoNotRun/scripts/script_data/timer/.venv/bin/pip install -r DoNotRun/scripts/script_data/timer/requirements.txt 
+#
+#    sudo mkdir -p /usr/local/script_data
+#    sudo ln -sf $PWD/DoNotRun/scripts/script_data/timer /usr/local/script_data/timer
+#} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+#task_output $! "$STDERR_LOG_PATH" "Place supporting script data in /usr/local/script_data"
+#[[ $? -ne 0 ]] && exit 1

@@ -30,6 +30,8 @@ cd ..
 bash audio.sh
 bash aur.sh
 
+sudo -v
+
 packages=(
     wayland-protocols river foot wl-clipboard bemenu-wayland \
     swaybg wlr-randr river-creek \

@@ -26,6 +26,8 @@ fi
 
 source ./shared_lib
 
+sudo -v
+
 if ! { which yay || type yay; } &>/dev/null
 then
     cd # pwd -> $HOME

@@ -33,6 +33,8 @@ source ./shared_lib
 bash secure.sh
 bash aur.sh
 
+sudo -v
+
 packages=(librewolf-bin)
 
 if ! yay -Q ${packages[@]} &>/dev/null; then

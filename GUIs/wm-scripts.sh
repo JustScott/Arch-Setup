@@ -25,7 +25,7 @@ fi
 
 source ../shared_lib
 
-SCRIPT_DIR="$PWD/DoNotRun/scripts/wm_scripts"
+SCRIPT_DIR="$PWD/../DoNotRun/scripts/wm_scripts"
 
 # Gives all users access to the scripts
 #
@@ -37,8 +37,7 @@ SCRIPT_DIR="$PWD/DoNotRun/scripts/wm_scripts"
 #
 if ! cat $HOME/.bashrc | grep "export PATH=" | grep "$SCRIPT_DIR" &>/dev/null
 then
-    echo "export PATH=\"\$PATH:$SCRIPT_DIR"\" >> $HOME/.bashrc \
-        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    echo "export PATH=\"\$PATH:$SCRIPT_DIR"\" >> $HOME/.bashrc 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Add window manager scripts to \$PATH in .bashrc"
     [[ $? -ne 0 ]] && exit 1
 fi
