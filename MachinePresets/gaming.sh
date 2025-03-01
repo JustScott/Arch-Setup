@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# manjaro-gaming.sh - part of the Arch-Setup project
+# gaming.sh - part of the Arch-Setup project
 # Copyright (C) 2023-2025, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -34,36 +34,43 @@ cd MachinePresets
 
 VIRTUAL_MACHINES_PWD=$PWD
 
-packages=(optimus-manager-git flatpak libgdm-prime gdm-prime) # r2modman-bin
+packages=( flatpak ) 
 
-if ! pacman -Q ${packages[@]} &>/dev/null; then
-    #echo -e "\n\n -- Answer 'y' when asked to confirm replacing gdm related packages -- \n\n"
+# Nvidia laptops
+#packages+=(optimus-manager-git libgdm-prime gdm-prime)
+
+# Mod manager for lethal company
+#packages+=( r2modman-bin )
+
+if ! yay -Q ${packages[@]} &>/dev/null; then
     yes | yay -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-    task_output $! "$STDERR_LOG_PATH" "Download and install pipewire audio packages with pacman"
+    task_output $! "$STDERR_LOG_PATH" "Download gaming related packages and flatpak for installing steam"
     [[ $? -ne 0 ]] && exit 1
 fi
 
-# Would be nice if this would automatically switch over 
+# Nvidia laptops (doesn't work last I checked)
 #echo 'optimus-manager --switch nvidia --noconfirm' >> ~/.bash_profile
+
 grep "export EDITOR=nvim" $HOME/.bash_profile &>/dev/null \
     || echo -e "\nexport EDITOR=nvim" >> $HOME/.bash_profile
 
-flatpak install com.bitwarden.desktop \
-    io.gitlab.librewolf-community \
-    com.github.tchx84.Flatseal \
-    com.valvesoftware.Steam \
-    com.play0ad.zeroad -y >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+# Optional
+#    com.bitwarden.desktop \
+#    io.gitlab.librewolf-community \
+#    com.play0ad.zeroad
+flatpak install -y com.github.tchx84.Flatseal com.valvesoftware.Steam \
+    >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
 task_output $! "$STDERR_LOG_PATH" "Install some GUI apps with flatpak"
 [[ $? -ne 0 ]] && exit 1
 
+#    sudo ln -s /var/lib/flatpak/exports/bin/com.bitwarden.desktop /usr/local/bin/bitwarden
+#    sudo ln -s /var/lib/flatpak/exports/bin/io.gitlab.librewolf-community /usr/local/bin/librewolf
+#    sudo ln -s /var/lib/flatpak/exports/bin/com.play0ad.zeroad /usr/local/bin/zeroad
 {
-    sudo ln -s /var/lib/flatpak/exports/bin/com.bitwarden.desktop /usr/local/bin/bitwarden
-    sudo ln -s /var/lib/flatpak/exports/bin/io.gitlab.librewolf-community /usr/local/bin/librewolf
     sudo ln -s /var/lib/flatpak/exports/bin/com.github.tchx84.Flatseal /usr/local/bin/flatseal
     sudo ln -s /var/lib/flatpak/exports/bin/com.valvesoftware.steam /usr/local/bin/steam
-    sudo ln -s /var/lib/flatpak/exports/bin/com.play0ad.zeroad /usr/local/bin/zeroad
 } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-task_output $! "$STDERR_LOG_PATH" "Download and install pipewire audio packages with pacman"
+task_output $! "$STDERR_LOG_PATH" "Add GUI app to PATH"
 [[ $? -ne 0 ]] && exit 1
 
 #
