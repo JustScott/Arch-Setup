@@ -16,9 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+mkdir -p $HOME/.tmp &>/dev/null
 
 update-status-bar() {
-    CACHE_DIRECTORY=/tmp/status-bar-variables
+    CACHE_DIRECTORY=$HOME/.tmp/status-bar-variables
     CACHE_BRIGHTNESS_FILE=$CACHE_DIRECTORY/brightness_display.log
     CACHE_VOLUME_FILE=$CACHE_DIRECTORY/volume_display.log
     CACHE_BATTERY_FILE=$CACHE_DIRECTORY/battery_display.log
@@ -182,8 +183,8 @@ update-status-bar() {
         #
         # Calculates the rx and tx usage of the network
         #
-        RX_LOG_FILE=/tmp/net_rx.log
-        TX_LOG_FILE=/tmp/net_tx.log
+        RX_LOG_FILE=$CACHE_DIRECTORY/net_rx.log
+        TX_LOG_FILE=$CACHE_DIRECTORY/net_tx.log
 
         [[ -f $RX_LOG_FILE ]] || echo "0" > $RX_LOG_FILE
         [[ -f $TX_LOG_FILE ]] || echo "0" > $TX_LOG_FILE
@@ -260,7 +261,7 @@ update-status-bar() {
 
     if [[ -n "$WAYLAND_DISPLAY" ]]; then
         echo "$brightness_display $volume_display $battery_display $network_display $weather_display $bluetooth_display $(date +"%B %e %H:%M:%S")" \
-            > /tmp/status_bar_info
+            > $HOME/.tmp/status_bar_info
     elif which dwm &>/dev/null; then
         xsetroot -name "$brightness_display $volume_display $battery_display $network_display $weather_display $bluetooth_display $(date +"%B %e %H:%M:%S")" 
     fi
