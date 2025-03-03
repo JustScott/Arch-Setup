@@ -25,10 +25,29 @@ fi
 
 source ./shared_lib
 
-packages=(bluez bluez-utils pulseaudio-bluetooth)
+bash audio.sh
+
+packages=(bluez bluez-utils)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
+    sudo -v
     sudo pacman -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Download and install bluetooth packages with pacman"
+    [[ $? -ne 0 ]] && exit 1
+fi
+
+if ! systemctl is-active --quiet bluetooth &>/dev/null
+then
+    sudo -v
+    sudo systemctl start bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Start bluetooth service"
+    [[ $? -ne 0 ]] && exit 1
+fi
+
+if rfkill list bluetooth | grep -q "Soft blocked: yes" &>/dev/null
+then
+    sudo -v
+    sudo rfkill unblock bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Remove bluetooth soft block"
     [[ $? -ne 0 ]] && exit 1
 fi

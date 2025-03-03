@@ -30,14 +30,25 @@ packages=(
     pavucontrol pamixer
 )
 
+if pacman -Q pulseaudio &>/dev/null; then
+    if systemctl --user is-active --quiet pulseaudio &>/dev/null
+    then
+        systemctl --user disable --now pulseaudio &>/dev/null
+        task_output $! "$STDERR_LOG_PATH" "Stop pulseaudio service"
+    fi
+
+    sudo -v
+    yes | sudo pacman -R pulseaudio >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Remove pulseaudio if installed"
+    [[ $? -ne 0 ]] && exit 1
+fi
+
 if ! pacman -Q ${packages[@]} &>/dev/null; then
-    sudo pacman -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    sudo -v
+    yes | sudo pacman -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Download and install pipewire audio packages with pacman"
     [[ $? -ne 0 ]] && exit 1 
 fi
-
-## If it fails it probably means pulseaudio wasn't installed, so ignore
-systemctl --user disable --now pulseaudio &>/dev/null
 
 {
     systemctl --user enable --now pipewire &>/dev/null

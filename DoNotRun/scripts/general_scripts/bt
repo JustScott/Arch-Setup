@@ -20,47 +20,114 @@
 # Easy to use wrapper around the basic functionality of bluetoothctl
 #
 
+STDOUT_LOG_PATH="/dev/null"
+STDERR_LOG_PATH="/tmp/bterrors.log"
+
+
+if ! command -v bluetoothctl &>/dev/null; then
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] bluetoothctl is not installed. Install bluez-utils." >&2
+    exit 1
+fi
+
+if rfkill list bluetooth | grep -q "Soft blocked: yes" &>/dev/null
+then
+    sudo rfkill unblock bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Remove bluetooth soft block"
+    [[ $? -ne 0 ]] && exit 1
+fi
 
 display_help() {
     echo -e "\nUsage: bt [COMMAND]"
     echo -e "\nEasy to use wrapper around the basic functionality of bluetoothctl"
 
     echo "Commands:"
-    printf "\t%-15s %-1s\n" "list" "List all currently scanned bluetooth devices"
+    printf "\t%-15s %-1s\n" "on" "Start bluetooth service and power on"
+    printf "\t%-15s %-1s\n" "off" "Power off and stop bluetooth service"
+    printf "\t%-15s %-1s\n" "start" "Start bluetooth service"
+    printf "\t%-15s %-1s\n" "stop" "Stop bluetooth service"
+    printf "\t%-15s %-1s\n" "con" "Start service, power on, and search for/connect to devices"
+    printf "\t%-15s %-1s\n" "dis" "Disconnect from a connected device"
+    printf "\t%-15s %-1s\n" "version" "Check the bt version"
 
     echo -e "\nExamples:"
-    echo -e "\t\`bt list\`"
-    echo -e "\t\`bt con <partial or full device name>\`"
+    echo -e "\t\`bt con\` # Use fzf to connect to device"
+    echo -e "\t\`bt con <partial or full device name>\` # Connect to closest named device"
+}
+
+
+# Function to show a spinner and handle exit status
+task_output() {
+    local pid=$1
+    local stderr_path=$2
+    local task_message="$3"
+
+    local spin_chars="/-\|"
+
+    while kill -0 "$pid" 2>/dev/null; do
+        for i in $(seq 0 3); do
+            printf "\r\e[36m[%s]\e[0m %s" "${spin_chars:$i:1}" "$task_message"
+            sleep 0.1
+        done
+    done
+
+    # Capture the exit code of the background process
+    wait $pid
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        printf "\r\e[32m[Success]\e[0m %s\n" "$task_message"
+        return 0
+    else
+        printf "\r\e[31m[Error]\e[0m %s (Exit code: %d)\n" "$task_message" "$exit_code"
+        printf "\e[31m[!] Check error log: %s\e[0m\n" "$stderr_path"
+        return 1
+    fi
 }
 
 start_service() {
-    if ! systemctl status bluetooth &>/dev/null
+    if ! systemctl is-active --quiet bluetooth &>/dev/null
     then
-        sudo systemctl start bluetooth
-        return $?
+        sudo -v
+        sudo systemctl start bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Start bluetooth service"
+        [[ $? -ne 0 ]] && return 1
     fi
     return 0
 }
 
 stop_service() {
-    if systemctl status bluetooth &>/dev/null
+    if systemctl is-active --quiet bluetooth &>/dev/null
     then
-        sudo systemctl stop bluetooth
-        return $?
+        sudo -v
+        sudo systemctl stop bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Stop bluetooth service"
+        [[ $? -ne 0 ]] && return 1
     fi
     return 0
 }
 
 power_on() {
+    if bluetoothctl show | grep -q "Powered: yes"; then
+        printf "\e[34m%s\e[0m\n" \
+            "[Skipping] Already powered on."
+        return 0
+    fi
+
     for i in {1..5}
     do
+        bluetoothctl power on >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Attempt to power on bluetooth [$i/5]"
+        [[ $? -eq 0 ]] && return 0
         sleep 1
-        bluetoothctl power on && return 0
     done
+
+    return 1
 }
 
 power_off() {
-    bluetoothctl power off
+    bluetoothctl power off >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Power off bluetooth"
 }
 
 remove_inactive_devices() {
@@ -115,11 +182,16 @@ connect() {
     } | bluetoothctl &>/dev/null
     remove_inactive_devices # Remove old inactive devices so scan only shows active devices
 
-    echo "Scanning for 10 seconds..."
+    for i in {10..1}; do
+        printf "\rScanning for \e[36m%s\e[0m seconds" "$i"
+        sleep 1
+    done &
 
     {   printf 'scan on\n\n'
         sleep 10
     } | bluetoothctl &>/dev/null
+
+    echo -e "\n"
 
     devices="$(echo "devices" | bluetoothctl | grep "Device")"
 
@@ -139,25 +211,20 @@ connect() {
                     device_basic_info="$matched_devices"
                 fi
             else
-                echo "No devices match the name given...stopping"
+                printf "\r\e[31m%s\e[0m\n" "No devices match the name given...stopping"
                 exit 1
             fi
         fi
     else
-        echo "No Availble Devices...stopping"
+        printf "\r\e[31m%s\e[0m\n" "No Availble Devices...stopping"
         exit 1
     fi
 
     if [[ -z "$device_basic_info" ]]
     then
-        echo "No device selected...stopping"
+        printf "\r\e[31m%s\e[0m\n" "No device selected...stopping"
         return 1
     fi
-
-#    power_off
-#    stop_service
-#    start_service
-#    power_on
 
     device_mac="$(echo "$device_basic_info" | awk '{print $2}')"
 
@@ -165,21 +232,21 @@ connect() {
 
     if echo "$device_advanced_info" | grep "Paired: no" &>/dev/null
     then
-        echo "Pairing with device..."
+        printf "\r\e[33m%s\e[0m\n" "Pairing with device..."
         {   printf "pair $device_mac\n\n"
             sleep 2
         } | bluetoothctl &>/dev/null && {
-            echo "Paired Successfully"
+            printf "\r\e[32m%s\e[0m\n" "Paired Successfully"
         }
     fi
 
     if echo "$device_advanced_info" | grep "Connected: no" &>/dev/null
     then
-        echo "Connecting to device..."
+        printf "\r\e[33m%s\e[0m\n" "Connecting to device..."
         {   printf "connect $device_mac\n\n"
             sleep 2
         } | bluetoothctl &>/dev/null && {
-            echo "Connected Successfully"
+            printf "\r\e[32m%s\e[0m\n" "Connected Successfully"
         }
     fi
 }
@@ -208,22 +275,22 @@ disconnect() {
     power_off
     power_on
 
-#    devices="$(echo "devices Connected" | bluetoothctl | grep "Device")"
-#
-#    if [[ -n "$devices" ]]
-#    then
-#        echo "$devices" | while IFS= read -r device_basic_info
-#        do
-#            echo "Disconnecting from -> $device_basic_info"
-#            device_mac="$(echo "$device_basic_info" | awk '{print $2}')"
-#            if echo "disconnect $device_mac" | bluetoothctl &>/dev/null
-#            then
-#                echo "Disconnected Successfully"
-#            else
-#                echo "Issue disconnecting"
-#            fi
-#        done
-#    fi
+    #devices="$(echo "devices Connected" | bluetoothctl | grep "Device")"
+    #
+    #if [[ -n "$devices" ]]
+    #then
+    #   echo "$devices" | while IFS= read -r device_basic_info
+    #   do
+    #       echo "Disconnecting from -> $device_basic_info"
+    #       device_mac="$(echo "$device_basic_info" | awk '{print $2}')"
+    #       if echo "disconnect $device_mac" | bluetoothctl &>/dev/null
+    #       then
+    #           echo "Disconnected Successfully"
+    #       else
+    #           echo "Issue disconnecting"
+    #       fi
+    #   done
+    #fi
 }
 
 
