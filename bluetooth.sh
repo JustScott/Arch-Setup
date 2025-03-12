@@ -36,6 +36,14 @@ if ! pacman -Q ${packages[@]} &>/dev/null; then
     [[ $? -ne 0 ]] && exit 1
 fi
 
+if ! systemctl is-enabled --quiet bluetooth &>/dev/null
+then
+    sudo -v
+    sudo systemctl enable bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Enable bluetooth"
+    [[ $? -ne 0 ]] && exit 1
+fi
+
 if ! systemctl is-active --quiet bluetooth &>/dev/null
 then
     sudo -v
