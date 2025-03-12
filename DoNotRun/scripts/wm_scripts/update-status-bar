@@ -250,7 +250,7 @@ update-status-bar() {
     then
         unset bluetooth_display
 
-        if systemctl status bluetooth &> /dev/null 
+        if bluetoothctl show | grep -q "Powered: yes"
         then
             bluetooth_display="bt: ON | "
             echo "$bluetooth_display" > $CACHE_BLUETOOTH_FILE
