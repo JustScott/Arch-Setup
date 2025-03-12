@@ -34,12 +34,12 @@ if pacman -Q pulseaudio &>/dev/null; then
     if systemctl --user is-active --quiet pulseaudio &>/dev/null
     then
         systemctl --user disable --now pulseaudio &>/dev/null
-        task_output $! "$STDERR_LOG_PATH" "Stop pulseaudio service"
+        task_output $! "$STDERR_LOG_PATH" "Disable and stop pulseaudio service"
     fi
 
     sudo -v
     yes | sudo pacman -R pulseaudio >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-    task_output $! "$STDERR_LOG_PATH" "Remove pulseaudio if installed"
+    task_output $! "$STDERR_LOG_PATH" "Remove pulseaudio"
     [[ $? -ne 0 ]] && exit 1
 fi
 
@@ -50,9 +50,34 @@ if ! pacman -Q ${packages[@]} &>/dev/null; then
     [[ $? -ne 0 ]] && exit 1 
 fi
 
-{
-    systemctl --user enable --now pipewire &>/dev/null
-    systemctl --user enable --now pipewire-pulse &>/dev/null
-} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-task_output $! "$STDERR_LOG_PATH" "Enable the pipewire and pipewire-pulse services"
-[[ $? -ne 0 ]] && exit 1
+if ! systemctl --user is-enabled pipewire &>/dev/null
+then
+    systemctl --user enable pipewire \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Enable the pipewire services"
+    [[ $? -ne 0 ]] && exit 1
+fi
+
+if ! systemctl --user is-active pipewire &>/dev/null
+then
+    systemctl --user start pipewire \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Start pipewire services"
+    [[ $? -ne 0 ]] && exit 1
+fi
+
+if ! systemctl --user is-enabled pipewire-pulse &>/dev/null
+then
+    systemctl --user enable pipewire-pulse \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Enable the pipewire-pulse services"
+    [[ $? -ne 0 ]] && exit 1
+fi
+
+if ! systemctl --user is-active pipewire-pulse &>/dev/null
+then
+    systemctl --user start pipewire-pulse \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Start the pipewire-pulse services"
+    [[ $? -ne 0 ]] && exit 1
+fi
