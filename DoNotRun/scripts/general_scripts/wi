@@ -16,22 +16,31 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+STDOUT_LOG_PATH="/dev/null"
+STDERR_LOG_PATH="/tmp/wierrors.log"
 
 # Check that the required packages are installed
 check_packages() {
     required_packages=(nmcli fzf)
 
     for package in ${required_packages[@]}; do 
-        which $package &>/dev/null \
-            || { echo -e "\n - [ERROR] $package must be installed - \n"; missing_packages=true; } 
+        if ! command -v $package &>/dev/null; then
+            printf "\e[31m%s\e[0m\n" \
+                "[Error] Required package '$package' is not installed" >&2
+            missing_packages=true
+        fi
     done
 
     [[ $missing_packages = true ]] && exit 2
 
-    if ! systemctl status NetworkManager &>/dev/null
+    if ! systemctl is-active --quiet NetworkManager &>/dev/null
     then
-        sudo systemctl start NetworkManager
+        sudo -v
+        sudo systemctl start NetworkManager >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Start NetworkManager service"
+        [[ $? -ne 0 ]] && exit 1 || exit 0
     fi
+    return 0
 }
 
 display_help() {
@@ -75,6 +84,35 @@ display_help() {
     echo -e "\nError Codes:"
     printf "\t%-3s %-1s\n" "1" "General Error"
     printf "\t%-3s %-1s\n" "2" "Missing Packages"
+}
+
+# Function to show a spinner and handle exit status
+task_output() {
+    local pid=$1
+    local stderr_path=$2
+    local task_message="$3"
+
+    local spin_chars="/-\|"
+
+    while kill -0 "$pid" 2>/dev/null; do
+        for i in $(seq 0 3); do
+            printf "\r\e[36m[%s]\e[0m %s" "${spin_chars:$i:1}" "$task_message"
+            sleep 0.1
+        done
+    done
+
+    # Capture the exit code of the background process
+    wait $pid
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        printf "\r\e[32m[Success]\e[0m %s\n" "$task_message"
+        return 0
+    else
+        printf "\r\e[31m[Error]\e[0m %s (Exit code: %d)\n" "$task_message" "$exit_code"
+        printf "\e[31m[!] Check error log: %s\e[0m\n" "$stderr_path"
+        return 1
+    fi
 }
 
 validate_ipv4 ()
@@ -408,16 +446,18 @@ manual() {
     return 0
 }
 
+check_packages
+
 case $1 in
-    ""|"info")   check_packages; display_info;;
-    "up")        check_packages; up $@;;
-    "down")      check_packages; down $@;;
-    "on")        check_packages; nmcli radio wifi on;;
-    "off")       check_packages; nmcli radio wifi off;;
-    "new")       check_packages; new;;
-    "delete")    check_packages; delete;;
-    "make-safe") check_packages; make-safe;;
-    "manual")    check_packages; manual $@;;
+    ""|"info")   display_info;;
+    "up")        up $@;;
+    "down")      down $@;;
+    "on")        nmcli radio wifi on;;
+    "off")       nmcli radio wifi off;;
+    "new")       new;;
+    "delete")    delete;;
+    "make-safe") make-safe;;
+    "manual")    manual $@;;
     "version"|"--version") echo "0.1.0";;
     "--help"|"-h") display_help;;
     *) 
