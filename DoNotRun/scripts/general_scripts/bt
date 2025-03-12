@@ -109,19 +109,21 @@ stop_service() {
 
 power_on() {
     if bluetoothctl show | grep -q "Powered: yes"; then
-        printf "\e[34m%s\e[0m\n" \
-            "[Skipping] Already powered on."
         return 0
     fi
 
     for i in {1..5}
     do
-        bluetoothctl power on >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Attempt to power on bluetooth [$i/5]"
-        [[ $? -eq 0 ]] && return 0
+        bluetoothctl power on >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH"
+        if bluetoothctl show | grep -q "Powered: yes" &>/dev/null; then
+            printf "\r\e[32m[Success]\e[0m %s\n" "Power on bluetooth"
+            return 0
+        fi
         sleep 1
     done
 
+    printf "\r\e[31m[Error]\e[0m %s \n" "Power on bluetooth"
+    printf "\e[31m[!] Check error log: %s\e[0m\n" "$stderr_path"
     return 1
 }
 
@@ -300,7 +302,7 @@ case $1 in
     "start")    start_service;;
     "stop")     stop_service;;
     "on")       start_service && power_on;;
-    "off")      power_off && stop_service;;
+    "off")      power_off;;
     "version"|"--version") echo "0.1.0";;
     ""|"--help"|"-h") display_help;;
     *) 
