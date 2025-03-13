@@ -133,10 +133,10 @@ power_off() {
 }
 
 remove_inactive_devices() {
-    all_devices="$(echo "devices" | bluetoothctl | grep "Device")"
-    connected_devices="$(echo "devices Connected" | bluetoothctl | grep "Device")"
+    all_devices="$(bluetoothctl devices)"
+    connected_devices="$(bluetoothctl devices Connected)"
 
-    echo "$connected_devices"
+    #echo "$connected_devices"
 
     # Ignore connected devices
     if [[ -n "$connected_devices" ]]
@@ -152,8 +152,11 @@ remove_inactive_devices() {
     then
         echo "$all_devices" | while IFS= read -r device_basic_info
         do
+            device_name="$(echo "$device_basic_info" | cut -d ' ' -f3-)"
             device_mac="$(echo "$device_basic_info" | awk '{print $2}')"
-            echo "remove $device_mac" | bluetoothctl &>/dev/null
+            bluetoothctl remove "$device_mac" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Remove old device: '$device_name'"
+            [[ $? -ne 0 ]] && return 1
         done
     fi
 }
@@ -181,21 +184,20 @@ connect() {
 
     {   printf 'scan off\n\n'
         sleep 1
-    } | bluetoothctl &>/dev/null
+    } | bluetoothctl >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH"
+
     remove_inactive_devices # Remove old inactive devices so scan only shows active devices
 
-    for i in {10..1}; do
+    for i in {10..0}; do
         printf "\rScanning for \e[36m%s\e[0m seconds" "$i"
         sleep 1
     done &
 
     {   printf 'scan on\n\n'
-        sleep 10
-    } | bluetoothctl &>/dev/null
+        sleep 11
+    } | bluetoothctl >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH"
 
-    echo -e "\n"
-
-    devices="$(echo "devices" | bluetoothctl | grep "Device")"
+    devices="$(bluetoothctl devices)"
 
     if [[ -n "$devices" ]]
     then
@@ -203,14 +205,14 @@ connect() {
         then
             device_basic_info="$(echo "$devices" | fzf --reverse)"
         else
-            matched_devices="$(echo "$devices" | grep -i "${searched_name[@]}")"
-            if [[ -n "$matched_devices" ]]
+            matched_device="$(echo "$devices" | grep -i "${searched_name[@]}")"
+            if [[ -n "$matched_device" ]]
             then
-                if [[ $(echo "$matched_devices" | wc -l) -gt 1 ]]
+                if [[ $(echo "$matched_device" | wc -l) -gt 1 ]]
                 then
-                    device_basic_info="$(echo "$matched_devices" | fzf --reverse)"
+                    device_basic_info="$(echo "$matched_device" | fzf --reverse)"
                 else
-                    device_basic_info="$matched_devices"
+                    device_basic_info="$matched_device"
                 fi
             else
                 printf "\r\e[31m%s\e[0m\n" "No devices match the name given...stopping"
@@ -228,28 +230,22 @@ connect() {
         return 1
     fi
 
+    device_name="$(echo "$device_basic_info" | cut -d ' ' -f3-)"
     device_mac="$(echo "$device_basic_info" | awk '{print $2}')"
-
-    device_advanced_info="$(echo "info $device_mac" | bluetoothctl)"
+    device_advanced_info="$(bluetoothctl info "$device_mac")"
 
     if echo "$device_advanced_info" | grep "Paired: no" &>/dev/null
     then
-        printf "\r\e[33m%s\e[0m\n" "Pairing with device..."
-        {   printf "pair $device_mac\n\n"
-            sleep 2
-        } | bluetoothctl &>/dev/null && {
-            printf "\r\e[32m%s\e[0m\n" "Paired Successfully"
-        }
+        bluetoothctl pair "$device_mac" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Pair with: '$device_name'"
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if echo "$device_advanced_info" | grep "Connected: no" &>/dev/null
     then
-        printf "\r\e[33m%s\e[0m\n" "Connecting to device..."
-        {   printf "connect $device_mac\n\n"
-            sleep 2
-        } | bluetoothctl &>/dev/null && {
-            printf "\r\e[32m%s\e[0m\n" "Connected Successfully"
-        }
+        bluetoothctl connect "$device_mac" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Connect to: '$device_name'"
+        [[ $? -ne 0 ]] && return 1
     fi
 }
 
@@ -274,25 +270,30 @@ disconnect() {
         esac
     done
 
-    power_off
-    power_on
+    devices="$(bluetoothctl devices Connected)"
+    
+    if [[ -n "$devices" ]]
+    then
+        if [[ -n "${searched_name[@]}" ]]
+        then
+            device_basic_info="$(echo "$devices" | grep -i "${searched_name[@]}" | head -n 1)"
+        else
+            device_basic_info="$(echo "$devices" | fzf --reverse)"
+        fi
 
-    #devices="$(echo "devices Connected" | bluetoothctl | grep "Device")"
-    #
-    #if [[ -n "$devices" ]]
-    #then
-    #   echo "$devices" | while IFS= read -r device_basic_info
-    #   do
-    #       echo "Disconnecting from -> $device_basic_info"
-    #       device_mac="$(echo "$device_basic_info" | awk '{print $2}')"
-    #       if echo "disconnect $device_mac" | bluetoothctl &>/dev/null
-    #       then
-    #           echo "Disconnected Successfully"
-    #       else
-    #           echo "Issue disconnecting"
-    #       fi
-    #   done
-    #fi
+        if [[ -n "$device_basic_info" ]]
+        then
+            device_name="$(echo "$device_basic_info" | cut -d ' ' -f3-)"
+            device_mac="$(echo "$device_basic_info" | awk '{print $2}')"
+            bluetoothctl disconnect "$device_mac" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Disconnect from: '$device_name'"
+            [[ $? -ne 0 ]] && return 1
+        else
+            printf "\e[31m%s\e[0m\n" "[Error] No matchine device" >&2
+        fi
+    else
+        printf "\e[31m%s\e[0m\n" "[Error] No connected devices" >&2
+    fi
 }
 
 
