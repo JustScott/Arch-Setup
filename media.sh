@@ -28,6 +28,9 @@ source ./shared_lib
 # Allows for playing media from youtube
 packages=(ytfzf fzf mpv yt-dlp)
 
+# Specifically for the yt-x script
+packages+=(jq curl ffmpeg)
+
 if ! pacman -Q ${packages[@]} &>/dev/null; then
     sudo pacman -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Download and install media packages with pacman"
