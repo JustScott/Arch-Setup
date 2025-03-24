@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+LOG_FILE_PATH=$HOME/.tmp/status_bar_info
 
 creek_PID=($(top -U $USER -n 1 -b | grep "creek" | awk '{print $1}'))
 
@@ -26,12 +27,13 @@ do
 done
 echo "[ Done ]"
 
+mkdir -p $(dirname $LOG_FILE_PATH)
 
 echo -n "Restarting Creek..."
 while true;
 do
     sleep 1
-    cat /tmp/status_bar_info
+    cat $LOG_FILE_PATH
 done | creek \
         -fn monospace:size=22 -hg 36 -nf 0xffffff \
         -nb 0x222222 -ff 0xffffff -fb 0x005577 &
