@@ -34,5 +34,13 @@ if ! pacman -Q ${packages[@]} &>/dev/null; then
 fi
 
 rustup default stable >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-task_output $! "$STDERR_LOG_PATH" "Configure Rust"
+task_output $! "$STDERR_LOG_PATH" "Use Rust stable branch"
 [[ $? -ne 0 ]] && exit 1
+
+if ! cat $HOME/.bashrc | grep "export PATH=\"\$PATH:\$HOME/.cargo/bin\"" &>/dev/null
+then
+    echo -e "\nexport PATH=\"\$PATH:\$HOME/.cargo/bin\"" >> $HOME/.bashrc
+    task_output $! "$STDERR_LOG_PATH" "Add cargo binaries to PATH"
+    [[ $? -ne 0 ]] && exit 1
+fi
+
