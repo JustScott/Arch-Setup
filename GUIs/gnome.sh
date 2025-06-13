@@ -27,7 +27,7 @@ source ../shared_lib
 
 set_keybindings() {
     declare -A shortcut_keybinds=(
-        ["Terminal"]="<Alt><Shift><Return>"
+        ["Terminal"]="<Shift><Alt><Return>"
         ["Browser"]="<Alt>b"
     )
 
@@ -80,7 +80,7 @@ packages=(
 )
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
-    yes | sudo pacman -Sy ${packages[@]} \
+    yes | sudo pacman -Sy --noconfirm ${packages[@]} \
         >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" \
         "Download and install gnome packages with pacman (this may take awhile)"
