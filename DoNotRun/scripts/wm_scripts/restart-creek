@@ -34,7 +34,5 @@ while true;
 do
     sleep 1
     cat $LOG_FILE_PATH
-done | creek \
-        -fn monospace:size=22 -hg 36 -nf 0xffffff \
-        -nb 0x222222 -ff 0xffffff -fb 0x005577 &
+done | creek $(cat $HOME/.river_creek_theme) &
 echo -e "[ Done ]\n"
