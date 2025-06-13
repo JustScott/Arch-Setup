@@ -27,15 +27,13 @@ source ../shared_lib
 
 set_keybindings() {
     declare -A shortcut_keybinds=(
-        ["Terminal"]="<Ctrl><Alt>t"
-        ["Browser"]="<Ctrl><Shift>b"
-        ["AUR"]="<Ctrl><Alt>a"
+        ["Terminal"]="<Alt><Shift><Return>"
+        ["Browser"]="<Alt>b"
     )
 
     declare -A shortcut_commands=(
-        ["Terminal"]="gnome-terminal"
+        ["Terminal"]="foot"
         ["Browser"]="xdg-open https://":
-        ["AUR"]="xdg-open https://wiki.archlinux.org"
     )
 
     keybind_locations="["
@@ -54,7 +52,6 @@ set_keybindings() {
         binding="${shortcut_keybinds[$name]}"
         command="${shortcut_commands[$name]}"
 
-        ACTION=""
         gsettings set \
             org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom$keybind_index/ binding "$binding" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Set Desktop Shortcut for '$name'"
@@ -77,13 +74,13 @@ set_keybindings() {
 
 packages=(
     gnome-control-center gnome-backgrounds gnome-terminal \
-    gnome-keyring gnome-logs gnome-settings-daemon \
-    gnome-calculator gnome-software gvfs malcontent mutter \
-    gdm nautilus xdg-user-dirs-gtk xorg
+    gnome-keyring gnome-settings-daemon gnome-calculator \
+    gnome-software gnome-color-manager gvfs mutter gdm \
+    foot nautilus xdg-user-dirs-gtk xorg evince \
 )
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
-    sudo pacman -Sy --noconfirm ${packages[@]} \
+    yes | sudo pacman -Sy ${packages[@]} \
         >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" \
         "Download and install gnome packages with pacman (this may take awhile)"
@@ -142,7 +139,6 @@ task_output $! "$STDERR_LOG_PATH" \
     "Set Keybind: Switch to the Next Terminal Tab = <Control>Return"
 [[ $? -ne 0 ]] && exit 1
 
-ACTION=""
 gsettings set org.gnome.Terminal.Legacy.Keybindings:/org/gnome/terminal/legacy/keybindings/ \
     prev-tab '<Control>BackSpace' >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
 task_output $! "$STDERR_LOG_PATH" \
