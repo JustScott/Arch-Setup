@@ -25,6 +25,8 @@ fi
 
 source ./shared_lib
 
+sudo -v
+
 packages=(
     pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse \
     pavucontrol pamixer

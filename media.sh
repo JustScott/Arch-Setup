@@ -25,6 +25,8 @@ fi
 
 source ./shared_lib
 
+sudo -v
+
 # Allows for playing media from youtube
 packages=(ytfzf fzf mpv yt-dlp)
 

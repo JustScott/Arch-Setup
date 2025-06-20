@@ -28,11 +28,12 @@ source ../shared_lib
 packages=(
     zip unzip \
     vim neovim \
-    lf bat fzf \
+    lf bat fzf ripgrep \
     wget base-devel
 )
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
+    sudo -v
     sudo pacman -Sy --noconfirm ${packages[@]} \
         >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" \

@@ -31,6 +31,8 @@ fi
 
 source ../../shared_lib
 
+sudo -v
+
 cd ..
 bash base_vm.sh
 cd ..

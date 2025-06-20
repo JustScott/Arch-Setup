@@ -30,6 +30,7 @@ bash base_vm.sh
 packages=(pass)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
+    sudo -v
     sudo pacman -Sy ${packages[@]} --noconfirm >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Download and install Vault packages with pacman"
     [[ $? -ne 0 ]] && exit 1

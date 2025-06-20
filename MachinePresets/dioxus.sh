@@ -25,10 +25,11 @@ fi
 
 source ../shared_lib
 
+sudo -v
+
 cd ..
 bash aur.sh
 bash qemu.sh
-bash secure.sh
 
 cd Development
 bash rust.sh

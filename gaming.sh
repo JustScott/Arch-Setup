@@ -37,6 +37,7 @@ FLATPAK_PACKAGES=( com.github.tchx84.Flatseal com.valvesoftware.Steam )
 
 if groups | grep -E "(sudo|wheel)" &>/dev/null
 then
+    sudo -v
     if ! which yay &>/dev/null
     then
         bash aur.sh

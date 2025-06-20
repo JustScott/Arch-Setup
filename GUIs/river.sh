@@ -25,12 +25,11 @@ fi
 
 source ../shared_lib
 
+sudo -v
+
 bash wm-scripts.sh
 cd ..
-bash audio.sh
 bash aur.sh
-
-sudo -v
 
 packages=(
     wayland-protocols river foot wl-clipboard bemenu-wayland \

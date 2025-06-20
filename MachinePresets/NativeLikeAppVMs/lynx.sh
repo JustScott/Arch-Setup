@@ -29,6 +29,7 @@ packages=(lynx)
 
 if ! pacman -Q ${packages[@]} &>/dev/null
 then
+    sudo -v
     ACTION=""
     echo -n "...$ACTION..."
     sudo pacman -Sy --noconfirm ${packages[@]} \

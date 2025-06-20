@@ -25,6 +25,8 @@ fi
 
 source ../shared_lib
 
+sudo -v
+
 set_keybindings() {
     declare -A shortcut_keybinds=(
         ["Terminal"]="<Shift><Alt><Return>"
@@ -75,8 +77,8 @@ set_keybindings() {
 packages=(
     gnome-control-center gnome-backgrounds gnome-terminal \
     gnome-keyring gnome-settings-daemon gnome-calculator \
-    gnome-software gnome-color-manager gvfs mutter gdm \
-    foot nautilus xdg-user-dirs-gtk xorg evince \
+    flatpak discover gnome-color-manager gvfs mutter \
+    gdm foot nautilus xdg-user-dirs-gtk xorg evince \
 )
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
@@ -149,4 +151,3 @@ task_output $! "$STDERR_LOG_PATH" \
 # ----------- Start the gnome desktop environment -----------
 
 cd $HOME
-sudo systemctl start gdm

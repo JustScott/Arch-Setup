@@ -25,6 +25,8 @@ fi
 
 source ../../shared_lib
 
+sudo -v
+
 STARTING_PWD=$PWD
 
 cd ..

@@ -25,6 +25,8 @@ fi
 
 source ./shared_lib
 
+sudo -v
+
 packages=(docker docker-compose)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then

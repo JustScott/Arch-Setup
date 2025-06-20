@@ -25,6 +25,8 @@ fi
 
 source ../shared_lib
 
+sudo -v
+
 packages=(python python-pip)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then

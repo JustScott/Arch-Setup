@@ -25,6 +25,8 @@ fi
 
 source ../shared_lib
 
+sudo -v
+
 SCRIPT_DIR="$PWD/../DoNotRun/scripts/wm_scripts"
 
 # Gives all users access to the scripts

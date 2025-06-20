@@ -25,6 +25,8 @@ fi
 
 source ./shared_lib
 
+sudo -v
+
 bash audio.sh
 
 packages=(bluez bluez-utils)

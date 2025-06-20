@@ -30,10 +30,9 @@ fi
 
 source ./shared_lib
 
-bash secure.sh
-bash aur.sh
-
 sudo -v
+
+bash aur.sh
 
 packages=(librewolf-bin)
 

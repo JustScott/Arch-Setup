@@ -28,6 +28,8 @@ fi
 
 source ../shared_lib
 
+sudo -v
+
 bash base.sh
 
 # If in a QEMU virtual machine

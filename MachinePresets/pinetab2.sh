@@ -25,6 +25,8 @@ fi
 
 source ../shared_lib
 
+sudo -v
+
 bash base.sh
 
 get_name() {

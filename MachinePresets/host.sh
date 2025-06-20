@@ -31,13 +31,11 @@ packages=(newsboat calcurse pass)
 
 if ! pacman -Q ${packages[@]} &>/dev/null
 then
+    sudo -v
     sudo pacman -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Download and install host packages with pacman"
     [[ $? -ne 0 ]] && exit 1
 fi
 
 cd ..
-bash media.sh
-bash secure.sh
-uname -r | grep "pinetab2" &>/dev/null || bash qemu.sh
 bash general-scripts.sh
