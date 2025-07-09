@@ -18,16 +18,21 @@
 
 
 # 
-# Turn on main display and turn off all external displays
+# Turn off all displays then turn primary display back on
 #
 
-main_display=$(wlr-randr | grep "eDP-" | awk '{print $1}')
+laptop_display="eDP-1"
 
-wlr-randr --output $main_display --on --pos 0,0
+display_names=$(wlr-randr | grep -v "^[[:space:]]" | awk '{print $1}')
 
-external_displays=$(wlr-randr | grep "^DP-" | awk '{print $1}')
-
-for display in ${external_displays[@]}
+for display in $display_names
 do
     wlr-randr --output $display --off
 done
+
+wlr-randr --output $laptop_display --on --pos 0,0
+
+if { which creek || type creek; } &>/dev/null
+then
+    restart-creek &>/dev/null
+fi
