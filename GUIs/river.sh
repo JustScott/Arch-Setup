@@ -34,7 +34,7 @@ bash aur.sh
 packages=(
     wayland-protocols river foot wl-clipboard bemenu-wayland \
     swaybg wlr-randr river-creek \
-    swayidle waylock \
+    swayidle swaylock \
     brightnessctl noto-fonts-emoji
 )
 
