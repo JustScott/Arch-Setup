@@ -248,7 +248,7 @@ update-status-bar() {
         weather_data="$(curl -s wttr.in/columbus_nebraska?u\&format=%t+%w)"
         if [[ $? == 0 ]]
         then
-            if ! echo "$weather_data" | grep -i "Sorry" &>/dev/null
+            if ! echo "$weather_data" | grep -e "Sorry" -e "Unknown" &>/dev/null
             then
                 real_temperature=$(echo "$weather_data" | awk '{print $1}' | tr -d "+")
                 wind_speed=$(echo "$weather_data" | awk '{print $2}')
