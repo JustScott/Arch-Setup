@@ -23,45 +23,45 @@ then
     exit 1
 fi
 
+GUIs_PATH=$PWD
+
 source ../shared_lib
 
 sudo -v
 
 bash wm-scripts.sh
-cd ..
-bash aur.sh
 
 packages=(
     wayland-protocols river foot wl-clipboard bemenu-wayland \
-    swaybg wlr-randr river-creek \
+    swaybg wlr-randr \
     swayidle swaylock \
     brightnessctl noto-fonts-emoji
 )
 
-if ! yay -Q ${packages[@]} &>/dev/null
+if uname -m | grep "x86_64" &>/dev/null
 then
-    yay -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-    task_output $! "$STDERR_LOG_PATH" "Download and install river packages with pacman"
-    [[ $? -ne 0 ]] && exit 1 
-fi
-
-ARCH_SETUP_DIR=$PWD
-
-AUR_PROJECTS_ROOT=$HOME/.raw_aur
-mkdir -p $AUR_PROJECTS_ROOT
-cd $AUR_PROJECTS_ROOT # pwd -> $HOME/Git/Hub
-
-if uname -r | grep 'pinetab2' &>/dev/null
-then
-    # creek in the aur doesn't support aarch64, so compile it with zig
+    packages+=(river-creek)
+else
+    # creek in pacman only supports x86_64 so compile it with zig
     if ! { which creek || type creek; } &>/dev/null
     then
         if ! pacman -Q zig &>/dev/null
         then
-            sudo pacman -Sy --noconfirm zig >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            if ! which yay &>/dev/null
+            then
+                cd ..
+                bash aur.sh
+                cd $GUIs_PATH
+            fi
+            yay -Sy --noconfirm zig-bin fcft pixman wayland \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Download and install zig with pacman"
             [[ $? -ne 0 ]] && exit 1
         fi
+
+        AUR_PROJECTS_ROOT=$HOME/.raw_aur
+        mkdir -p $AUR_PROJECTS_ROOT
+        cd $AUR_PROJECTS_ROOT
 
         ACTION="Build creek from source with zig"
         git clone https://github.com/nmeum/creek.git >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
@@ -73,11 +73,19 @@ then
         task_output $! "$STDERR_LOG_PATH" "Compile Creek"
         [[ $? -ne 0 ]] && exit 1
             
-        ln -s $PWD/zig-out/bin/creek $ARCH_SETUP_DIR/DoNotRun/scripts/wm_scripts/ \
+        ln -s $PWD/zig-out/bin/creek ../DoNotRun/scripts/wm_scripts/ \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Install Creek to wm_scripts"
         [[ $? -ne 0 ]] && exit 1
     fi
+fi
+
+if ! pacman -Q ${packages[@]} &>/dev/null
+then
+    sudo -v
+    sudo pacman -Sy --noconfirm ${packages[@]} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Download and install river packages with pacman"
+    [[ $? -ne 0 ]] && exit 1 
 fi
 
 
