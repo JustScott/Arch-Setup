@@ -27,7 +27,7 @@ source ../shared_lib
 
 bash base.sh
 
-packages=(newsboat calcurse pass)
+packages=(newsboat calcurse pass usbutils)
 
 if ! pacman -Q ${packages[@]} &>/dev/null
 then
