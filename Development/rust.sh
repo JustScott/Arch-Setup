@@ -25,11 +25,10 @@ fi
 
 source ../shared_lib
 
-sudo -v
-
 packages=(rustup)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
+    sudo -v
     sudo pacman -Sy ${packages[@]} --noconfirm >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Download and install rust development packages"
     [[ $? -ne 0 ]] && exit 1
@@ -45,4 +44,3 @@ then
     task_output $! "$STDERR_LOG_PATH" "Add cargo binaries to PATH"
     [[ $? -ne 0 ]] && exit 1
 fi
-

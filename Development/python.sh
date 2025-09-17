@@ -25,12 +25,11 @@ fi
 
 source ../shared_lib
 
-sudo -v
-
 packages=(python python-pip)
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
-    sudo pacman -Sy ${packages[@]} --noconfirm >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    sudo -v
+    yes | sudo pacman -Sy ${packages[@]} --noconfirm >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Download and install python development packages"
     [[ $? -ne 0 ]] && exit 1
 fi
