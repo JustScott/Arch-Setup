@@ -25,4 +25,7 @@ volume-up() {
     update-status-bar --volume
 }
 
-volume-up
+if which pamixer &>/dev/null
+then
+    volume-up
+fi

@@ -24,4 +24,7 @@ start-pulseaudio-server() {
     }
 }
 
-start-pulseaudio-server
+if which pamixer &>/dev/null
+then
+    start-pulseaudio-server
+fi

@@ -24,4 +24,7 @@ volume() {
     }
 }
 
-volume
+if which pamixer &>/dev/null
+then
+    volume
+fi

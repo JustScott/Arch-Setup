@@ -21,4 +21,7 @@ brightness-down() {
     update-status-bar --brightness
 }
 
-brightness-down
+if which brightnessctl &>/dev/null
+then
+    brightness-down
+fi

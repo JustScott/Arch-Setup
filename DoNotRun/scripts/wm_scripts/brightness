@@ -27,4 +27,7 @@ brightness() {
     fi
 }
 
-brightness
+if which brightnessctl &>/dev/null
+then
+    brightness
+fi
