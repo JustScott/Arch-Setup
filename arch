@@ -1,0 +1,198 @@
+#!/bin/bash
+#
+# arch - part of the Arch-Setup project
+# Copyright (C) 2025, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+#
+# CLI tool to replace Arch-Setup and Arch-Configurations. It will
+#  make the process of installing software and having them automatically
+#  configured to my setup much easier.
+#
+
+INSTALLABLE_PACKAGES="qutebrowser librewolf docker"
+SETUP_OPTIONS=
+PRESET_OPTIONS=
+
+PACKAGE_INSTALLATION_LIBRARY=package_installation_library.sh
+SETUP_INSTALLATION_LIBRARY=setup_installation_library.sh
+PRESET_INSTALLATION_LIBRARY=preset_installation_library.sh
+
+PRETTY_OUTPUT_LIBRARY=pretty_output_library.sh
+
+check_library_files_exist() {
+    if ! [[ -f "./$PRETTY_OUTPUT_LIBRARY" ]]
+    then
+        echo -e "\n - Missing pretty output script. Cannot Proceed - \n"
+        exit 4
+    fi
+    if ! [[ -f "./$PACKAGE_INSTALLATION_LIBRARY" ]]
+    then
+        echo -e "\n - Missing package installation scripts. Cannot Proceed - \n"
+        exit 4
+    fi
+    if ! [[ -f "./$SETUP_INSTALLATION_LIBRARY" ]]
+    then
+        echo -e "\n - Missing setup installation scripts. Cannot Proceed - \n"
+        exit 4
+    fi
+    if ! [[ -f "./$PRESET_INSTALLATION_LIBRARY" ]]
+    then
+        echo -e "\n - Missing preset installation scripts. Cannot Proceed - \n"
+        exit 4
+    fi
+}
+
+check_library_files_exist
+
+display_help() {
+    echo -e "\nUsage: arch [COMMAND]"
+    echo -e "\nSimplifies Arch-Setup and Arch-Configurations into a single"
+    echo -e " CLI tool with many more automated features.\n"
+
+    echo "Commands:"
+    printf "\t%-15s %-1s\n" "install" "Install supported software"
+    printf "\t%-15s %-1s\n" "uninstall" "Cleanly uninstall supported software"
+    printf "\t%-15s %-1s\n" "setup" "Setup groups of software packages"
+    printf "\t%-15s %-1s\n" "preset" "Pre-setup the system in a specifc way"
+    printf "\t%-15s %-1s\n" "version" "Returns version information"
+
+    echo -e "\nCommand Flags:\n"
+    echo -e "\tinstall:"
+    printf "\t    %-20s\t %-1s\n" "-l | --list" "List installable software"
+    echo -e "\tuninstall:"
+    printf "\t    %-20s\t %-1s\n" "-l | --list" "List installed software"
+    echo -e "\tsetup:"
+    printf "\t    %-20s\t %-1s\n" "-l | --list" "List available setup options"
+    printf "\t    %-20s\t %-1s\n" "-u | --undo" "Cleanly remove the setup"
+    echo -e "\tpreset:"
+    printf "\t    %-20s\t %-1s\n" "-l | --list" "List available preset options"
+    printf "\t    %-20s\t %-1s\n" "-u | --undo" "Cleanly remove the preset"
+    
+    echo -e "\nExamples:"
+    echo -e "\t\`arch install --list\`"
+    echo -e "\t\`arch uninstall --list\`"
+    echo -e "\t\`arch install qutebrowser\`"
+    echo -e "\t\`arch install user-scripts\`"
+    echo -e "\t\`arch uninstall qutebrowser\`"
+    echo -e "\t\`arch setup river rust bluetooth\`"
+    echo -e "\t\`arch setup security\`"
+    echo -e "\t\`arch setup --undo rust\`"
+    echo -e "\t\`arch preset base host base_vm\`"
+    echo -e "\t\`arch preset --undo base_vm\`"
+
+    echo -e "\nError Codes:"
+    printf "\t%-3s %-1s\n" "1" "Invalid command"
+    printf "\t%-3s %-1s\n" "2" "Package, setup, or preset doesn't exist"
+    printf "\t%-3s %-1s\n" "3" "Can't be uninstalled or removed as it doesn't exist"
+    printf "\t%-3s %-1s\n" "4" "Missing source file in Arch-Setup"
+}
+
+install() {
+    local \
+        packages_to_install \
+        FLAG_list_packages
+
+    for arg in $@
+    do
+        case $arg in
+            "-l" | "--list")
+                [[ -n "$FLAG_list_packages" ]] && {
+                    echo -e "\n - [ERROR] duplicated the list packages flag - \n"
+                    exit 1
+                }
+                FLAG_list_packages=1
+            ;;
+            *)
+                # Support flags starting with '-' or "--" shouldn't reach
+                # the catchall case
+                if [[ $arg =~ ^-{1,2} ]]
+                then
+                    echo "The '$arg' flag isn't supported"
+                    exit 1
+                fi
+                packages_to_install+=($arg)
+            ;;
+        esac
+    done
+
+    if ((FLAG_list_packages))
+    then
+        echo -e "\nPackages Available to Install:"
+        for package_name in $INSTALLABLE_PACKAGES
+        do
+            echo "  - $package_name"
+        done
+        
+        if [[ -n $packages_to_install ]]
+        then
+            echo -e "\nTIP: cannot list packages and install in the same command"
+        fi
+
+        exit 0
+    fi
+
+    for package_name in ${packages_to_install[@]}
+    do
+        if ! echo "$INSTALLABLE_PACKAGES" | grep "$package_name" &>/dev/null
+        then
+            echo -e "\n'$package_name' is not a supported package"
+            echo -e "\nTIP: run \`arch install --list\` to see supported packages"
+            exit 2
+        fi
+    done
+
+    source ./$PACKAGE_INSTALLATION_LIBRARY || check_library_files_exist
+
+    for package_name in ${packages_to_install[@]}
+    do
+        case $package_name in
+            "qutebrowser")
+                if ! install_qutebrowser
+                then
+                    echo -e "\n - Failed to install qutebrowser - \n"
+                fi
+            ;;
+            "librewolf")
+                echo "Installing docker"
+            ;;
+            "docker")
+                echo "Installing docker"
+            ;;
+            *)
+                echo "This shouldn't happen..."
+                exit 1
+            ;;
+        esac
+    done
+}
+
+place_holder() {
+    echo $@
+}
+
+case $1 in
+    "install")      install ${@:2};;
+    "setup")        place_holder ${@:2};;
+    "preset")       place_holder ${@:2};;
+    "version"|"--version") echo "0.1.0";;
+    "--help"|"-h") display_help;;
+    *) 
+        echo -e "\n - [ERROR] Invalid use of the \`arch\` command -";
+        display_help
+        exit 1
+        ;;
+esac

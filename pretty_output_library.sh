@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# shared_lib - part of the Arch-Setup project
+# pretty_output_library - part of the Arch-Setup project
 # Copyright (C) 2025, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
