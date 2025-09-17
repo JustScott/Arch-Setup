@@ -30,7 +30,7 @@ sudo chmod g+rwx -R /dev/bus/usb
 
 packages=(
     gnome-boxes virt-manager virt-viewer \
-    qemu-emulators-full spice-vdagent
+    qemu-emulators-full spice-vdagent swtpm \
 )
 
 if ! pacman -Q ${packages[@]} &>/dev/null; then
