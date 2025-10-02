@@ -245,15 +245,18 @@ update-status-bar() {
         unset weather_display
         echo "$weather_display" > $CACHE_WEATHER_FILE
 
-        weather_data="$(curl -s wttr.in/columbus_nebraska?u\&format=%t+%w)"
-        if [[ $? == 0 ]]
+        if [[ -n $LOCATION ]]
         then
-            if ! echo "$weather_data" | grep -e "Sorry" -e "Unknown" &>/dev/null
+            weather_data="$(curl -s wttr.in/$LOCATION?u\&format=%t+%w)"
+            if [[ $? == 0 ]]
             then
-                real_temperature=$(echo "$weather_data" | awk '{print $1}' | tr -d "+")
-                wind_speed=$(echo "$weather_data" | awk '{print $2}')
-                weather_display="$real_temperature ($wind_speed) |"
-                echo "$weather_display" > $CACHE_WEATHER_FILE
+                if ! echo "$weather_data" | grep -e "Sorry" -e "Unknown" &>/dev/null && [[ -n $weather_data ]]
+                then
+                    real_temperature=$(echo "$weather_data" | awk '{print $1}' | tr -d "+")
+                    wind_speed=$(echo "$weather_data" | awk '{print $2}')
+                    weather_display="$real_temperature ($wind_speed) |"
+                    echo "$weather_display" > $CACHE_WEATHER_FILE
+                fi
             fi
         fi
     fi
