@@ -23,39 +23,6 @@
 STDOUT_LOG_PATH="/dev/null"
 STDERR_LOG_PATH="/tmp/bterrors.log"
 
-
-if ! command -v bluetoothctl &>/dev/null; then
-    printf "\e[31m%s\e[0m\n" \
-        "[Error] bluetoothctl is not installed. Install bluez-utils." >&2
-    exit 1
-fi
-
-if rfkill list bluetooth | grep -q "Soft blocked: yes" &>/dev/null
-then
-    sudo rfkill unblock bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-    task_output $! "$STDERR_LOG_PATH" "Remove bluetooth soft block"
-    [[ $? -ne 0 ]] && exit 1
-fi
-
-display_help() {
-    echo -e "\nUsage: bt [COMMAND]"
-    echo -e "\nEasy to use wrapper around the basic functionality of bluetoothctl"
-
-    echo "Commands:"
-    printf "\t%-15s %-1s\n" "on" "Start bluetooth service and power on"
-    printf "\t%-15s %-1s\n" "off" "Power off and stop bluetooth service"
-    printf "\t%-15s %-1s\n" "start" "Start bluetooth service"
-    printf "\t%-15s %-1s\n" "stop" "Stop bluetooth service"
-    printf "\t%-15s %-1s\n" "con" "Start service, power on, and search for/connect to devices"
-    printf "\t%-15s %-1s\n" "dis" "Disconnect from a connected device"
-    printf "\t%-15s %-1s\n" "version" "Check the bt version"
-
-    echo -e "\nExamples:"
-    echo -e "\t\`bt con\` # Use fzf to connect to device"
-    echo -e "\t\`bt con <partial or full device name>\` # Connect to closest named device"
-}
-
-
 # Function to show a spinner and handle exit status
 task_output() {
     local pid=$1
@@ -83,6 +50,40 @@ task_output() {
         printf "\e[31m[!] Check error log: %s\e[0m\n" "$stderr_path"
         return 1
     fi
+}
+
+if ! command -v bluetoothctl &>/dev/null; then
+    printf "\e[31m%s\e[0m\n" \
+        "[Error] bluetoothctl is not installed. Install bluez-utils." >&2
+    exit 1
+fi
+
+check_bluetooth() {
+    if rfkill list bluetooth | grep -q "Soft blocked: yes" &>/dev/null
+    then
+        sudo -v
+        sudo rfkill unblock bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Remove bluetooth soft block"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+}
+
+display_help() {
+    echo -e "\nUsage: bt [COMMAND]"
+    echo -e "\nEasy to use wrapper around the basic functionality of bluetoothctl"
+
+    echo "Commands:"
+    printf "\t%-15s %-1s\n" "on" "Start bluetooth service and power on"
+    printf "\t%-15s %-1s\n" "off" "Power off and stop bluetooth service"
+    printf "\t%-15s %-1s\n" "start" "Start bluetooth service"
+    printf "\t%-15s %-1s\n" "stop" "Stop bluetooth service"
+    printf "\t%-15s %-1s\n" "con" "Start service, power on, and search for/connect to devices"
+    printf "\t%-15s %-1s\n" "dis" "Disconnect from a connected device"
+    printf "\t%-15s %-1s\n" "version" "Check the bt version"
+
+    echo -e "\nExamples:"
+    echo -e "\t\`bt con\` # Use fzf to connect to device"
+    echo -e "\t\`bt con <partial or full device name>\` # Connect to closest named device"
 }
 
 start_service() {
@@ -298,12 +299,12 @@ disconnect() {
 
 
 case $1 in
-    "con")      start_service && power_on && connect $@;;
-    "dis")      disconnect $@;;
-    "start")    start_service;;
-    "stop")     stop_service;;
-    "on")       start_service && power_on;;
-    "off")      power_off;;
+    "con")      check_bluetooth;start_service && power_on && connect $@;;
+    "dis")      check_bluetooth;disconnect $@;;
+    "start")    check_bluetooth;start_service;;
+    "stop")     check_bluetooth;stop_service;;
+    "on")       check_bluetooth;start_service && power_on;;
+    "off")      check_bluetooth;power_off;;
     "version"|"--version") echo "0.1.0";;
     ""|"--help"|"-h") display_help;;
     *) 
