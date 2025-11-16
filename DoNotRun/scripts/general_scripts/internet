@@ -1,0 +1,659 @@
+#!/bin/bash
+#
+# internet - part of the Arch-Setup project
+# Copyright (C) 2024-2025, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+STDOUT_LOG_PATH="/dev/null"
+STDERR_LOG_PATH="/tmp/internet_errors.log"
+
+CONFIG_DIRECTORY="$HOME/.config/internet"
+CONFIG_FILE_PATH="$CONFIG_DIRECTORY/config"
+
+SHARE_DIRECTORY="$HOME/.local/share/internet"
+SHARE_TIME_REMAINING_FILE="$SHARE_DIRECTORY/time_remaining"
+SHARE_TIME_REMAINING_GOAL_FILE="$SHARE_DIRECTORY/time_remaining_goal"
+SHARE_TIME_REMAINING_BEFORE_SESSION_FILE="$SHARE_DIRECTORY/time_remaining_before_session"
+
+SHARE_CURRENT_DATE_FILE="$SHARE_DIRECTORY/current_date"
+
+SHARE_TIMER_SCRIPT_FILE="$SHARE_DIRECTORY/internet_timer_script.sh"
+SHARE_TIMER_SCRIPT_PID_LOCK_FILE="$SHARE_DIRECTORY/internet_timer_script_pid_lock"
+
+SHARE_CURRENT_SESSION_LOG_FILE="$SHARE_DIRECTORY/current_session_log"
+SHARE_SESSION_HISTORY_LOG_FILE="$SHARE_DIRECTORY/session_log_history"
+
+
+populate_background_timer_script()
+{
+if ! [[ -d $SHARE_DIRECTORY ]]
+then
+    mkdir -p $SHARE_DIRECTORY
+fi
+
+# Q: Why keep the background timer script in a here doc?
+# A: It allows `internet` to be a single script which makes portability/sharing
+#    it easier, and allows `internet` to quickly populate this required file
+#    if it's missing for any reason, instead of just failing to run
+#
+# Q: Why duplicate some code instead of calling: `internet off`, for example
+# A: The user may not be using `internet` from path, preferring to run the
+#    script direct/local instead
+cat > $SHARE_TIMER_SCRIPT_FILE << "EOF"
+#!/bin/bash
+#
+# internet_timer_script.sh - part of the internet project
+# Copyright (C) 2024-2025, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+STDOUT_LOG_PATH="/dev/null"
+STDERR_LOG_PATH="/tmp/internet_errors.log"
+
+CONFIG_DIRECTORY="$HOME/.config/internet"
+CONFIG_FILE_PATH="$CONFIG_DIRECTORY/config"
+
+SHARE_DIRECTORY="$HOME/.local/share/internet"
+SHARE_TIME_REMAINING_FILE="$SHARE_DIRECTORY/time_remaining"
+SHARE_TIME_REMAINING_GOAL_FILE="$SHARE_DIRECTORY/time_remaining_goal"
+SHARE_TIME_REMAINING_BEFORE_SESSION_FILE="$SHARE_DIRECTORY/time_remaining_before_session"
+
+SHARE_CURRENT_DATE_FILE="$SHARE_DIRECTORY/current_date"
+
+SHARE_TIMER_SCRIPT_FILE="$SHARE_DIRECTORY/internet_timer_script.sh"
+SHARE_TIMER_SCRIPT_PID_LOCK_FILE="$SHARE_DIRECTORY/internet_timer_script_pid_lock"
+
+SHARE_CURRENT_SESSION_LOG_FILE="$SHARE_DIRECTORY/current_session_log"
+SHARE_SESSION_HISTORY_LOG_FILE="$SHARE_DIRECTORY/session_log_history"
+
+USER_PROMPTED_SESSION_TIME=$1
+USER_PROMPTED_SESSION_TIME=$(( USER_PROMPTED_SESSION_TIME * 60 ))
+
+if [[ -f $SHARE_TIME_REMAINING_FILE ]]
+then
+    timer_value=$(cat $SHARE_TIME_REMAINING_FILE)
+
+    if [[ $timer_value -lt $USER_PROMPTED_SESSION_TIME ]]
+    then
+        echo 0 > $SHARE_TIME_REMAINING_GOAL_FILE
+    else
+        echo $((timer_value-USER_PROMPTED_SESSION_TIME)) > $SHARE_TIME_REMAINING_GOAL_FILE
+    fi
+
+    while :
+    do
+        if [[ $timer_value -eq 0 || $timer_value -lt 0 ]]
+        then
+            break
+        fi
+        if [[ $USER_PROMPTED_SESSION_TIME -eq 0 || $USER_PROMPTED_SESSION_TIME -lt 0 ]]
+        then
+            break
+        fi
+
+        sleep 1
+        (( timer_value -= 1 ))
+        (( USER_PROMPTED_SESSION_TIME -= 1 ))
+
+        echo $timer_value > $SHARE_TIME_REMAINING_FILE
+    done
+fi
+
+connected_ssid=$(
+    nmcli -f CONNECTION,TYPE,STATE d | grep -v "\--" | tail -n +2 | \
+        grep "wifi " | grep "connected" | awk -F'  ' '{print $1}'
+)
+
+if [[ -n "$connected_ssid" ]]
+then
+    nmcli connection down "$connected_ssid" &>/dev/null
+fi
+
+if ! [[ -f $SHARE_TIME_REMAINING_GOAL_FILE \
+    && -f $SHARE_TIME_REMAINING_FILE \
+    && -f $SHARE_CURRENT_SESSION_LOG_FILE ]]
+then
+    printf "\n\e[31m[!] Missing session time files, cannot save session to log.\e[0m\n"
+    exit 2
+fi
+
+current_log=$(cat $SHARE_CURRENT_SESSION_LOG_FILE)
+session_time_goal=$(echo $current_log | awk -F' ' '{print $1}')
+session_reason=$(echo $current_log | awk -F' ' '{$1="";print $0}')
+
+time_remaining_file_value=$(cat $SHARE_TIME_REMAINING_FILE)
+time_remaining_before_session=$(cat $SHARE_TIME_REMAINING_BEFORE_SESSION_FILE)
+
+real_session_time=$(( time_remaining_before_session - time_remaining_file_value ))
+
+echo "$real_session_time $session_time_goal $session_reason" \
+    >> $SHARE_SESSION_HISTORY_LOG_FILE
+EOF
+}
+
+check_paths()
+{
+    if ! [[ -d $CONFIG_DIRECTORY ]]
+    then
+        mkdir -p $CONFIG_DIRECTORY 
+    fi
+
+    if ! [[ -f $CONFIG_FILE_PATH ]]
+    then
+        echo "DAILY_MINUTE_LIMIT=30" > $CONFIG_FILE_PATH
+    fi
+
+    if ! [[ -d $SHARE_DIRECTORY ]]
+    then
+        mkdir -p $SHARE_DIRECTORY
+    fi
+
+    if ! [[ -f $SHARE_CURRENT_DATE_FILE ]]
+    then
+        echo $(date '+%F') > $SHARE_CURRENT_DATE_FILE
+    fi
+
+    if ! [[ -f $SHARE_TIMER_SCRIPT_FILE ]]
+    then
+        populate_background_timer_script
+    fi
+}
+
+check_paths
+
+source $CONFIG_FILE_PATH # bring in the DAILY_MINUTE_LIMIT variable
+
+reset_timer_if_needed()
+{
+    if ! [[ -f $SHARE_TIME_REMAINING_FILE ]]
+    then
+        echo $(($DAILY_MINUTE_LIMIT*60)) > $SHARE_TIME_REMAINING_FILE
+    fi
+
+    if [[ $(cat $SHARE_CURRENT_DATE_FILE) != $(date '+%F') ]]
+    then
+        echo $((DAILY_MINUTE_LIMIT*60)) > $SHARE_TIME_REMAINING_FILE
+        echo $(date '+%F') > $SHARE_CURRENT_DATE_FILE
+    fi
+}
+
+reset_timer_if_needed
+
+# Check that the required packages are installed
+check_packages() 
+{
+    required_packages=(nmcli fzf)
+
+    for package in ${required_packages[@]}; do 
+        if ! command -v $package &>/dev/null; then
+            printf "\e[31m%s\e[0m\n" \
+                "[Error] Required package '$package' is not installed" >&2
+            missing_packages=true
+        fi
+    done
+
+    [[ $missing_packages = true ]] && exit 2
+
+    if ! systemctl is-active --quiet NetworkManager &>/dev/null
+    then
+        sudo -v
+        sudo systemctl start NetworkManager >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Start NetworkManager service"
+        [[ $? -ne 0 ]] && exit 1 || exit 0
+    fi
+    return 0
+}
+
+display_help() 
+{
+    echo -e "\nUsage: internet [COMMAND]"
+    echo -e "\nMake your internet usage intentional with specific reasons"
+    echo -e " and time limits before connecting\n"
+
+    echo "Commands:"
+    printf "\t%-15s %-1s\n" "on" "Connect to a network after specifying a reason and a time limit"
+    printf "\t%-15s %-1s\n" "off" "Disconnect at anytime to stop the session/timer"
+    printf "\t%-15s %-1s\n" "status" "Check the status of your current session"
+    printf "\t%-15s %-1s\n" "log" "View all your past sessions"
+    printf "\t%-15s %-1s\n" "config" "Edit your config file for setting daily time limits"
+
+    echo -e "\nBase Flags:"
+    printf "\t    %-20s\t %-1s\n" "--version" "Returns version information"
+    printf "\t    %-20s\t %-1s\n" "-h | --help" "Show this help message"
+
+    echo -e "\nExamples:"
+    echo -e "\t\`internet on\`"
+    echo -e "\t\`internet off\`"
+    echo -e "\t\`internet status\`"
+    echo -e "\t\`internet log\`"
+    echo -e "\t\`internet config\`"
+
+    echo -e "\nFAQ:"
+    echo -e "\tQ: What if I have 4m 30s left today, and I want to start a 5 minute session"
+    echo -e "\tA: Set you session for as long as you'd like, it will still cut off for the daily limit"
+
+    echo -e "\nError Codes:"
+    printf "\t%-3s %-1s\n" "1" "Issue connecting to the internet"
+    printf "\t%-3s %-1s\n" "2" "Missing required files"
+}
+
+# Function to show a spinner and handle exit status
+task_output() 
+{
+    local pid=$1
+    local stderr_path=$2
+    local task_message="$3"
+
+    local spin_chars="/-\|"
+
+    while kill -0 "$pid" 2>/dev/null; do
+        for i in $(seq 0 3); do
+            printf "\r\e[36m[%s]\e[0m %s" "${spin_chars:$i:1}" "$task_message"
+            sleep 0.1
+        done
+    done
+
+    # Capture the exit code of the background process
+    wait $pid
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        printf "\r\e[32m[Success]\e[0m %s\n" "$task_message"
+        return 0
+    else
+        printf "\r\e[31m[Error]\e[0m %s (Exit code: %d)\n" "$task_message" "$exit_code"
+        printf "\e[31m[!] Check error log: %s\e[0m\n" "$stderr_path"
+        return 1
+    fi
+}
+
+declare SESSION_REASON SESSION_LENGTH
+
+prompt_time_and_reason()
+{
+    total_time_remaining=$(cat $SHARE_TIME_REMAINING_FILE)
+    echo -e "\nTime remaining today: $((total_time_remaining / 60))m $((total_time_remaining % 60))s\n"
+
+    while :
+    do
+        if [[ -z "$SESSION_REASON" ]]
+        then
+            read -p 'Reason for internet use: ' SESSION_REASON
+            continue
+        fi
+        if [[ -z "$SESSION_LENGTH" ]]
+        then
+            read -p 'Session length in minutes: ' SESSION_LENGTH
+
+            re=''
+            if ! [[ $SESSION_LENGTH =~ ^[0-9]+$ || $SESSION_LENGTH == 0 ]]
+            then
+                printf "\e[31m[!]\e[0m Not a valid number... try 1,5,75,etc\n"
+                unset SESSION_LENGTH
+            fi
+
+            continue
+        fi
+
+        break
+    done
+
+    remaining_time=$(cat $SHARE_TIME_REMAINING_FILE)
+    if [[ $remaining_time -lt $((SESSION_LENGTH * 60)) ]]
+    then
+        printf "\n\e[33m[!] Session will stop when daily limit is reached, ignoring your desired session time\e[0m\n\n"
+    fi
+}
+
+validate_ipv4 ()
+{
+    ipv4=$(echo $1 | cut -f1 -d'/') # Allow any subnet
+
+    if [ -z "$ipv4" ]; then
+        return 1
+    fi
+
+    OFS=$IFS
+    IFS=.
+
+    set -- $ipv4
+
+    IFS=$OFS
+
+    if [ $# -ne 4 ]; then
+        return 1
+    fi
+
+    for i; do
+        # not a number
+        case "$i" in
+            ''|*[!0-9]*)
+                return 1
+                ;;
+        esac
+
+        # not in range 0-255
+        if [ "$i" -lt 0 -o "$i" -gt 255 ]; then
+            return 1
+        fi
+    done
+}
+
+clear_session_files()
+{
+    rm $SHARE_TIME_REMAINING_GOAL_FILE \
+        $SHARE_TIMER_SCRIPT_PID_LOCK_FILE \
+        $SHARE_CURRENT_SESSION_LOG_FILE \
+        &>/dev/null
+}
+
+# returns 0 if sessions active, otherwise 1
+# TODO: Check for active session without pid as well (with specific command)
+check_for_active_session()
+{
+    saved_pid=$(cat $SHARE_TIMER_SCRIPT_PID_LOCK_FILE 2>/dev/null)
+    if [[ -n $saved_pid ]]
+    then
+        if ps axu | grep "$SHARE_TIMER_SCRIPT_FILE" | grep "$saved_pid" &>/dev/null
+        then
+            return 0
+        else
+            return 1
+        fi
+    fi
+
+    return 1
+}
+
+display_session_data()
+{
+    wifi_interface=$(nmcli -f DEVICE,TYPE d | grep 'wifi ' | awk '{print $1}')
+
+    private_ip=$(
+        ip a | grep 'state UP' -A3 | grep "$wifi_interface" \
+            | tail -n1 | awk -F'[/ ]+' '{print $3}'
+    )
+
+    if ! validate_ipv4 $private_ip; then
+        printf "\n\e[31m[!] Not connected to a network, or DHCP is failing\e[0m\n"
+        exit 1
+    else
+        if [[ -z "$SESSION_REASON" || -z "$SESSION_LENGTH" ]]
+        then
+            prompt_time_and_reason
+        fi
+
+        echo -e "\n---------|Session Data|-----------\n"
+
+        echo "Private IP: $private_ip"
+
+        printf "\rTesting Internet Access (20s max)"
+        curl -m 20 -s ip.me &>/dev/null 
+        if [[ $? -ne 0 ]]
+        then
+            ping ip.me -c 4 &>/dev/null
+            if [[ $? -ne 0 ]]
+            then
+                ping 9.9.9.9 -c 2 &>/dev/null
+                if [[ $? -ne 0 ]]
+                then
+                    if [[ -n "$private_ip" ]]
+                    then
+                        # TODO: Find a better way to prevent overlap
+                        printf "\r                                 "
+                        printf "  \rInternet: \e[31mNo, LAN only\e[0m"
+                    fi
+                else
+                    printf "  \rInternet: \e[33mPartial, Accessible without DNS\e[0m"
+                fi
+            else
+                printf "  \rInternet: \e[31mPing works, but general web access is being metered/restricted\e[0m"
+            fi
+        else
+            # TODO: Find a better way to prevent overlap
+            printf "\r                                 "
+            printf "  \rInternet: \e[32mYes, Fully Accessible\e[0m"
+        fi
+
+        echo -e "\n\nReason: $SESSION_REASON\nLength: $SESSION_LENGTH m"
+
+        echo -e "\n----------------------------------\n"
+    fi
+}
+
+stop_timer_script()
+{
+    saved_pid=$(cat $SHARE_TIMER_SCRIPT_PID_LOCK_FILE)
+
+    if [[ -f $SHARE_TIMER_SCRIPT_PID_LOCK_FILE ]]
+    then
+        if ps axu | grep "$SHARE_TIMER_SCRIPT_FILE" | grep "$pid" &>/dev/null
+        then
+            if kill -9 $saved_pid &>/dev/null
+            then
+                printf "\n\e[32mStopped session timer\e[0m\n"
+                echo > $SHARE_TIMER_SCRIPT_PID_LOCK_FILE
+            else
+                printf "\n\e[33mNo session timer to stop\e[0m\n"
+            fi
+        fi
+    fi
+}
+
+on() 
+{
+    if [[ $(cat $SHARE_TIME_REMAINING_FILE) -lt 1 ]]
+    then
+        printf "\e[31m\n[!] You've already used all your internet time for today\n\e[0m"
+        exit 1
+    fi
+
+    check_for_active_session && {
+        printf "\n\e[31m[!] Timer session already running, run \`internet off\` first\n\e[0m"
+        exit 1
+    }
+
+    declare user_chosen_ssid
+
+    connected_ssid=$(
+        nmcli -f CONNECTION,TYPE,STATE d | grep -v "\--" | tail -n +2 | \
+            grep "wifi " | grep "connected" | awk -F'  ' '{print $1}'
+    )
+    if [[ -z $connected_ssid ]]
+    then
+        nmcli radio wifi on >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Enable Wifi Radio"
+        [[ $? -ne 0 ]] && exit 1
+
+        nmcli device wifi list --rescan yes >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Scan for available networks..."
+        [[ $? -ne 0 ]] && exit 1
+
+        choices=$(
+        nmcli connection show | grep "wifi" | awk -F'  ' '{print $1}' | while IFS= read -r ssid
+        do
+            if nmcli -f SSID device wifi list --rescan no | tail -n +2 | grep "$ssid" &>/dev/null
+            then
+                echo "$ssid"
+            fi
+        done
+        ) 
+
+        if [[ -n "$choices" ]]
+        then
+            choice=$(echo "$choices" | fzf --reverse)
+            if [[ -n "$choice" ]]
+            then
+                user_chosen_ssid="$choice"
+            else
+        printf "\n\e[33m[!] No network selected. Goodbye.\e[0m\n"
+                exit 1
+            fi
+        else
+            printf "\n\e[31m[!] No networks within range\n"
+            exit 1
+        fi
+
+        prompt_time_and_reason
+
+        nmcli connection up "$user_chosen_ssid" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Connecting to network '$user_chosen_ssid'"
+        if [[ $? -ne 0 ]]
+        then
+            printf "\n\e[31m[!] Failed to connect to '$user_chosen_ssid'. The session will not be started.\e[0m\n" >&2
+            exit 1
+        fi
+
+    else
+        printf "\e[33m[!] Already Connected to a network, skipping connection steps...\e[0m\n"
+    fi
+
+    display_session_data
+
+    nohup bash $SHARE_TIMER_SCRIPT_FILE $SESSION_LENGTH 1>/dev/null 2>>"$STDERR_LOG_PATH" &
+    echo $! > $SHARE_TIMER_SCRIPT_PID_LOCK_FILE
+
+    check_for_active_session || {
+        printf "\n\e[31m[!] Background session timer script failed to start... this shouldn't happen, check '$STDERR_LOG_PATH' for more information. \n - Session will not start, but internet access will be left on so you can research the issue\e[0m\n" >&2
+        clear_session_files
+        exit 1
+    }
+
+    echo "$((SESSION_LENGTH * 60)) $SESSION_REASON" > $SHARE_CURRENT_SESSION_LOG_FILE
+    cat $SHARE_TIME_REMAINING_FILE > $SHARE_TIME_REMAINING_BEFORE_SESSION_FILE
+}
+
+off()
+{
+    connected_ssid=$(
+        nmcli -f CONNECTION,TYPE,STATE d | grep -v "\--" | tail -n +2 | \
+            grep "wifi " | grep "connected" | awk -F'  ' '{print $1}'
+    )
+
+    if [[ -n "$connected_ssid" ]]
+    then
+        nmcli connection down "$connected_ssid" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Disconnect from network: '$connected_ssid'"
+        [[ $? -ne 0 ]] && exit 1
+
+        if ! [[ -f $SHARE_TIME_REMAINING_GOAL_FILE \
+            && -f $SHARE_TIME_REMAINING_FILE \
+            && -f $SHARE_CURRENT_SESSION_LOG_FILE ]]
+        then
+            printf "\n\e[31m[!] Missing session time files, cannot save session to log.\e[0m\n"
+            exit 2
+        fi
+
+        current_log=$(cat $SHARE_CURRENT_SESSION_LOG_FILE)
+        session_time_goal=$(echo $current_log | awk -F' ' '{print $1}')
+        session_reason=$(echo $current_log | awk -F' ' '{$1="";print $0}')
+        
+        time_remaining_file_value=$(cat $SHARE_TIME_REMAINING_FILE)
+        time_remaining_before_session=$(cat $SHARE_TIME_REMAINING_BEFORE_SESSION_FILE)
+
+        real_session_time=$(( time_remaining_before_session - time_remaining_file_value ))
+
+        echo "$real_session_time $session_time_goal $session_reason" \
+            >> $SHARE_SESSION_HISTORY_LOG_FILE
+    else
+        printf "\n\e[33mNo session to stop, checking for rogue session timers...\e[0m\n"
+    fi
+
+    stop_timer_script
+    clear_session_files
+}
+
+log()
+{
+    if [[ -f $SHARE_SESSION_HISTORY_LOG_FILE ]]
+    then
+        session_history="$(cat $SHARE_SESSION_HISTORY_LOG_FILE)"
+        if [[ -n "$session_history" ]]
+        then
+            echo "$session_history" | $PAGER
+        else
+            echo -e "\nNo session history yet...\n"
+        fi
+    else
+        echo -e "\nNo session history yet...\n"
+    fi
+}
+
+session_status()
+{
+    SHARE_TIME_REMAINING_GOAL_FILE="$HOME/.local/share/internet/time_remaining_goal"
+
+    total_time_remaining=$(cat $SHARE_TIME_REMAINING_FILE)
+    echo -e "\nTime remaining for future sessions: $((total_time_remaining / 60))m $((total_time_remaining % 60))s"
+
+    saved_pid=$(cat $SHARE_TIMER_SCRIPT_PID_LOCK_FILE 2>/dev/null)
+    if [[ -n $saved_pid ]]
+    then
+        if ps axu | grep "$SHARE_TIMER_SCRIPT_FILE" | grep "$saved_pid" &>/dev/null
+        then
+            time_remaining=$(cat $SHARE_TIME_REMAINING_FILE 2>/dev/null)
+            time_remaining_goal=$(cat $SHARE_TIME_REMAINING_GOAL_FILE 2>/dev/null)
+
+            session_seconds_remaining=$(( time_remaining - time_remaining_goal ))
+
+            echo -e "\nTime remaining in current session: $(( session_seconds_remaining / 60 ))m $(( session_seconds_remaining % 60 ))s\n"
+
+            if [[ -f $SHARE_CURRENT_SESSION_LOG_FILE ]]
+            then
+                current_log=$(cat $SHARE_CURRENT_SESSION_LOG_FILE 2>/dev/null)
+                session_time_goal=$(echo $current_log | awk -F' ' '{print $1}')
+                session_reason=$(echo $current_log | awk -F' ' '{$1="";print $0}')
+
+                echo -e "  Goal: $((session_time_goal / 60)) minutes\nReason:$session_reason"
+            else
+                printf "\e[31m%s\e[0m\n" \
+                    "[!] The current session's log doesn't exist, this shouldn't happen" >&2
+                exit 2
+            fi
+
+        fi
+    fi
+}
+
+place_holder() 
+{
+    echo
+}
+
+case $1 in
+    "on")          check_packages && on;;
+    "off")         check_packages && off;;
+    "status")      check_packages && session_status;;
+    "log")         log;;
+    "config")      $EDITOR $CONFIG_FILE_PATH;;
+    "version"|"--version") echo "0.1.0";;
+    "--help"|"-h") display_help;;
+    *) 
+        echo -e "\n - [ERROR] Invalid use of the \`internet\` command -";
+        display_help
+        exit 1
+        ;;
+esac
