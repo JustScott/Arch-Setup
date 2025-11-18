@@ -16,7 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# TODO: Add play by artist using file metadata
+#TODO: have a `music doctor` command that gets the url of broken mp3 files
+#      and automatically redownloads them
+#  1. Loop through the mp3 files checking for corruption
+#  2. if file is corrupted, get its url from the metadata
+#  3. delete the file and redownload it
+#  - place the url in a songs_to_redownload file, and remove them
+#    once the file is successfully redownloaded. This way if the
+#    process is interrupted it can start back from where it was
 
 STDOUT_LOG_PATH="/dev/null"
 STDERR_LOG_PATH="/tmp/music_errors.log"
@@ -26,6 +33,9 @@ ALL_SONGS_PATH="$MUSIC_PATH/all_songs"
 PLAYLISTS_PATH="$MUSIC_PATH/playlists"
 
 TEMP_PLAYLIST_PATH="/tmp/music/temp_playlist_songs"
+TEMP_ARTIST_PATH="/tmp/music/temp_artist_songs"
+
+DEFAULT_MPV_FLAGS="--display-tags=artist,title"
 
 # Check that the required packages are installed
 check_packages() {
@@ -48,23 +58,37 @@ display_help() {
 
     echo "Commands:"
     printf "\t%-15s %-1s\n" "play" "play your songs"
-    printf "\t%-15s %-1s\n" "download" "Download songs from youtube music (including all song metadata by default)"
-    printf "\t%-15s %-1s\n" "download" "Create, delete, add to and remove songs from playlists"
+    printf "\t%-15s %-1s\n" "download" \
+        "Download songs from youtube music (including all song metadata by default)"
+    printf "\t%-15s %-1s\n" "download" \
+        "Create, delete, add to and remove songs from playlists"
+    printf "\t%-15s %-1s\n" "doctor" \
+        "Checks all the songs for corruption and redownloads them if necessary"
     printf "\t%-15s %-1s\n" "version" "Returns version information"
 
     echo -e "\nCommand Flags:\n"
     echo -e "\tplay:"
     printf "\t    %-20s\t %-1s\n" "-r | --random | --shuffle" \
         "Randomly shuffle whatever songs you're playing"
-    printf "\t    %-20s\t %-1s\n" "--show-cover" "Show the song cover"
-    printf "\t    %-20s\t %-1s\n" "--playlist" "Play songs from a playlist (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "--show-cover" \
+        "Show the song cover"
+    printf "\t    %-20s\t %-1s\n" "--playlist" \
+        "Play songs from a playlist (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "--artist" \
+        "Play songs from an artist (uses fzf)"
     echo -e "\tplaylist:"
-    printf "\t    %-20s\t %-1s\n" "-l | --list" "List created playlists (uses fzf)"
-    printf "\t    %-20s\t %-1s\n" "-c | --create" "Create a new playlist"
-    printf "\t    %-20s\t %-1s\n" "-d | --delete" "Delete an existing playlist (uses fzf)"
-    printf "\t    %-20s\t %-1s\n" "--list-songs" "list songs from a playlist (uses fzf)"
-    printf "\t    %-20s\t %-1s\n" "--add-songs" "add songs to a playlist (uses fzf)"
-    printf "\t    %-20s\t %-1s\n" "--remove-songs" "Remove songs from a playlist (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "-l | --list" \
+        "List created playlists (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "-c | --create" \
+        "Create a new playlist"
+    printf "\t    %-20s\t %-1s\n" "-d | --delete" \
+        "Delete an existing playlist (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "--list-songs" \
+        "list songs from a playlist (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "--add-songs" \
+        "add songs to a playlist (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "--remove-songs" \
+        "Remove songs from a playlist (uses fzf)"
     
     echo -e "\nExamples (most use fzf and don't need flags or arguments):"
     echo -e "\t\`music play --shuffle --show-cover\`"
@@ -122,6 +146,12 @@ check_paths()
     else
         rm -rf $TEMP_PLAYLIST_PATH/*
     fi
+    if ! [[ -d $TEMP_ARTIST_PATH ]]
+    then
+        mkdir -p $TEMP_ARTIST_PATH
+    else
+        rm -rf $TEMP_ARTIST_PATH/*
+    fi
 
 }
 
@@ -131,6 +161,7 @@ play()
         FLAG_shuffle_songs \
         FLAG_show_cover \
         FLAG_play_playlist \
+        FLAG_play_artist \
 
     for arg in $@
     do
@@ -158,6 +189,14 @@ play()
                     exit 1
                 fi
                 FLAG_play_playlist=1
+            ;;
+            "-a" | "--artist")
+                if [[ -n "$FLAG_play_artist" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the play artist flag - \n"
+                    exit 1
+                fi
+                FLAG_play_artist=1
             ;;
             *)
                 # Support flags starting with '-' or "--" shouldn't reach
@@ -214,21 +253,63 @@ play()
             ln -s "$ALL_SONGS_PATH/$line" $TEMP_PLAYLIST_PATH/ &>/dev/null
         done < "$PLAYLISTS_PATH/$chosen_playlist"
 
-        mpv $mpv_shuffle_flag $mpv_hide_cover_flag $TEMP_PLAYLIST_PATH/*
+        mpv $DEFAULT_MPV_FLAGS $mpv_shuffle_flag $mpv_hide_cover_flag $TEMP_PLAYLIST_PATH/*
         return
     fi
+
+
+    if (( FLAG_play_artist ))
+    then
+        artists_and_titles="$(mpv \
+            --frames=0 --display-tags=Artist,Title $ALL_SONGS_PATH/*.mp3 \
+            | grep -e "Artist: " -e "Title: ")"
+        
+        if [[ -z "$artists_and_titles" ]]
+        then
+            printf "\n\e[33m%s\e[0m\n" "[!] No artist available. Goodbye."
+            return
+        fi
+
+        chosen_artist=$(echo "$artists_and_titles" \
+            | grep "Artist: " | awk -F': ' '{$1="";print $0}' \
+            | sort -u | fzf)
+
+        if [[ -z "$chosen_artist" ]]
+        then
+            printf "\n\e[33m%s\e[0m\n" "[!] No artist chosen. Goodbye."
+            return
+        fi
+
+        artists_titles="$(echo "$artists_and_titles" \
+            | grep "$chosen_artist" -A 1 --no-group-separator \
+            | grep "Title: " | awk -F': ' '{$1="";print $2}')"
+
+        while IFS= read -r title; do
+            ln -s "$ALL_SONGS_PATH/$title.mp3" $TEMP_ARTIST_PATH/ &>/dev/null
+        done <<< "$artists_titles"
+
+        echo ""
+        mpv $DEFAULT_MPV_FLAGS $mpv_shuffle_flag \
+            $mpv_hide_cover_flag $TEMP_ARTIST_PATH/*
+        return
+    fi
+
+
+    # Only reach this point if no other flags were passed, all 
+    # other if statements should return
 
     if ((FLAG_shuffle_songs))
     then
-        mpv $mpv_shuffle_flag $mpv_hide_cover_flag $ALL_SONGS_PATH/*
+        mpv $DEFAULT_MPV_FLAGS $mpv_shuffle_flag \
+            $mpv_hide_cover_flag $ALL_SONGS_PATH/*
         return
     fi
 
-    # Only reach this point if no other flags were passed, all other if statements should return
     chosen_song=$(ls -A $ALL_SONGS_PATH | fzf)
     if [[ -n "$chosen_song" ]]
     then
-        mpv $mpv_hide_cover_flag "$ALL_SONGS_PATH/$chosen_song"
+        mpv $DEFAULT_MPV_FLAGS $mpv_hide_cover_flag \
+            "$ALL_SONGS_PATH/$chosen_song"
         return
     fi
 
@@ -263,7 +344,7 @@ download()
         then
             playlist_id="$(echo $url | awk -F'list=' '{print $2}')"
 
-            printf "\e[33[!] Warning: The playlist task below will almost always falsely report errors. Ignore it."
+            printf "\n\e[33m[!] Warning: The playlist task below will almost always falsely report errors. Ignore it.\n\n"
 
             yt-dlp \
                 -x \
@@ -290,9 +371,11 @@ download()
                 task_output $! "$STDERR_LOG_PATH" "Downloading Song: $song_id"
         fi
     done
+
+    rm $ALL_SONGS_PATH/*.webm
+    rm $ALL_SONGS_PATH/*.part
 }
 
-# TODO: Implement remove songs from playlist
 playlist()
 {
     local \
