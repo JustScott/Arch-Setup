@@ -1,0 +1,292 @@
+#!/bin/bash
+#
+# music - part of the Arch-Setup project
+# Copyright (C) 2024-2025, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+STDOUT_LOG_PATH="/dev/null"
+STDERR_LOG_PATH="/tmp/music_errors.log"
+
+MUSIC_PATH="$HOME/Music"
+ALL_SONGS_PATH="$MUSIC_PATH/all_songs"
+PLAYLISTS_PATH="$MUSIC_PATH/playlists"
+
+# Check that the required packages are installed
+check_packages() {
+    required_packages=(mpv yt-dlp fzf)
+
+    for package in ${required_packages[@]}; do 
+        if ! command -v $package &>/dev/null; then
+            printf "\e[31m%s\e[0m\n" \
+                "[Error] Required package '$package' is not installed" >&2
+            missing_packages=true
+        fi
+    done
+
+    [[ $missing_packages = true ]] && exit 2
+}
+
+display_help() {
+    echo -e "\nUsage: music [COMMAND] [FLAGS]"
+    echo -e "\nDownload songs via youtube music links. Sort them into playlists, or just play them all\n"
+
+    echo "Commands:"
+    printf "\t%-15s %-1s\n" "play" "play your songs"
+    printf "\t%-15s %-1s\n" "download" "Download songs from youtube music (including all song metadata by default)"
+    printf "\t%-15s %-1s\n" "version" "Returns version information"
+
+    echo -e "\nCommand Flags:\n"
+    echo -e "\tplay:"
+    printf "\t    %-20s\t %-1s\n" "-r | --random | --shuffle" \
+        "Randomly shuffle whatever songs you're playing"
+    printf "\t    %-20s\t %-1s\n" "--show-cover" "Show the song cover"
+    echo -e "\tdownload:"
+    printf "\t    %-20s\t %-1s\n" "-r | --random | --shuffle" \
+        "Randomly shuffle whatever songs you're playing"
+    printf "\t    %-20s\t %-1s\n" "--show-cover" "Show the song cover"
+    
+    echo -e "\nExamples (most use fzf and don't need flags or arguments):"
+    echo -e "\t\`music play --show-cover\` # fzf to select a specific song and show the cover image"
+    echo -e "\t\`music play --shuffle\` # Shuffle and play all songs"
+    echo -e "\t\`music download "url" "next_url" "another_url"\` # Download songs"
+
+    echo -e "\nError Codes:"
+    printf "\t%-3s %-1s\n" "1" "General Error"
+    printf "\t%-3s %-1s\n" "2" "Missing Packages"
+}
+
+# Function to show a spinner and handle exit status
+task_output() {
+    local pid=$1
+    local stderr_path=$2
+    local task_message="$3"
+
+    local spin_chars="/-\|"
+
+    while kill -0 "$pid" 2>/dev/null; do
+        for i in $(seq 0 3); do
+            printf "\r\e[36m[%s]\e[0m %s" "${spin_chars:$i:1}" "$task_message"
+            sleep 0.1
+        done
+    done
+
+    # Capture the exit code of the background process
+    wait $pid
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        printf "\r\e[32m[Success]\e[0m %s\n" "$task_message"
+        return 0
+    else
+        printf "\r\e[31m[Error]\e[0m %s (Exit code: %d)\n" "$task_message" "$exit_code"
+        printf "\e[31m[!] Check error log: %s\e[0m\n" "$stderr_path"
+        return 1
+    fi
+}
+
+check_paths()
+{
+    if ! [[ -d $ALL_SONGS_PATH ]]
+    then
+        mkdir -p $ALL_SONGS_PATH
+    fi
+    if ! [[ -d $PLAYLISTS_PATH ]]
+    then
+        mkdir -p $PLAYLISTS_PATH
+    fi
+}
+
+play()
+{
+    local \
+        FLAG_shuffle_songs \
+        FLAG_show_cover \
+
+    for arg in $@
+    do
+        case $arg in
+            "-r" | "--random" | "--shuffle")
+                if [[ -n "$FLAG_shuffle" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the shuffle songs flag - \n"
+                    exit 1
+                fi
+                FLAG_shuffle_songs=1
+            ;;
+            "--show-cover")
+                if [[ -n "$FLAG_show_cover" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the show cover flag - \n"
+                    exit 1
+                fi
+                FLAG_show_cover=1
+            ;;
+            *)
+                # Support flags starting with '-' or "--" shouldn't reach
+                # the catchall case
+                if [[ $arg =~ ^-{1,2} ]]
+                then
+                    echo "The '$arg' flag isn't supported"
+                    exit 1
+                fi
+            ;;
+        esac
+    done
+
+    if [[ -z "$(ls -A $ALL_SONGS_PATH)" ]]
+    then
+        printf "\n\e[31m[!] No songs in '$ALL_SONGS_PATH'\n  - use the \`music download\` command to download songs\e[0m\n"
+        exit 1
+    fi
+
+    mpv_hide_cover_flag="--no-audio-display"
+    if ((FLAG_show_cover))
+    then
+        unset mpv_hide_cover_flag
+    fi
+
+    declare mpv_shuffle_flag
+    if ((FLAG_shuffle_songs))
+    then
+        mpv_shuffle_flag="--shuffle"
+    fi
+    
+    # Only reach this point if no other flags were passed, all other if statements should return
+    if ((FLAG_shuffle_songs))
+    then
+        mpv $mpv_shuffle_flag $mpv_hide_cover_flag $ALL_SONGS_PATH/*
+        return
+    fi
+
+    # Only reach this point if no other flags were passed, all other if statements should return
+    chosen_song=$(ls -A $ALL_SONGS_PATH | fzf)
+    if [[ -n "$chosen_song" ]]
+    then
+        mpv $mpv_hide_cover_flag "$ALL_SONGS_PATH/$chosen_song"
+        return
+    fi
+
+    printf "\n\e[33m[!] No songs chosen or flags passed... Goodbye\e[0m\n"
+}
+
+download()
+{
+    local \
+        all_urls \
+
+    for arg in $@
+    do
+        case $arg in
+            *)
+                # Support flags starting with '-' or "--" shouldn't reach
+                # the catchall case
+                if [[ $arg =~ ^-{1,2} ]]
+                then
+                    echo "The '$arg' flag isn't supported"
+                    exit 1
+                fi
+                all_urls+=($arg)
+            ;;
+        esac
+    done
+
+
+    for url in ${all_urls[@]}
+    do
+        if [[ "$url" =~ "playlist" ]]
+        then
+            playlist_id="$(echo $url | awk -F'list=' '{print $2}')"
+
+            printf "\e[33[!] Warning: The playlist task below will almost always falsely report errors. Ignore it."
+
+            yt-dlp \
+                -x \
+                --audio-format mp3 \
+                --embed-metadata \
+                --embed-thumbnail \
+                --add-metadata \
+                --no-playlist \
+                --output "$ALL_SONGS_PATH/%(title)s.%(ext)s" \
+                "$url" >/dev/null 2>>"$STDERR_LOG_PATH" &
+                task_output $! "$STDERR_LOG_PATH" "Downloading Playlist: $playlist_id"
+        else
+            song_id="$(echo $url | awk -F'=' '{print $2}')"
+
+            yt-dlp \
+                -x \
+                --audio-format mp3 \
+                --embed-metadata \
+                --embed-thumbnail \
+                --add-metadata \
+                --no-playlist \
+                --output "$ALL_SONGS_PATH/%(title)s.%(ext)s" \
+                "$url" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+                task_output $! "$STDERR_LOG_PATH" "Downloading Song: $song_id"
+        fi
+    done
+}
+
+playlist()
+{
+    local \
+        playlist \
+        FLAG_create_playlist \
+
+    for arg in $@
+    do
+        case $arg in
+            "-c" | "--create")
+                if [[ -n "$FLAG_create_playlist" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the shuffle songs flag - \n"
+                    exit 1
+                fi
+                FLAG_shuffle_songs=1
+            ;;
+            "--show-cover")
+                if [[ -n "$FLAG_show_cover" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the show cover flag - \n"
+                    exit 1
+                fi
+                FLAG_show_cover=1
+            ;;
+            *)
+                # Support flags starting with '-' or "--" shouldn't reach
+                # the catchall case
+                if [[ $arg =~ ^-{1,2} ]]
+                then
+                    echo "The '$arg' flag isn't supported"
+                    exit 1
+                fi
+                all_urls+=($arg)
+            ;;
+        esac
+    done
+}
+
+check_paths
+
+case $1 in
+    "play")         check_packages;play ${@:2};;
+    "download")     check_packages;download ${@:2};;
+    "version"|"--version") echo "0.1.0";;
+    "--help"|"-h") display_help;;
+    *) 
+        echo -e "\n - [ERROR] Invalid use of the \`music\` command -";
+        display_help
+        exit 1
+        ;;
+esac
