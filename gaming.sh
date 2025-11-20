@@ -32,7 +32,7 @@ fi
 
 source ./shared_lib
 
-AUR_PACKAGES=( flatpak ) 
+AUR_PACKAGES=( flatpak btop rocm-smi-lib ) 
 FLATPAK_PACKAGES=( com.github.tchx84.Flatseal com.valvesoftware.Steam )
 
 if groups | grep -E "(sudo|wheel)" &>/dev/null
@@ -61,6 +61,10 @@ else
         flatpak install --noninteractive --or-update --user -y ${FLATPAK_PACKAGES[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Install or update GUI apps with flatpak"  
+        [[ $? -ne 0 ]] && exit 1
+
+        flatpak override --user --device=dri com.valvesoftware.Steam
+        task_output $! "$STDERR_LOG_PATH" "Enable GPU acceleration for Steam"  
         [[ $? -ne 0 ]] && exit 1
 
         {
