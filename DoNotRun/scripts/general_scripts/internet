@@ -590,15 +590,33 @@ log()
 {
     if [[ -f $SHARE_SESSION_HISTORY_LOG_FILE ]]
     then
-        session_history="$(cat $SHARE_SESSION_HISTORY_LOG_FILE)"
-        if [[ -n "$session_history" ]]
+        session_history="$(tac $SHARE_SESSION_HISTORY_LOG_FILE)"
+        if [[ -z "$session_history" ]]
         then
-            echo "$session_history" | $PAGER
-        else
             echo -e "\nNo session history yet...\n"
+            return 1
         fi
+
+        declare pretty_log
+        echo "$session_history" | while IFS= read -r session
+        do
+            real_seconds=$(echo "$session" | awk -F' ' '{print $1}')
+            desired_seconds=$(echo "$session" | awk -F' ' '{print $2}')
+
+            real_time="$(( real_seconds / 60 ))m $(( real_seconds % 60 ))s"
+            desired_time="$(( desired_seconds / 60 ))m"
+
+            reason=$(echo "$session" | awk -F'  ' '{print $2}')
+            printf "\n%s\e[36m%s\e[0m" \
+                "Real Session Time: " "$real_time"
+            printf "\n%s\e[36m%s\e[0m" \
+                "Desired Session Time: " "$desired_time"
+            printf "\n\n%s\n" \
+                "$reason" | fold -s -w 60 | sed 's/^/\t/'
+        done | $PAGER
     else
         echo -e "\nNo session history yet...\n"
+        return 1
     fi
 }
 
