@@ -16,21 +16,27 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-STDOUT_LOG_PATH="/dev/null"
-STDERR_LOG_PATH="/tmp/internet_errors.log"
+SCRIPT_NAME="internet" # Remember to change in here doc as well
+REQUIRED_PACKAGES=( \
+    bash systemctl nmcli fzf sed awk \
+    grep fold tac date ps tail kill \
+)
 
-CONFIG_DIRECTORY="$HOME/.config/internet"
+STDOUT_LOG_PATH="/dev/null"
+STDERR_LOG_PATH="/tmp/${SCRIPT_NAME}_errors.log"
+
+CONFIG_DIRECTORY="$HOME/.config/${SCRIPT_NAME}"
 CONFIG_FILE_PATH="$CONFIG_DIRECTORY/config"
 
-SHARE_DIRECTORY="$HOME/.local/share/internet"
+SHARE_DIRECTORY="$HOME/.local/share/${SCRIPT_NAME}"
 SHARE_TIME_REMAINING_FILE="$SHARE_DIRECTORY/time_remaining"
 SHARE_TIME_REMAINING_GOAL_FILE="$SHARE_DIRECTORY/time_remaining_goal"
 SHARE_TIME_REMAINING_BEFORE_SESSION_FILE="$SHARE_DIRECTORY/time_remaining_before_session"
 
 SHARE_CURRENT_DATE_FILE="$SHARE_DIRECTORY/current_date"
 
-SHARE_TIMER_SCRIPT_FILE="$SHARE_DIRECTORY/internet_timer_script.sh"
-SHARE_TIMER_SCRIPT_PID_LOCK_FILE="$SHARE_DIRECTORY/internet_timer_script_pid_lock"
+SHARE_TIMER_SCRIPT_FILE="$SHARE_DIRECTORY/${SCRIPT_NAME}_timer_script.sh"
+SHARE_TIMER_SCRIPT_PID_LOCK_FILE="$SHARE_DIRECTORY/${SCRIPT_NAME}_timer_script_pid_lock"
 
 SHARE_CURRENT_SESSION_LOG_FILE="$SHARE_DIRECTORY/current_session_log"
 SHARE_SESSION_HISTORY_LOG_FILE="$SHARE_DIRECTORY/session_log_history"
@@ -44,13 +50,14 @@ then
 fi
 
 # Q: Why keep the background timer script in a here doc?
-# A: It allows `internet` to be a single script which makes portability/sharing
-#    it easier, and allows `internet` to quickly populate this required file
+# A: It allows this tool to be a single script which makes portability/sharing
+#    it easier, and allows this script to quickly populate the required file
 #    if it's missing for any reason, instead of just failing to run
 #
-# Q: Why duplicate some code instead of calling: `internet off`, for example
-# A: The user may not be using `internet` from path, preferring to run the
-#    script direct/local instead
+# Q: Why duplicate some code instead of calling this scripts off command, 
+#    for example
+# A: The user may not be using this script from path, preferring to run the
+#    script local instead
 cat > $SHARE_TIMER_SCRIPT_FILE << "EOF"
 #!/bin/bash
 #
@@ -70,21 +77,23 @@ cat > $SHARE_TIMER_SCRIPT_FILE << "EOF"
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-STDOUT_LOG_PATH="/dev/null"
-STDERR_LOG_PATH="/tmp/internet_errors.log"
+SCRIPT_NAME="internet"
 
-CONFIG_DIRECTORY="$HOME/.config/internet"
+STDOUT_LOG_PATH="/dev/null"
+STDERR_LOG_PATH="/tmp/${SCRIPT_NAME}_errors.log"
+
+CONFIG_DIRECTORY="$HOME/.config/${SCRIPT_NAME}"
 CONFIG_FILE_PATH="$CONFIG_DIRECTORY/config"
 
-SHARE_DIRECTORY="$HOME/.local/share/internet"
+SHARE_DIRECTORY="$HOME/.local/share/${SCRIPT_NAME}"
 SHARE_TIME_REMAINING_FILE="$SHARE_DIRECTORY/time_remaining"
 SHARE_TIME_REMAINING_GOAL_FILE="$SHARE_DIRECTORY/time_remaining_goal"
 SHARE_TIME_REMAINING_BEFORE_SESSION_FILE="$SHARE_DIRECTORY/time_remaining_before_session"
 
 SHARE_CURRENT_DATE_FILE="$SHARE_DIRECTORY/current_date"
 
-SHARE_TIMER_SCRIPT_FILE="$SHARE_DIRECTORY/internet_timer_script.sh"
-SHARE_TIMER_SCRIPT_PID_LOCK_FILE="$SHARE_DIRECTORY/internet_timer_script_pid_lock"
+SHARE_TIMER_SCRIPT_FILE="$SHARE_DIRECTORY/${SCRIPT_NAME}_timer_script.sh"
+SHARE_TIMER_SCRIPT_PID_LOCK_FILE="$SHARE_DIRECTORY/${SCRIPT_NAME}_timer_script_pid_lock"
 
 SHARE_CURRENT_SESSION_LOG_FILE="$SHARE_DIRECTORY/current_session_log"
 SHARE_SESSION_HISTORY_LOG_FILE="$SHARE_DIRECTORY/session_log_history"
@@ -205,33 +214,38 @@ reset_timer_if_needed
 # Check that the required packages are installed
 check_packages() 
 {
-    required_packages=(nmcli fzf)
-
-    for package in ${required_packages[@]}; do 
-        if ! command -v $package &>/dev/null; then
-            printf "\e[31m%s\e[0m\n" \
-                "[Error] Required package '$package' is not installed" >&2
-            missing_packages=true
+    for tool in ${REQUIRED_PACKAGES[@]}
+    do
+        if ! which $tool &>/dev/null
+        then
+            printf "\n\e[31m%s\e[0m\n" "[!] Must install '$tool' for $SCRIPT_NAME to work"
+            tools_not_installed=1
         fi
     done
 
-    [[ $missing_packages = true ]] && exit 2
-
+    if ((tools_not_installed))
+    then
+        exit 3
+    fi
+    
     if ! systemctl is-active --quiet NetworkManager &>/dev/null
     then
+        printf "\e[31m%s\e[0m" \
+            "[!] NetworkManager service not active... attempting to start:"
         sudo -v
-        sudo systemctl start NetworkManager >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Start NetworkManager service"
-        [[ $? -ne 0 ]] && exit 1 || exit 0
+        # Show STDERR output to user on purpose
+        if ! sudo systemctl start NetworkManager 1>/dev/null
+        then
+            exit 3
+        fi
     fi
-    return 0
 }
 
 display_help() 
 {
-    echo -e "\nUsage: internet [COMMAND]"
-    echo -e "\nMake your internet usage intentional with specific reasons"
-    echo -e " and time limits before connecting\n"
+    echo -e "\nUsage: $SCRIPT_NAME [COMMAND]"
+    echo -e "\nMake your internet usage intentional with a specific reason"
+    echo -e " and time limit before connecting\n"
 
     echo "Commands:"
     printf "\t%-15s %-1s\n" "on" "Connect to a network after specifying a reason and a time limit"
@@ -241,23 +255,24 @@ display_help()
     printf "\t%-15s %-1s\n" "config" "Edit your config file for setting daily time limits"
 
     echo -e "\nBase Flags:"
-    printf "\t    %-20s\t %-1s\n" "--version" "Returns version information"
-    printf "\t    %-20s\t %-1s\n" "-h | --help" "Show this help message"
+    printf "\t%-15s %-1s\n" "--version" "Returns version information"
+    printf "\t%-15s %-1s\n" "-h | --help" "Show this help message"
 
     echo -e "\nExamples:"
-    echo -e "\t\`internet on\`"
-    echo -e "\t\`internet off\`"
-    echo -e "\t\`internet status\`"
-    echo -e "\t\`internet log\`"
-    echo -e "\t\`internet config\`"
+    echo -e "\t\`$SCRIPT_NAME on\`"
+    echo -e "\t\`$SCRIPT_NAME off\`"
+    echo -e "\t\`$SCRIPT_NAME status\`"
+    echo -e "\t\`$SCRIPT_NAME log\`"
+    echo -e "\t\`$SCRIPT_NAME config\`"
 
     echo -e "\nFAQ:"
     echo -e "\tQ: What if I have 4m 30s left today, and I want to start a 5 minute session"
     echo -e "\tA: Set you session for as long as you'd like, it will still cut off for the daily limit"
 
     echo -e "\nError Codes:"
-    printf "\t%-3s %-1s\n" "1" "Issue connecting to the internet"
+    printf "\t%-3s %-1s\n" "1" "General Error"
     printf "\t%-3s %-1s\n" "2" "Missing required files"
+    printf "\t%-3s %-1s\n" "3" "Missing required packages"
 }
 
 # Function to show a spinner and handle exit status
@@ -444,7 +459,7 @@ on()
     fi
 
     check_for_active_session && {
-        printf "\n\e[31m[!] Timer session already running, run \`internet off\` first\n\e[0m"
+        printf "\n\e[31m[!] Timer session already running, run \`$SCRIPT_NAME off\` first\n\e[0m"
         exit 1
     }
 
@@ -596,7 +611,7 @@ log()
 
 session_status()
 {
-    SHARE_TIME_REMAINING_GOAL_FILE="$HOME/.local/share/internet/time_remaining_goal"
+    SHARE_TIME_REMAINING_GOAL_FILE="$HOME/.local/share/${SCRIPT_NAME}/time_remaining_goal"
 
     total_time_remaining=$(cat $SHARE_TIME_REMAINING_FILE)
     echo -e "\nTime remaining for future sessions: $((total_time_remaining / 60))m $((total_time_remaining % 60))s"
@@ -630,21 +645,32 @@ session_status()
     fi
 }
 
+edit_config()
+{
+    if [[ -n $EDITOR ]]
+    then
+        $EDITOR $CONFIG_FILE_PATH
+    else
+        printf "\n\e[33m%s\e[0m\n" \
+            "[!] No \$EDITOR configured, you can manually edit the config file here: '$CONFIG_FILE_PATH'" | fold -s -w 80 | sed 's/^/\t/'
+    fi
+}
+
 place_holder() 
 {
     echo
 }
 
 case $1 in
-    "on")          check_packages && on;;
-    "off")         check_packages && off;;
-    "status")      check_packages && session_status;;
-    "log")         log;;
-    "config")      $EDITOR $CONFIG_FILE_PATH;;
+    "on")          check_packages;on;;
+    "off")         check_packages;off;;
+    "status")      check_packages;session_status;;
+    "log")         check_packages;log;;
+    "config")      edit_config;;
     "version"|"--version") echo "0.1.0";;
     "--help"|"-h") display_help;;
     *) 
-        echo -e "\n - [ERROR] Invalid use of the \`internet\` command -";
+        echo -e "\n - [ERROR] Invalid use of the \`$SCRIPT_NAME\` command -";
         display_help
         exit 1
         ;;
