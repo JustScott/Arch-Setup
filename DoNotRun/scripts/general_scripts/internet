@@ -410,35 +410,7 @@ display_session_data()
 
         echo "Private IP: $private_ip"
 
-        printf "\rTesting Internet Access (20s max)"
-        curl -m 20 -s ip.me &>/dev/null 
-        if [[ $? -ne 0 ]]
-        then
-            ping ip.me -c 4 &>/dev/null
-            if [[ $? -ne 0 ]]
-            then
-                ping 9.9.9.9 -c 2 &>/dev/null
-                if [[ $? -ne 0 ]]
-                then
-                    if [[ -n "$private_ip" ]]
-                    then
-                        # TODO: Find a better way to prevent overlap
-                        printf "\r                                 "
-                        printf "  \rInternet: \e[31mNo, LAN only\e[0m"
-                    fi
-                else
-                    printf "  \rInternet: \e[33mPartial, Accessible without DNS\e[0m"
-                fi
-            else
-                printf "  \rInternet: \e[31mPing works, but general web access is being metered/restricted\e[0m"
-            fi
-        else
-            # TODO: Find a better way to prevent overlap
-            printf "\r                                 "
-            printf "  \rInternet: \e[32mYes, Fully Accessible\e[0m"
-        fi
-
-        echo -e "\n\nReason: $SESSION_REASON\nLength: $SESSION_LENGTH m"
+        echo -e "\nReason: $SESSION_REASON\nLength: $SESSION_LENGTH m"
 
         echo -e "\n----------------------------------\n"
     fi
@@ -518,6 +490,8 @@ on()
         fi
 
         prompt_time_and_reason
+
+        echo ""
 
         nmcli connection up "$user_chosen_ssid" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Connecting to network '$user_chosen_ssid'"
