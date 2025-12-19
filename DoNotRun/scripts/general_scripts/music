@@ -144,13 +144,13 @@ check_paths()
     then
         mkdir -p $TEMP_PLAYLIST_PATH
     else
-        rm -rf $TEMP_PLAYLIST_PATH/*
+        rm -rf $TEMP_PLAYLIST_PATH/* &>/dev/null
     fi
     if ! [[ -d $TEMP_ARTIST_PATH ]]
     then
         mkdir -p $TEMP_ARTIST_PATH
     else
-        rm -rf $TEMP_ARTIST_PATH/*
+        rm -rf $TEMP_ARTIST_PATH/* &>/dev/null
     fi
 
 }
@@ -347,7 +347,7 @@ download()
             printf "\n\e[33m[!] Warning: The playlist task below will almost always falsely report errors. Ignore it.\n\n"
 
             yt-dlp \
-                -x \
+                --extract-audio \
                 --audio-format mp3 \
                 --embed-metadata \
                 --embed-thumbnail \
@@ -360,7 +360,7 @@ download()
             song_id="$(echo $url | awk -F'=' '{print $2}')"
 
             yt-dlp \
-                -x \
+                --extract-audio \
                 --audio-format mp3 \
                 --embed-metadata \
                 --embed-thumbnail \
@@ -372,8 +372,8 @@ download()
         fi
     done
 
-    rm $ALL_SONGS_PATH/*.webm
-    rm $ALL_SONGS_PATH/*.part
+    rm $ALL_SONGS_PATH/*.webm &>/dev/null
+    rm $ALL_SONGS_PATH/*.part &>/dev/null
 }
 
 playlist()
@@ -470,7 +470,7 @@ playlist()
     then
         if [[ -n "${playlist_name[@]}" ]]
         then
-            rm "$PLAYLISTS_PATH/${playlist_name[@]}"
+            rm "$PLAYLISTS_PATH/${playlist_name[@]}" &>/dev/null
             echo -e "\nPlaylist '${playlist_name[@]}' deleted\n"
             return
         else
@@ -486,7 +486,7 @@ playlist()
                 return
             fi
 
-            rm "$PLAYLISTS_PATH/$chosen_playlist"
+            rm "$PLAYLISTS_PATH/$chosen_playlist" &>/dev/null
             echo -e "\nPlaylist '$chosen_playlist' deleted\n"
             return
         fi
