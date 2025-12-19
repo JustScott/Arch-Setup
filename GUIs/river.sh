@@ -63,8 +63,8 @@ else
         mkdir -p $AUR_PROJECTS_ROOT
         cd $AUR_PROJECTS_ROOT
 
-        ACTION="Build creek from source with zig"
-        git clone https://github.com/nmeum/creek.git >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        git clone https://git.8pit.net/creek.git \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Clone Creek"
         [[ $? -ne 0 ]] && exit 1
 
@@ -72,7 +72,7 @@ else
         zig build >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Compile Creek"
         [[ $? -ne 0 ]] && exit 1
-            
+
         ln -s $PWD/zig-out/bin/creek ../DoNotRun/scripts/wm_scripts/ \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Install Creek to wm_scripts"
