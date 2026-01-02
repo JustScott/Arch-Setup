@@ -189,51 +189,21 @@ update-status-bar() {
     then
         unset network_display
 
-        if which nmcli &>/dev/null
+        if which nmcli &>/dev/null && which internet &>/dev/null 
         then
-            #
-            # Calculates the rx and tx usage of the network
-            #
-            RX_LOG_FILE=$CACHE_DIRECTORY/net_rx.log
-            TX_LOG_FILE=$CACHE_DIRECTORY/net_tx.log
+            if internet status | grep "current session: " &>/dev/null
+            then
+                network_name="$(nmcli d | grep "wifi " \
+                    | grep "connected " | awk '{print $4}')"
 
-            [[ -f $RX_LOG_FILE ]] || echo "0" > $RX_LOG_FILE
-            [[ -f $TX_LOG_FILE ]] || echo "0" > $TX_LOG_FILE
+                time_remaining="$(internet status \
+                    | grep "current session: " \
+                    | awk -F'current session: ' '{print $2}')"
 
-            rx_total=$(( $(cat /sys/class/net/*/statistics/rx_bytes | paste -sd '+') ))
-            tx_total=$(( $(cat /sys/class/net/*/statistics/tx_bytes | paste -sd '+') ))
-            rx_last=$(cat $RX_LOG_FILE)
-            tx_last=$(cat $TX_LOG_FILE)
+                network_display="$network_name::$time_remaining |"
 
-            rx_current=$(( $rx_total-$rx_last ))
-            tx_current=$(( $tx_total-$tx_last ))
-
-            current_combined_usage=$(numfmt --to iec $(( $rx_current+$tx_current )))
-
-            echo $rx_total > $RX_LOG_FILE
-            echo $tx_total > $TX_LOG_FILE
-
-            # 
-            # Yes, ethernet is suppose to only show if wifi isn't connected to a network
-            #
-            nmcli_device_output=$(nmcli d)
-
-            for interface in 'ethernet' 'wifi'
-            do
-                devices="$(echo "$nmcli_device_output" | grep "$interface ")"
-                if [[ -n "$devices" ]]
-                then
-                    ssids="$(echo "$devices" | awk '{$1=$2=$3=""; print $0}' | awk '{$1=$1; print}')"
-                    while IFS= read -r ssid
-                    do
-                        if ! echo "$ssid" | grep "\--" &>/dev/null
-                        then
-                            [[ -n "$ssid" ]] \
-                                && network_display="$interface:$current_combined_usage:$ssid |"
-                        fi
-                    done < <(echo "$ssids")
-                fi
-            done
+                unset network_name time_remaining
+            fi
         fi
 
         echo "$network_display" > $CACHE_NETWORK_FILE

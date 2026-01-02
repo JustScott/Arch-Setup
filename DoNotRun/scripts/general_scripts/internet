@@ -216,7 +216,7 @@ check_packages()
 {
     for tool in ${REQUIRED_PACKAGES[@]}
     do
-        if ! which $tool &>/dev/null
+        if ! { which $tool || type $tool; } &>/dev/null
         then
             printf "\n\e[31m%s\e[0m\n" "[!] Must install '$tool' for $SCRIPT_NAME to work"
             tools_not_installed=1
@@ -433,7 +433,7 @@ display_session_data()
 
 stop_timer_script()
 {
-    saved_pid=$(cat $SHARE_TIMER_SCRIPT_PID_LOCK_FILE)
+    saved_pid=$(cat $SHARE_TIMER_SCRIPT_PID_LOCK_FILE 2>/dev/null)
 
     if [[ -f $SHARE_TIMER_SCRIPT_PID_LOCK_FILE ]]
     then
