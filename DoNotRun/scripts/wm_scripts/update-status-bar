@@ -191,18 +191,23 @@ update-status-bar() {
 
         if which nmcli &>/dev/null && which internet &>/dev/null 
         then
-            if internet status | grep "current session: " &>/dev/null
+            network_name="$(nmcli d | grep " wifi " \
+                | grep " connected " | awk '{print $4}')"
+
+            if [[ -n "$network_name" ]]
             then
-                network_name="$(nmcli d | grep "wifi " \
-                    | grep "connected " | awk '{print $4}')"
+                network_display="$network_name |"
 
-                time_remaining="$(internet status \
-                    | grep "current session: " \
-                    | awk -F'current session: ' '{print $2}')"
+                if internet status | grep "current session: " &>/dev/null
+                then
+                    time_remaining="$(internet status \
+                        | grep "current session: " \
+                        | awk -F'current session: ' '{print $2}')"
 
-                network_display="$network_name::$time_remaining |"
+                    network_display="$network_name::$time_remaining |"
 
-                unset network_name time_remaining
+                    unset network_name time_remaining
+                fi
             fi
         fi
 
