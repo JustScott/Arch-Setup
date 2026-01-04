@@ -412,23 +412,45 @@ display_session_data()
             | tail -n1 | awk -F'[/ ]+' '{print $3}'
     )
 
-    if ! validate_ipv4 $private_ip; then
-        printf "\n\e[31m[!] Not connected to a network, or DHCP is failing\e[0m\n"
-        exit 1
-    else
-        if [[ -z "$SESSION_REASON" || -z "$SESSION_LENGTH" ]]
-        then
-            prompt_time_and_reason
+    attempts=5
+
+    while :
+    do
+        if ! validate_ipv4 $private_ip; then
+            (( attempts-- ))
+            sleep 1
+
+            if [[ $attempts -eq 0 ]]
+            then
+                printf "\n\e[31m%s\e[0m\n" \
+                    "[!] Not connected to a network, or DHCP is failing"
+                exit 1
+            fi
+
+            if [[ $attempts -lt 3 ]]
+            then
+                sleep 1
+                printf "\n\e[33m%s %s\e[0m" \
+                    "[!] Issues validating your private" \
+                    "IPv4 address... Trying again"
+            fi
+        else
+            if [[ -z "$SESSION_REASON" || -z "$SESSION_LENGTH" ]]
+            then
+                prompt_time_and_reason
+            fi
+
+            echo -e "\n---------|Session Data|-----------\n"
+
+            echo "Private IP: $private_ip"
+
+            echo -e "\nReason: $SESSION_REASON\nLength: $SESSION_LENGTH m"
+
+            echo -e "\n----------------------------------\n"
+
+            return 0
         fi
-
-        echo -e "\n---------|Session Data|-----------\n"
-
-        echo "Private IP: $private_ip"
-
-        echo -e "\nReason: $SESSION_REASON\nLength: $SESSION_LENGTH m"
-
-        echo -e "\n----------------------------------\n"
-    fi
+    done
 }
 
 stop_timer_script()
