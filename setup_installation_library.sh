@@ -41,73 +41,74 @@ setup_qemu() {
         sudo -v
         yes | sudo pacman -Sy --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Installing qemu packages"
+        task_output $! "$STDERR_LOG_PATH" "Install qemu packages"
         [[ $? -ne 0 ]] && return 1 
-
-        sudo chmod g+rwx -R /dev/bus/usb
-
-        {
-            cat /etc/libvirt/libvirtd.conf | grep 'unix_sock_group = libvirt' &>/dev/null || \
-                sudo bash -c 'echo -e "\nunix_sock_group = libvirt" >> /etc/libvirt/libvirtd.conf'
-            cat /etc/libvirt/libvirtd.conf | grep 'unix_sock_rw_perms = 0770' &>/dev/null || \
-                sudo bash -c 'echo "unix_sock_rw_perms = 0770" >> /etc/libvirt/libvirtd.conf'
-        } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Alter config files"
-        [[ $? -ne 0 ]] && exit 1
-
-        if ! groups | grep "libvirt" &>/dev/null
-        then
-            sudo usermod -aG libvirt $USER \
-                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-            task_output $! "$STDERR_LOG_PATH" "Add '$USER' to 'libvirt' group"
-            [[ $? -ne 0 ]] && return 1
-        fi
-        cat /etc/libvirt/qemu.conf | grep "group=$CURRENT_USER" &>/dev/null || \
-            sudo bash -c "echo 'group=$CURRENT_USER' >> /etc/libvirt/qemu.conf"
     else
-        printf "\r\e[33m[skipping...]\e[0m %s\n" "rust already installed"
+        printf "\r\e[33m[skipping...]\e[0m %s\n" \
+            "Qemu packages already installed"
     fi
 
-    if ! { which yay || type yay; } &>/dev/null
-    then
-        git clone https://aur.archlinux.org/yay.git \
-            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Clone yay from the AUR"
-        [[ $? -ne 0 ]] && {
-            rm -rf yay
-            exit 1
-        }
+    # Allows currently plugged in USB devices, so doesn't really make
+    # sense to be in the setup
+    #sudo chmod g+rwx -R /dev/bus/usb
 
-        {
-            cd yay >/dev/null 2>>/tmp/archsetuperrors.log
-            makepkg -si PKGBUILD --noconfirm >/dev/null 2>>/tmp/archsetuperrors.log
-        } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Install yay with makepkg"
-        [[ $? -ne 0 ]] && {
-            cd ..
-            rm -rf yay
-            exit 1
-        }
-        cd ..
-    else
-        printf "\r\e[33m[skipping...]\e[0m %s\n" "yay already installed"
+    CURRENT_USER=$USER
+
+    {
+        if ! cat /etc/libvirt/libvirtd.conf \
+            | grep 'unix_sock_group = libvirt' &>/dev/null
+        then
+            sudo bash -c 'echo -e "\nunix_sock_group = libvirt" >> /etc/libvirt/libvirtd.conf'
+        fi
+        if ! cat /etc/libvirt/libvirtd.conf \
+            | grep 'unix_sock_rw_perms = 0770' &>/dev/null
+        then
+            sudo bash -c 'echo "unix_sock_rw_perms = 0770" >> /etc/libvirt/libvirtd.conf'
+        fi
+        if ! cat /etc/libvirt/qemu.conf | grep "group=$CURRENT_USER" &>/dev/null
+        then
+            sudo bash -c "echo 'group=$CURRENT_USER' >> /etc/libvirt/qemu.conf"
+        fi
+    } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Alter config files"
+    [[ $? -ne 0 ]] && exit 1
+
+    if ! groups | grep "libvirt" &>/dev/null
+    then
+        sudo usermod -aG libvirt $CURRENT_USER \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Add '$CURRENT_USER' to 'libvirt' group"
+        [[ $? -ne 0 ]] && return 1
     fi
 
     return 0
 }
-unsetup_qemu() {
+remove_setup_qemu() {
     source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
 
-    if pacman -Q yay &>/dev/null
+    packages=(
+        gnome-boxes virt-manager virt-viewer \
+        qemu-emulators-full spice-vdagent swtpm \
+    )
+
+    if pacman -Q ${packages[@]} &>/dev/null
     then
         sudo -v
-        yes | sudo pacman -Rs --noconfirm yay \
+        yes | sudo pacman -Rs --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Uninstalling yay"
+        task_output $! "$STDERR_LOG_PATH" "Uninstall qemu packages"
         [[ $? -ne 0 ]] && return 1 
     else
-        printf "\r\e[33m[skipping...]\e[0m %s\n" "yay not installed"
+        printf "\r\e[33m[skipping...]\e[0m %s\n" \
+            "No Qemu packages installed"
     fi
 
-    return 0
+    if ! groups | grep "libvirt" &>/dev/null
+    then
+        sudo gpasswd -d $CURRENT_USER libvirt \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Remove '$CURRENT_USER' from the 'libvirt' group"
+        [[ $? -ne 0 ]] && return 1
+    fi
 }
