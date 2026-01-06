@@ -18,6 +18,8 @@
 
 PRETTY_OUTPUT_LIBRARY=pretty_output_library.sh
 
+SSH_CONFIG_FILE_PATH="/etc/ssh/sshd_config.d/99‑disable‑root.conf"
+
 enforce_library_files_exist() {
     if ! [[ -f "./$PRETTY_OUTPUT_LIBRARY" ]]
     then
@@ -28,9 +30,10 @@ enforce_library_files_exist() {
 
 enforce_library_files_exist
 
-setup_qemu() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
+source ./$PRETTY_OUTPUT_LIBRARY
 
+setup_qemu() 
+{
     packages=(
         gnome-boxes virt-manager virt-viewer \
         qemu-emulators-full spice-vdagent swtpm \
@@ -83,9 +86,9 @@ setup_qemu() {
 
     return 0
 }
-remove_setup_qemu() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
 
+remove_setup_qemu() 
+{
     packages=(
         gnome-boxes virt-manager virt-viewer \
         qemu-emulators-full spice-vdagent swtpm \
@@ -110,5 +113,82 @@ remove_setup_qemu() {
         task_output $! "$STDERR_LOG_PATH" \
             "Remove '$CURRENT_USER' from the 'libvirt' group"
         [[ $? -ne 0 ]] && return 1
+    fi
+}
+
+
+setup_security()
+{
+    sudo -v
+
+    if grep -e "^# deny = " -e "^deny = " /etc/security/faillock.conf &>/dev/null
+    then
+        sudo sed -i \
+            -e '/^# deny =/c\deny = 6' \
+            -e '/^deny =/c\deny = 6' \
+            /etc/security/faillock.conf &>/dev/null \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Change max login attempts before lock out to 6 (3 isn't enough)"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    sudo passwd --lock root >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Disable root login"
+    [[ $? -ne 0 ]] && exit 1
+
+    if ! [[ -f "$SSH_CONFIG_FILE_PATH" ]]
+    then
+        sudo bash -c \
+            "echo 'PermitRootLogin no' >> "$SSH_CONFIG_FILE_PATH"" \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Add rule to disable root login over ssh"
+        [[ $? -ne 0 ]] && exit 1
+
+        if systemctl is-active sshd &>/dev/null
+        then
+            sudo systemctl reload sshd \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" \
+                "Reload the ssh daemon"
+            [[ $? -ne 0 ]] && exit 1
+        fi
+    fi
+}
+
+remove_setup_security()
+{
+    sudo -v
+
+    if grep "^deny = 6" /etc/security/faillock.conf &>/dev/null
+    then
+        sudo sed -i '/^deny = 6/c\deny = 3' \
+            /etc/security/faillock.conf &>/dev/null \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Change max login attempts before lock out back to 3"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    sudo passwd --unlock root >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Enable root login"
+    [[ $? -ne 0 ]] && exit 1
+
+    if [[ -f "$SSH_CONFIG_FILE_PATH" ]]
+    then
+        sudo rm $SSH_CONFIG_FILE_PATH &>/dev/null
+        task_output $! "$STDERR_LOG_PATH" \
+            "Remove rule against root login over ssh"
+        [[ $? -ne 0 ]] && exit 1
+
+        if systemctl is-active sshd &>/dev/null
+        then
+            sudo systemctl reload sshd \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" \
+                "Reload the ssh daemon"
+            [[ $? -ne 0 ]] && exit 1
+        fi
     fi
 }

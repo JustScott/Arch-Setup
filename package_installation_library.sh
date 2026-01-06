@@ -28,9 +28,9 @@ enforce_library_files_exist() {
 
 enforce_library_files_exist
 
-install_yay() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
+source ./$PRETTY_OUTPUT_LIBRARY
 
+install_yay() {
     if ! { which yay || type yay; } &>/dev/null
     then
         git clone https://aur.archlinux.org/yay.git \
@@ -59,8 +59,6 @@ install_yay() {
     return 0
 }
 uninstall_yay() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
-
     if pacman -Q yay &>/dev/null
     then
         sudo -v
@@ -76,8 +74,6 @@ uninstall_yay() {
 }
 
 install_qutebrowser() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
-
     if ! pacman -Q qutebrowser &>/dev/null
     then
         sudo -v
@@ -92,8 +88,6 @@ install_qutebrowser() {
     return 0
 }
 uninstall_qutebrowser() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
-
     if pacman -Q qutebrowser &>/dev/null
     then
         sudo -v
@@ -109,8 +103,6 @@ uninstall_qutebrowser() {
 }
 
 install_librewolf() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
-
     if ! { which yay || type yay; } &>/dev/null
     then
         printf "\n\r\e[31m[Error]\e[0m %s\n" "yay must be installed first as librewolf is only available in the aur"
@@ -131,8 +123,6 @@ install_librewolf() {
     return 0
 }
 uninstall_librewolf() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
-
     if ! { which yay || type yay; } &>/dev/null
     then
         printf "\n\r\e[31m[Error]\e[0m %s\n" "Cannot uninstall librewolf without yay being installed, as yay manages aur packages"
@@ -154,8 +144,6 @@ uninstall_librewolf() {
 }
 
 install_docker() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
-
     local packages
 
     packages=(docker docker-compose)
@@ -212,8 +200,6 @@ install_docker() {
     return 0
 }
 uninstall_docker() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
-
     packages=(docker docker-compose)
 
     if systemctl is-active docker &>/dev/null
@@ -273,8 +259,6 @@ uninstall_docker() {
 }
 
 install_python() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
-
     packages=(python python-pip)
 
     if ! pacman -Q ${packages[@]} &>/dev/null
@@ -291,8 +275,6 @@ install_python() {
     return 0
 }
 uninstall_python() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
-
     packages=(python python-pip)
 
     if pacman -Q ${packages[@]} &>/dev/null
@@ -310,8 +292,6 @@ uninstall_python() {
 }
 
 install_rust() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
-
     packages=(rustup)
 
     if ! pacman -Q ${packages[@]} &>/dev/null
@@ -342,8 +322,6 @@ install_rust() {
     return 0
 }
 uninstall_rust() {
-    source ./$PRETTY_OUTPUT_LIBRARY || enforce_library_files_exist
-
     packages=(rustup)
 
     if pacman -Q ${packages[@]} &>/dev/null

@@ -197,7 +197,14 @@ install() {
         fi
     done
 
-    source ./$PACKAGE_INSTALLATION_LIBRARY || check_library_files_exist
+    if check_library_files_exist
+    then
+        source ./$PACKAGE_INSTALLATION_LIBRARY
+    else
+        printf "\n\e[31m%s\n%s\e[0m\n" \
+            "[!] Issue sourcing package installation library despite passing" \
+            "    library file checks... This shouldn't happen"
+    fi
 
     for package_name in ${packages_to_install[@]}
     do
@@ -344,7 +351,14 @@ uninstall() {
         fi
     done
 
-    source ./$PACKAGE_INSTALLATION_LIBRARY || check_library_files_exist
+    if check_library_files_exist
+    then
+        source ./$PACKAGE_INSTALLATION_LIBRARY
+    else
+        printf "\n\e[31m%s\n%s\e[0m\n" \
+            "[!] Issue sourcing package installation library despite passing" \
+            "    library file checks... This shouldn't happen"
+    fi
 
     for package_name in ${packages_to_uninstall[@]}
     do
@@ -460,16 +474,30 @@ setup() {
         fi
     done
 
-    source ./$SETUP_INSTALLATION_LIBRARY || check_library_files_exist
+    if check_library_files_exist
+    then
+        source ./$SETUP_INSTALLATION_LIBRARY
+    else
+        printf "\n\e[31m%s\n%s\e[0m\n" \
+            "[!] Issue sourcing setup library despite passing" \
+            "    library file checks... This shouldn't happen"
+    fi
 
     for setup_name in ${setups_chosen[@]}
     do
-        case $package_name in
+        case $setup_name in
             "qemu")
                 if ! setup_qemu
                 then
                     printf "\n\e[31m%s\e[0m\n" \
                         "[!] Failed to setup qemu"
+                fi
+            ;;
+            "security")
+                if ! setup_security
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to setup security"
                 fi
             ;;
             *)
@@ -514,7 +542,14 @@ remove_setup() {
         fi
     done
 
-    source ./$PACKAGE_INSTALLATION_LIBRARY || check_library_files_exist
+    if check_library_files_exist
+    then
+        source ./$SETUP_INSTALLATION_LIBRARY
+    else
+        printf "\n\e[31m%s\n%s\e[0m\n" \
+            "[!] Issue sourcing setup library despite passing" \
+            "    library file checks... This shouldn't happen"
+    fi
 
     for setup_name in ${setups_chosen[@]}
     do
@@ -524,6 +559,13 @@ remove_setup() {
                 then
                     printf "\n\e[31m%s\e[0m\n" \
                         "[!] Failed to remove setup: qemu"
+                fi
+            ;;
+            "security")
+                if ! remove_setup_security
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to remove setup: security"
                 fi
             ;;
             *)
