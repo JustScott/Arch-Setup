@@ -481,7 +481,8 @@ on()
     fi
 
     check_for_active_session && {
-        printf "\n\e[31m[!] Timer session already running, run \`$SCRIPT_NAME off\` first\n\e[0m"
+        printf "\n\e[31m%s\e[0m\n" \
+            "[!] Timer session already running, run \`internet off\` first"
         exit 1
     }
 
@@ -597,6 +598,37 @@ off()
     clear_session_files
 }
 
+continue_last_session()
+{
+    if check_for_active_session
+    then
+        off
+    fi
+
+    if [[ -f $SHARE_SESSION_HISTORY_LOG_FILE ]]
+    then
+        last_reason="$(cat $SHARE_SESSION_HISTORY_LOG_FILE \
+            | tail -n1 \
+            | awk '$1="";$2="";{print $0}' \
+            | awk -F'  ' '{print $2}')"
+
+        if [[ -z "$last_reason" ]]
+        then
+            printf "\n\e[31m%s\e[0m\n" \
+                "[!] Log file empty, try starting a new session."
+            exit 1
+        fi
+    else
+        printf "\n\e[31m%s\e[0m\n" \
+            "[!] No log file found, try starting a new session."
+        exit 1
+    fi
+
+    SESSION_REASON="$last_reason"
+
+    on
+}
+
 log()
 {
     if [[ -f $SHARE_SESSION_HISTORY_LOG_FILE ]]
@@ -678,17 +710,15 @@ edit_config()
     fi
 }
 
-place_holder() 
-{
-    echo
-}
+
 
 case $1 in
-    "on")          check_packages;on;;
-    "off")         check_packages;off;;
-    "status")      check_packages;session_status;;
-    "log")         check_packages;log;;
-    "config")      edit_config;;
+    "on")               check_packages;on;;
+    "off")              check_packages;off;;
+    "continue")         check_packages;continue_last_session;;
+    "status")           check_packages;session_status;;
+    "log")              check_packages;log;;
+    "config")           edit_config;;
     "version"|"--version") echo "0.1.0";;
     "--help"|"-h") display_help;;
     *) 
