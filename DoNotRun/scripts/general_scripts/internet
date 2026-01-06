@@ -248,11 +248,18 @@ display_help()
     echo -e " and time limit before connecting\n"
 
     echo "Commands:"
-    printf "\t%-15s %-1s\n" "on" "Connect to a network after specifying a reason and a time limit"
-    printf "\t%-15s %-1s\n" "off" "Disconnect at anytime to stop the session/timer"
-    printf "\t%-15s %-1s\n" "status" "Check the status of your current session"
-    printf "\t%-15s %-1s\n" "log" "View all your past sessions"
-    printf "\t%-15s %-1s\n" "config" "Edit your config file for setting daily time limits"
+    printf "\t%-15s %-1s\n" "on" \
+        "Connect to a network after specifying a reason and a time limit"
+    printf "\t%-15s %-1s\n" "off" \
+        "Disconnect at anytime to stop the session/timer"
+    printf "\t%-15s %-1s\n" "continue" \
+        "Start a new session using the last sessions reason"
+    printf "\t%-15s %-1s\n" "status" \
+        "Check the status of your current session"
+    printf "\t%-15s %-1s\n" "log" \
+        "View all your past sessions"
+    printf "\t%-15s %-1s\n" "config" \
+        "Edit your config file for setting daily time limits"
 
     echo -e "\nBase Flags:"
     printf "\t%-15s %-1s\n" "--version" "Returns version information"
@@ -261,13 +268,14 @@ display_help()
     echo -e "\nExamples:"
     echo -e "\t\`$SCRIPT_NAME on\`"
     echo -e "\t\`$SCRIPT_NAME off\`"
+    echo -e "\t\`$SCRIPT_NAME continue\`"
     echo -e "\t\`$SCRIPT_NAME status\`"
     echo -e "\t\`$SCRIPT_NAME log\`"
     echo -e "\t\`$SCRIPT_NAME config\`"
 
     echo -e "\nFAQ:"
     echo -e "\tQ: What if I have 4m 30s left today, and I want to start a 5 minute session"
-    echo -e "\tA: Set you session for as long as you'd like, it will still cut off for the daily limit"
+    echo -e "\tA: Set your session for as long as you'd like, it will still cut off for the daily limit"
 
     echo -e "\nError Codes:"
     printf "\t%-3s %-1s\n" "1" "General Error"
