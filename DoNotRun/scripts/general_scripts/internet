@@ -254,10 +254,16 @@ display_help()
         "Disconnect at anytime to stop the session/timer"
     printf "\t%-15s %-1s\n" "continue" \
         "Start a new session using the last sessions reason"
+    printf "\t%-15s %-1s\n" "new-network" \
+        "Add a new network"
+    printf "\t%-15s %-1s\n" "remove-network" \
+        "Remove a saved network"
     printf "\t%-15s %-1s\n" "status" \
         "Check the status of your current session"
     printf "\t%-15s %-1s\n" "log" \
         "View all your past sessions"
+    printf "\t%-15s %-1s\n" "edit-network-config" \
+        "Edit the actual configuration file for a specific network"
     printf "\t%-15s %-1s\n" "config" \
         "Edit your config file for setting daily time limits"
 
@@ -269,8 +275,11 @@ display_help()
     echo -e "\t\`$SCRIPT_NAME on\`"
     echo -e "\t\`$SCRIPT_NAME off\`"
     echo -e "\t\`$SCRIPT_NAME continue\`"
+    echo -e "\t\`$SCRIPT_NAME new-network\`"
+    echo -e "\t\`$SCRIPT_NAME remove-network\`"
     echo -e "\t\`$SCRIPT_NAME status\`"
     echo -e "\t\`$SCRIPT_NAME log\`"
+    echo -e "\t\`$SCRIPT_NAME edit-network-config\`"
     echo -e "\t\`$SCRIPT_NAME config\`"
 
     echo -e "\nFAQ:"
@@ -475,6 +484,64 @@ stop_timer_script()
             else
                 printf "\n\e[33mNo session timer to stop\e[0m\n"
             fi
+        fi
+    fi
+}
+
+new_network() {
+    ssid_choices=$(\
+        nmcli -f SSID device wifi list --rescan yes \
+        | tail -n +2 \
+        | grep --invert-match "\--" \
+    )
+
+    if [[ -n "$ssid_choices" ]]
+    then
+        ssid_choice=$(\
+            echo "$ssid_choices" \
+            | fzf --reverse \
+            | awk -F'  ' '{print $1}' \
+        )
+        if [[ -n "$ssid_choice" ]]
+        then
+            if [[ $(nmcli -f NAME c show | tail -n +2 | grep "$ssid_choice") ]]
+            then
+                printf "\n\e[33m%s\e[0m\n" \
+                    "Network already saved... try 'internet on' instead"
+            else
+                if ! nmcli device wifi connect "$ssid_choice" --ask 2>/dev/null
+                then
+                    nmcli connection delete "$ssid_choice" &>/dev/null
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Issue connecting... did you use the right password?"
+                    exit 1
+                fi
+                internet off &>/dev/null
+            fi
+        fi
+    fi
+}
+
+remove_network() {
+    saved_ssids=$(\
+        nmcli c show \
+        | grep "wifi" \
+        | awk -F'  ' '{print $1}' \
+    )
+
+    if [[ -n "$saved_ssids" ]]
+    then
+        ssid_choice=$(echo "$saved_ssids" | fzf --reverse)
+        if [[ -n "$ssid_choice" ]]
+        then
+            if nmcli connection delete "$ssid_choice" &>/dev/null
+            then
+                printf "\n\e[32m%s\e[0m\n" "Network Deleted"
+            else
+                printf "\n\e[31m%s\e[0m\n" "[!] Cannot delete network"
+            fi
+        else
+            printf "\n\e[33m%s\e[0m\n" "No network chosen... Goodbye"
         fi
     fi
 }
@@ -706,6 +773,56 @@ session_status()
     fi
 }
 
+edit_network_config()
+{
+    saved_ssids=$(\
+        nmcli c show \
+        | grep "wifi" \
+        | awk -F'  ' '{print $1}' \
+    )
+
+    if [[ -n "$saved_ssids" ]]
+    then
+        ssid_choice=$(echo "$saved_ssids" | fzf --reverse)
+        if [[ -n "$ssid_choice" ]]
+        then
+            if ! sudo -v
+            then
+                printf "\n\e[31m%s\e[0m\n" \
+                    "[!] Must have sudo privileges to edit network configuration"
+                exit 1
+            fi
+            if sudo $EDITOR \
+            "/etc/NetworkManager/system-connections/${ssid_choice}.nmconnection"
+            then
+                printf "\n\e[32m%s\e[0m\n" \
+                    "Successfully edited the configuration for $ssid_choice"
+                if sudo systemctl restart NetworkManager &>/dev/null
+                then
+                    printf "\n\e[32m%s\e[0m\n" \
+                        "Restarted the NetworkManager service"
+
+                    printf "\n\e[32m%s\e[0m\n" \
+                        "Waiting 8 seconds for restart..."
+                    sleep 8
+                    internet off &>/dev/null
+                else
+                    printf "\n\e[31m%s\n%s\e[0m\n" \
+                        "[!] Failed to restart NetworkManager service, changes" \
+                        "    may not take effect immediately"
+                    exit 1
+                fi
+            else
+                printf "\n\e[31m%s\e[0m\n" \
+                    "[!] Failed to edit network configuration"
+                exit 1
+            fi
+        else
+            printf "\n\e[33m%s\e[0m\n" "No network chosen... Goodbye"
+        fi
+    fi
+}
+
 edit_config()
 {
     if [[ -n $EDITOR ]]
@@ -718,16 +835,18 @@ edit_config()
 }
 
 
-
 case $1 in
-    "on")               check_packages;on;;
-    "off")              check_packages;off;;
-    "continue")         check_packages;continue_last_session;;
-    "status")           check_packages;session_status;;
-    "log")              check_packages;log;;
-    "config")           edit_config;;
-    "version"|"--version") echo "0.1.0";;
-    "--help"|"-h") display_help;;
+    "on")                    check_packages;on;;
+    "off")                   check_packages;off;;
+    "continue")              check_packages;continue_last_session;;
+    "new-network")           check_packages;new_network;;
+    "remove-network")        check_packages;remove_network;;
+    "status")                check_packages;session_status;;
+    "log")                   check_packages;log;;
+    "edit-network-config")   check_packages;edit_network_config;;
+    "config")                edit_config;;
+    "version"|"--version")   echo "0.1.0";;
+    "--help"|"-h")           display_help;;
     *) 
         echo -e "\n - [ERROR] Invalid use of the \`$SCRIPT_NAME\` command -";
         display_help
