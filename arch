@@ -22,7 +22,7 @@
 #  make the process of installing software and having them automatically
 #  configured to my setup much easier.
 #
-
+PROJECT_NAME="Arch-Setup"
 SCRIPT_NAME="arch"
 
 REQUIRED_PACKAGES=( \
@@ -45,6 +45,121 @@ PACKAGE_INSTALLATION_LIBRARY=package_installation_library.sh
 SETUP_INSTALLATION_LIBRARY=setup_installation_library.sh
 
 PRETTY_OUTPUT_LIBRARY=pretty_output_library.sh
+
+if ! echo "$@" | grep "add-to-path" &>/dev/null
+then
+    if ! [[ -d $arch_setup_directory ]]
+    then
+        printf "\n\e[31m%s\n%s\n%s\e[0m\n" \
+            "[!] '\$arch_setup_directory' variable not set, or not set to" \
+            "    the correct directory path. Either way, \`cd\` into the" \
+            "    '$PROJECT_NAME' directory and run \`$SCRIPT_NAME add-to-path\`."
+        exit $4
+    fi
+fi
+
+add_to_path() {
+    if [[ $(basename $(pwd)) == "$PROJECT_NAME" ]]
+    then
+        bashrc_line="export arch_setup_directory=\"$(pwd)\""
+
+        if ! [[ -f "$HOME/.bashrc" ]]
+        then
+            if touch $HOME/.bashrc &>/dev/null
+            then
+                printf "\n\e[32m%s\e[0m\n" \
+                    "Created the file $HOME/.bashrc"
+            else
+                printf "\n\e[31m%s\n%s\n%s\e[0m\n" \
+                    "[!] Your user doesn't have a .bashrc in there \$HOME" \
+                    "    directory, and attempts at creating one failed. A" \
+                    "    $HOME/.bashrc file is required for this script."
+                exit 7
+            fi
+        fi
+
+        if grep "export arch_setup_directory=\"" $HOME/.bashrc \
+            | grep "/$PROJECT_NAME\"$" &>/dev/null
+        then
+            # Replace existing variable with this new one
+            sed -i \
+                's,export arch_setup_directory=".*\/Arch-Setup"$,'"$bashrc_line"',' \
+                $HOME/.bashrc
+        else
+            echo -e "\n$bashrc_line" >> $HOME/.bashrc
+        fi
+
+        # Check that the line was added without issue
+        if grep "$bashrc_line" $HOME/.bashrc &>/dev/null
+        then
+            printf "\n\e[32m%s\e[0m\n" \
+                "Added '$PROJECT_NAME' directory path to '.bashrc'"
+        else
+            printf "\n\e[31m%s\n%s\e[0m\n" \
+                "[!] Could not add '$PROJECT_NAME' directory to your" \
+                "    '.bashrc'... Check the files permissions and try again"
+            exit 7
+        fi
+
+        # Create a .bin directory in $HOME for the arch script
+        if ! [[ -f "./$SCRIPT_NAME" ]]
+        then
+            printf "\n\e[31m%s\n%s\e[0m\n" \
+                "[!] './$SCRIPT_NAME' not found. Move to the '$PROJECT_NAME'" \
+                "    directory containing the '$SCRIPT_NAME' script and try again"
+            exit 8
+        fi
+
+        chmod u+x "./$SCRIPT_NAME"
+
+        if ! [[ -d $HOME/.bin ]]
+        then
+            printf "\n\e[33m%s\e[0m" "[!] $HOME/.bin directory doesn't exit"
+
+            if mkdir -p $HOME/.bin &>/dev/null
+            then
+                printf "\n\e[32m%s\e[0m" "Created $HOME/.bin"
+            else
+                printf "\n\e[31m%s\e[0m\n" "[!] Failed to create $HOME/.bin"
+                exit 7
+            fi
+        fi
+
+        if ! [[ -L "$HOME/.bin/$SCRIPT_NAME" ]]
+        then
+            if ln -s "$(pwd)/$SCRIPT_NAME" $HOME/.bin/ &>/dev/null
+            then
+                printf "\n\e[32m%s\e[0m" \
+                    "Created softlink to '$SCRIPT_NAME' in $HOME/.bin"
+            else
+                printf "\n\e[31m%s\e[0m\n" \
+                    "[!] Failed to create softlink to '$SCRIPT_NAME' in $HOME/.bin"
+                exit 7
+            fi
+        fi
+
+        path_modification="export PATH=\"\$PATH:$HOME/.bin\""
+
+        if ! grep "^$path_modification$" $HOME/.bashrc &>/dev/null
+        then
+            echo -e "\n$path_modification" >> $HOME/.bashrc
+        fi
+
+        # Check that the line was added without issue
+        if ! grep "$path_modification" $HOME/.bashrc &>/dev/null
+        then
+            printf "\n\e[31m%s\n%s\e[0m\n" \
+                "[!] Could not edit path in '$HOME/.bashrc'..." \
+                "    Check the files permissions and try again"
+            exit 7
+        fi
+    else
+        printf "\n\e[31m%s %s\e[0m\n" \
+            "[!] Must be in the $PROJECT_NAME directory to" \
+            "add it's path to your .bashrc"
+        exit 1
+    fi
+}
 
 check_library_files_exist() {
     if ! [[ -f "./$PRETTY_OUTPUT_LIBRARY" ]]
@@ -91,6 +206,8 @@ display_help() {
         "CLI tool with many more automated features."
 
     printf "\n\nCommands:"
+    printf "\n  %-15s %-1s" "add-to-path" \
+        "Add the arch "
     printf "\n  %-15s %-1s" "install" "Install supported software"
     printf "\n  %-15s %-1s" "uninstall" "Cleanly uninstall supported software"
     printf "\n  %-15s %-1s" "setup" "Setup the system in specific ways"
@@ -130,12 +247,17 @@ display_help() {
     printf "\n  %-3s %-1s\n      %s" "3" \
         "Can't be uninstalled or removed as it doesn't exist or" \
         "isn't installed"
-    printf "\n  %-3s %-1s" "4" "Missing source file for $SCRIPT_NAME"
+    printf "\n  %-3s %-1s" "4" "Missing source file for '$SCRIPT_NAME'"
     printf "\n  %-3s %-1s\n      %s" "5" \
         "Package, setup, or preset depends on one or many other" \
         "$SCRIPT_NAME commands being run first"
     printf "\n  %-3s %-1s" "6" "Missing package required by script"
+    printf "\n  %-3s %-1s" "7" \
+        "Missing system file or directory required by '$SCRIPT_NAME'"
+    printf "\n  %-3s %-1s" "8" "Command run from the wrong directory"
 }
+
+
 
 install() {
     local \
@@ -577,15 +699,20 @@ remove_setup() {
         esac
     done
 }
+case $1 in
+    "add-to-path")         add_to_path ${@:2};exit ;exit 00;;
+esac
+
+cd $arch_setup_directory
 
 check_packages
 check_library_files_exist
 
 case $1 in
-    "install")      install ${@:2};;
-    "uninstall")    uninstall ${@:2};;
-    "setup")        setup ${@:2};;
-    "remove-setup")      remove_setup ${@:2};;
+    "install")             install ${@:2};;
+    "uninstall")           uninstall ${@:2};;
+    "setup")               setup ${@:2};;
+    "remove-setup")        remove_setup ${@:2};;
     "version"|"--version") echo "0.1.0";;
     "--help"|"-h") display_help;;
     *) 
