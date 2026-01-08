@@ -192,3 +192,131 @@ remove_setup_security()
         fi
     fi
 }
+
+setup_audio()
+{
+    packages=(
+        pipewire pipewire-alsa pipewire-audio pipewire-jack \
+        pipewire-pulse pavucontrol pamixer \
+    )
+
+    if pacman -Q pulseaudio &>/dev/null; then
+        if systemctl --user is-active --quiet pulseaudio &>/dev/null
+        then
+            systemctl --user disable --now pulseaudio &>/dev/null
+            task_output $! "$STDERR_LOG_PATH" \
+                "Disable and stop pulseaudio service"
+        fi
+
+        sudo -v
+        yes | sudo pacman -R pulseaudio \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Remove pulseaudio"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if ! pacman -Q ${packages[@]} &>/dev/null; then
+        sudo -v
+        yes | sudo pacman -Sy ${packages[@]} \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Download and install pipewire audio packages with pacman"
+        [[ $? -ne 0 ]] && exit 1 
+    fi
+
+    if ! systemctl --user is-enabled pipewire &>/dev/null
+    then
+        systemctl --user enable pipewire \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Enable the pipewire services"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if ! systemctl --user is-active pipewire &>/dev/null
+    then
+        systemctl --user start pipewire \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Start pipewire services"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if ! systemctl --user is-enabled pipewire-pulse &>/dev/null
+    then
+        systemctl --user enable pipewire-pulse \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Enable the pipewire-pulse services"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if ! systemctl --user is-active pipewire-pulse &>/dev/null
+    then
+        systemctl --user start pipewire-pulse \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Start the pipewire-pulse services"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+}
+
+remove_setup_audio()
+{
+    packages=(
+        pipewire pipewire-alsa pipewire-audio pipewire-jack \
+        pipewire-pulse pavucontrol pamixer \
+    )
+
+    if pacman -Q pulseaudio &>/dev/null; then
+        if systemctl --user is-active --quiet pulseaudio &>/dev/null
+        then
+            systemctl --user disable --now pulseaudio &>/dev/null
+            task_output $! "$STDERR_LOG_PATH" \
+                "Disable and stop pulseaudio service"
+        fi
+
+        sudo -v
+        yes | sudo pacman -R pulseaudio \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Remove pulseaudio"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if pacman -Q ${packages[@]} &>/dev/null; then
+        sudo -v
+        yes | sudo pacman -Rs ${packages[@]} \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Remove pipewire and related packages with pacman"
+        [[ $? -ne 0 ]] && exit 1 
+    fi
+
+    if systemctl --user is-enabled pipewire &>/dev/null
+    then
+        systemctl --user disable pipewire \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Disable the pipewire services"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if systemctl --user is-active pipewire &>/dev/null
+    then
+        systemctl --user stop pipewire \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Stop pipewire services"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if systemctl --user is-enabled pipewire-pulse &>/dev/null
+    then
+        systemctl --user disable pipewire-pulse \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Disable the pipewire-pulse services"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if systemctl --user is-active pipewire-pulse &>/dev/null
+    then
+        systemctl --user stop pipewire-pulse \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Stop the pipewire-pulse services"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+}

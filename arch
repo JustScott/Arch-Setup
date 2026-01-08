@@ -622,6 +622,13 @@ setup() {
                         "[!] Failed to setup security"
                 fi
             ;;
+            "audio")
+                if ! setup_audio
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to setup audio"
+                fi
+            ;;
             *)
                 printf "\e[31m%s %s\e[0m" \
                     "Chosen setups did not match setup case statement." \
@@ -688,6 +695,13 @@ remove_setup() {
                 then
                     printf "\n\e[31m%s\e[0m\n" \
                         "[!] Failed to remove setup: security"
+                fi
+            ;;
+            "audio")
+                if ! remove_setup_audio
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to remove setup: audio"
                 fi
             ;;
             *)
