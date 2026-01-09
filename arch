@@ -644,6 +644,13 @@ setup() {
                         "[!] Failed to setup bluetooth"
                 fi
             ;;
+            "media")
+                if ! setup_media
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to setup media"
+                fi
+            ;;
             *)
                 printf "\e[31m%s %s\e[0m" \
                     "Chosen setups did not match setup case statement." \
@@ -731,6 +738,13 @@ remove_setup() {
                 then
                     printf "\n\e[31m%s\e[0m\n" \
                         "[!] Failed to remove setup: bluetooth"
+                fi
+            ;;
+            "media")
+                if ! remove_setup_media
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to remove setup: media"
                 fi
             ;;
             *)

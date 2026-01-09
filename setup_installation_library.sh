@@ -445,3 +445,37 @@ remove_setup_bluetooth()
 
     return 0
 }
+
+
+setup_media()
+{
+    packages=(ytfzf fzf mpv yt-dlp)
+
+    # Specifically for the yt-x script
+    packages+=(jq curl ffmpeg)
+
+    if ! pacman -Q ${packages[@]} &>/dev/null; then
+        sudo -v
+        yes | sudo pacman -Sy --noconfirm ${packages[@]} \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Download and install media packages with pacman"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+}
+remove_setup_media()
+{
+    packages=(ytfzf fzf mpv yt-dlp)
+
+    # Specifically for the yt-x script
+    packages+=(jq curl ffmpeg)
+
+    if pacman -Q ${packages[@]} &>/dev/null; then
+        sudo -v
+        yes | sudo pacman -Rs --noconfirm ${packages[@]} \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Remove media packages"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+}
