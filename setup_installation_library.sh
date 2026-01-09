@@ -32,6 +32,44 @@ enforce_library_files_exist
 
 source ./$PRETTY_OUTPUT_LIBRARY
 
+setup_user_scripts()
+{
+    if ! [[ -d "$arch_setup_directory" ]]
+    then
+        printf "\n\e[31m%s\n%s\n%s\e[0m\n" \
+            "[!] '\$arch_setup_directory' variable not set, or not set to" \
+            "    the correct directory path. Either way, \`cd\` into the" \
+            "    '$PROJECT_NAME' directory and run \`$SCRIPT_NAME add-to-path\`."
+        exit $4
+    fi
+
+    scripts_dir="$arch_setup_directory/DoNotRun/scripts/user_scripts"
+    bashrc_line="export PATH=\"\$PATH:$scripts_dir\""
+
+    if ! grep "$bashrc_line" $HOME/.bashrc &>/dev/null
+    then
+        echo -e "\n$bashrc_line" >> $HOME/.bashrc 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Add the user scripts directory to \$PATH in .bashrc"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    return 0
+}
+
+remove_setup_user_scripts()
+{
+    if sed -i \
+        '/export PATH=".*Arch-Setup\/DoNotRun\/scripts\/user_scripts"/d' \
+        $HOME/.bashrc
+    then
+        printf "\n\e[32m%s\e[0m\n" "Remove user_scripts from path"
+    else
+        printf "\n\e[31m%s\e[0m\n" \
+            "[!] Cannot remove user scripts from \$PATH... this shouldn't happen"
+    fi
+}
+
 setup_qemu() 
 {
     packages=(

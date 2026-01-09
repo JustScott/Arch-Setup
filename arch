@@ -608,6 +608,13 @@ setup() {
     for setup_name in ${setups_chosen[@]}
     do
         case $setup_name in
+            "user-scripts")
+                if ! setup_user_scripts
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to setup user-scripts"
+                fi
+            ;;
             "qemu")
                 if ! setup_qemu
                 then
@@ -683,6 +690,13 @@ remove_setup() {
     for setup_name in ${setups_chosen[@]}
     do
         case $setup_name in
+            "user-scripts")
+                if ! remove_setup_user_scripts
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to remove setup: user-scripts"
+                fi
+            ;;
             "qemu")
                 if ! remove_setup_qemu
                 then
