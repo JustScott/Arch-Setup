@@ -29,6 +29,7 @@ REQUIRED_PACKAGES=( \
     bash pacman \
     usermod gpasswd groups \
     grep cat \
+    rfkill \
 )
 
 INSTALLABLE_PACKAGES="\
@@ -636,6 +637,13 @@ setup() {
                         "[!] Failed to setup audio"
                 fi
             ;;
+            "bluetooth")
+                if ! setup_bluetooth
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to setup bluetooth"
+                fi
+            ;;
             *)
                 printf "\e[31m%s %s\e[0m" \
                     "Chosen setups did not match setup case statement." \
@@ -716,6 +724,13 @@ remove_setup() {
                 then
                     printf "\n\e[31m%s\e[0m\n" \
                         "[!] Failed to remove setup: audio"
+                fi
+            ;;
+            "bluetooth")
+                if ! remove_setup_bluetooth
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to remove setup: bluetooth"
                 fi
             ;;
             *)

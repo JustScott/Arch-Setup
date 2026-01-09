@@ -250,6 +250,8 @@ update-status-bar() {
                 echo "$bluetooth_display" > $CACHE_BLUETOOTH_FILE
             fi
         fi
+
+        echo "$bluetooth_display" > $CACHE_BLUETOOTH_FILE
     fi
 
     if [[ -n "$WAYLAND_DISPLAY" ]]; then

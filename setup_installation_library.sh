@@ -32,6 +32,7 @@ enforce_library_files_exist
 
 source ./$PRETTY_OUTPUT_LIBRARY
 
+
 setup_user_scripts()
 {
     if ! [[ -d "$arch_setup_directory" ]]
@@ -56,7 +57,6 @@ setup_user_scripts()
 
     return 0
 }
-
 remove_setup_user_scripts()
 {
     if sed -i \
@@ -68,7 +68,10 @@ remove_setup_user_scripts()
         printf "\n\e[31m%s\e[0m\n" \
             "[!] Cannot remove user scripts from \$PATH... this shouldn't happen"
     fi
+
+    return 0
 }
+
 
 setup_qemu() 
 {
@@ -124,7 +127,6 @@ setup_qemu()
 
     return 0
 }
-
 remove_setup_qemu() 
 {
     packages=(
@@ -152,6 +154,8 @@ remove_setup_qemu()
             "Remove '$CURRENT_USER' from the 'libvirt' group"
         [[ $? -ne 0 ]] && return 1
     fi
+
+    return 0
 }
 
 
@@ -193,8 +197,9 @@ setup_security()
             [[ $? -ne 0 ]] && exit 1
         fi
     fi
-}
 
+    return 0
+}
 remove_setup_security()
 {
     sudo -v
@@ -229,7 +234,10 @@ remove_setup_security()
             [[ $? -ne 0 ]] && exit 1
         fi
     fi
+
+    return 0
 }
+
 
 setup_audio()
 {
@@ -293,8 +301,9 @@ setup_audio()
         task_output $! "$STDERR_LOG_PATH" "Start the pipewire-pulse services"
         [[ $? -ne 0 ]] && exit 1
     fi
-}
 
+    return 0
+}
 remove_setup_audio()
 {
     packages=(
@@ -357,4 +366,82 @@ remove_setup_audio()
         task_output $! "$STDERR_LOG_PATH" "Stop the pipewire-pulse services"
         [[ $? -ne 0 ]] && exit 1
     fi
+
+    return 0
+}
+
+
+setup_bluetooth()
+{
+    packages=(bluez bluez-utils)
+
+    if ! pacman -Q ${packages[@]} &>/dev/null; then
+        sudo -v
+        yes | sudo pacman -Sy --noconfirm ${packages[@]} \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Download and install bluetooth packages with pacman"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if ! systemctl is-enabled bluetooth &>/dev/null
+    then
+        sudo -v
+        sudo systemctl enable bluetooth \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Enable bluetooth"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if ! systemctl is-active bluetooth &>/dev/null
+    then
+        sudo -v
+        sudo systemctl start bluetooth \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Start bluetooth service"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if rfkill list bluetooth | grep "Soft blocked: yes" &>/dev/null
+    then
+        sudo -v
+        sudo rfkill unblock bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Remove bluetooth soft block"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    return 0
+}
+remove_setup_bluetooth()
+{
+    packages=(bluez bluez-utils)
+
+    if systemctl is-active bluetooth &>/dev/null
+    then
+        sudo -v
+        sudo systemctl stop bluetooth \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Stop bluetooth service"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if systemctl is-enabled bluetooth &>/dev/null
+    then
+        sudo -v
+        sudo systemctl disable bluetooth \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Disable bluetooth service"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    if pacman -Q ${packages[@]} &>/dev/null; then
+        sudo -v
+        yes | sudo pacman -Rs --noconfirm ${packages[@]} \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Remove bluetooth packages"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    return 0
 }
