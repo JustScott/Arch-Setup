@@ -623,6 +623,13 @@ setup() {
                         "[!] Failed to setup qemu"
                 fi
             ;;
+            "gaming")
+                if ! setup_gaming
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to setup gaming"
+                fi
+            ;;
             "security")
                 if ! setup_security
                 then
@@ -717,6 +724,13 @@ remove_setup() {
                 then
                     printf "\n\e[31m%s\e[0m\n" \
                         "[!] Failed to remove setup: qemu"
+                fi
+            ;;
+            "gaming")
+                if ! remove_setup_gaming
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to remove setup: gaming"
                 fi
             ;;
             "security")

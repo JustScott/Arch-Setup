@@ -86,7 +86,7 @@ setup_qemu()
         yes | sudo pacman -Sy --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Install qemu packages"
-        [[ $? -ne 0 ]] && return 1 
+        [[ $? -ne 0 ]] && return 1
     else
         printf "\r\e[33m[skipping...]\e[0m %s\n" \
             "Qemu packages already installed"
@@ -134,17 +134,17 @@ remove_setup_qemu()
         qemu-emulators-full spice-vdagent swtpm \
     )
 
-    if pacman -Q ${packages[@]} &>/dev/null
-    then
-        sudo -v
-        yes | sudo pacman -Rs --noconfirm ${packages[@]} \
-            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Uninstall qemu packages"
-        [[ $? -ne 0 ]] && return 1 
-    else
-        printf "\r\e[33m[skipping...]\e[0m %s\n" \
-            "No Qemu packages installed"
-    fi
+    for package in ${packages[@]}
+    do
+        if pacman -Q $package &>/dev/null
+        then
+            sudo -v
+            yes | sudo pacman -Rs --noconfirm $package \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
 
     if ! groups | grep "libvirt" &>/dev/null
     then
@@ -320,20 +320,23 @@ remove_setup_audio()
         fi
 
         sudo -v
-        yes | sudo pacman -R pulseaudio \
+        yes | sudo pacman -Rs pulseaudio \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Remove pulseaudio"
         [[ $? -ne 0 ]] && exit 1
     fi
 
-    if pacman -Q ${packages[@]} &>/dev/null; then
-        sudo -v
-        yes | sudo pacman -Rs ${packages[@]} \
-            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" \
-            "Remove pipewire and related packages with pacman"
-        [[ $? -ne 0 ]] && exit 1 
-    fi
+    for package in ${packages[@]}
+    do
+        if pacman -Q $package &>/dev/null
+        then
+            sudo -v
+            yes | sudo pacman -Rs --noconfirm $package \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
 
     if systemctl --user is-enabled pipewire &>/dev/null
     then
@@ -434,14 +437,17 @@ remove_setup_bluetooth()
         [[ $? -ne 0 ]] && exit 1
     fi
 
-    if pacman -Q ${packages[@]} &>/dev/null; then
-        sudo -v
-        yes | sudo pacman -Rs --noconfirm ${packages[@]} \
-            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" \
-            "Remove bluetooth packages"
-        [[ $? -ne 0 ]] && exit 1
-    fi
+    for package in ${packages[@]}
+    do
+        if pacman -Q $package &>/dev/null
+        then
+            sudo -v
+            yes | sudo pacman -Rs --noconfirm $package \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
 
     return 0
 }
@@ -462,6 +468,8 @@ setup_media()
             "Download and install media packages with pacman"
         [[ $? -ne 0 ]] && exit 1
     fi
+
+    return 0
 }
 remove_setup_media()
 {
@@ -470,12 +478,101 @@ remove_setup_media()
     # Specifically for the yt-x script
     packages+=(jq curl ffmpeg)
 
-    if pacman -Q ${packages[@]} &>/dev/null; then
+    for package in ${packages[@]}
+    do
+        if pacman -Q $package &>/dev/null
+        then
+            sudo -v
+            yes | sudo pacman -Rs --noconfirm $package \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
+
+    return 0
+}
+
+
+setup_gaming()
+{
+    REQUIRED_PACKAGES=( flatpak )
+    PACKAGES=( btop rocm-smi-lib )
+    PACKAGES+=(${REQUIRED_PACKAGES[@]})
+    FLATPAK_PACKAGES=( com.github.tchx84.Flatseal com.valvesoftware.Steam )
+
+    if groups | grep -E "(sudo|wheel)" &>/dev/null
+    then
         sudo -v
-        yes | sudo pacman -Rs --noconfirm ${packages[@]} \
+        if ! pacman -Q ${PACKAGES[@]} &>/dev/null; then
+            yes | pacman -Sy --noconfirm ${PACKAGES[@]} \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" \
+                "Download gaming related packages"
+            [[ $? -ne 0 ]] && exit 1
+        else
+            printf "\r\e[34m[Skipping]\e[0m %s\n" \
+                "Gaming related packages and Flatpak already installed"
+        fi
+    fi
+    if pacman -Q ${REQUIRED_PACKAGES[@]} &>/dev/null
+        flatpak remote-add --if-not-exists --user flathub \
+            https://flathub.org/repo/flathub.flatpakrepo \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
-            "Remove media packages"
+            "Add remote source 'flathub' to flatpak"
         [[ $? -ne 0 ]] && exit 1
+
+        flatpak install --noninteractive --or-update \
+            --user -y ${FLATPAK_PACKAGES[@]} \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Install or update GUI apps with flatpak"
+        [[ $? -ne 0 ]] && exit 1
+
+        flatpak override --user --device=dri com.valvesoftware.Steam
+        task_output $! "$STDERR_LOG_PATH" \
+            "Enable GPU acceleration for Steam"
+        [[ $? -ne 0 ]] && exit 1
+
+        {
+            for flatpak in ${FLATPAK_PACKAGES[@]} 
+            do 
+                flatpak_name=$(echo $flatpak | awk -F'.' '{print $NF}' \
+                    | tr '[:upper:]' '[:lower:]')
+
+                bashrc_line="alias $flatpak_name=\"\$HOME/.local/share/flatpak/exports/bin/$flatpak\""
+ 
+                if ! grep "$bashrc_line" $HOME/.bashrc &>/dev/null 
+                then
+                    echo "$bashrc_line" >> $HOME/.bashrc
+                fi
+            done
+        } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Add an alias for each flatpak app to .bashrc"
+        [[ $? -ne 0 ]] && exit 1
+    else
+        printf "\r\e[31m%s\e[0m\n" \
+            "[!] Must install flatpak with pacman"
+        return 1
     fi
+
+    return 0
+}
+remove_setup_gaming()
+{
+    PACKAGES=( flatpak btop rocm-smi-lib )
+
+    for package in ${packages[@]}
+    do
+        if pacman -Q $package &>/dev/null
+        then
+            sudo -v
+            yes | sudo pacman -Rs --noconfirm $package \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
 }
