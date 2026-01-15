@@ -52,7 +52,7 @@ setup_user_scripts()
         echo -e "\n$bashrc_line" >> $HOME/.bashrc 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Add the user scripts directory to \$PATH in .bashrc"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     return 0
@@ -115,7 +115,7 @@ setup_qemu()
         fi
     } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Alter config files"
-    [[ $? -ne 0 ]] && exit 1
+    [[ $? -ne 0 ]] && return 1
 
     if ! groups | grep "libvirt" &>/dev/null
     then
@@ -172,12 +172,12 @@ setup_security()
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Change max login attempts before lock out to 6 (3 isn't enough)"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     sudo passwd --lock root >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Disable root login"
-    [[ $? -ne 0 ]] && exit 1
+    [[ $? -ne 0 ]] && return 1
 
     if ! [[ -f "$SSH_CONFIG_FILE_PATH" ]]
     then
@@ -186,7 +186,7 @@ setup_security()
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Add rule to disable root login over ssh"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
 
         if systemctl is-active sshd &>/dev/null
         then
@@ -194,7 +194,7 @@ setup_security()
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" \
                 "Reload the ssh daemon"
-            [[ $? -ne 0 ]] && exit 1
+            [[ $? -ne 0 ]] && return 1
         fi
     fi
 
@@ -211,19 +211,19 @@ remove_setup_security()
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Change max login attempts before lock out back to 3"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     sudo passwd --unlock root >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" "Enable root login"
-    [[ $? -ne 0 ]] && exit 1
+    [[ $? -ne 0 ]] && return 1
 
     if [[ -f "$SSH_CONFIG_FILE_PATH" ]]
     then
         sudo rm $SSH_CONFIG_FILE_PATH &>/dev/null
         task_output $! "$STDERR_LOG_PATH" \
             "Remove rule against root login over ssh"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
 
         if systemctl is-active sshd &>/dev/null
         then
@@ -231,7 +231,7 @@ remove_setup_security()
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" \
                 "Reload the ssh daemon"
-            [[ $? -ne 0 ]] && exit 1
+            [[ $? -ne 0 ]] && return 1
         fi
     fi
 
@@ -258,7 +258,7 @@ setup_audio()
         yes | sudo pacman -R pulseaudio \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Remove pulseaudio"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if ! pacman -Q ${packages[@]} &>/dev/null; then
@@ -267,7 +267,7 @@ setup_audio()
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Download and install pipewire audio packages with pacman"
-        [[ $? -ne 0 ]] && exit 1 
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if ! systemctl --user is-enabled pipewire &>/dev/null
@@ -275,7 +275,7 @@ setup_audio()
         systemctl --user enable pipewire \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Enable the pipewire services"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if ! systemctl --user is-active pipewire &>/dev/null
@@ -283,7 +283,7 @@ setup_audio()
         systemctl --user start pipewire \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Start pipewire services"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if ! systemctl --user is-enabled pipewire-pulse &>/dev/null
@@ -291,7 +291,7 @@ setup_audio()
         systemctl --user enable pipewire-pulse \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Enable the pipewire-pulse services"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if ! systemctl --user is-active pipewire-pulse &>/dev/null
@@ -299,7 +299,7 @@ setup_audio()
         systemctl --user start pipewire-pulse \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Start the pipewire-pulse services"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     return 0
@@ -323,7 +323,7 @@ remove_setup_audio()
         yes | sudo pacman -Rs pulseaudio \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Remove pulseaudio"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     for package in ${packages[@]}
@@ -343,7 +343,7 @@ remove_setup_audio()
         systemctl --user disable pipewire \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Disable the pipewire services"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if systemctl --user is-active pipewire &>/dev/null
@@ -351,7 +351,7 @@ remove_setup_audio()
         systemctl --user stop pipewire \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Stop pipewire services"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if systemctl --user is-enabled pipewire-pulse &>/dev/null
@@ -359,7 +359,7 @@ remove_setup_audio()
         systemctl --user disable pipewire-pulse \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Disable the pipewire-pulse services"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if systemctl --user is-active pipewire-pulse &>/dev/null
@@ -367,7 +367,7 @@ remove_setup_audio()
         systemctl --user stop pipewire-pulse \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Stop the pipewire-pulse services"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     return 0
@@ -384,7 +384,7 @@ setup_bluetooth()
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Download and install bluetooth packages with pacman"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if ! systemctl is-enabled bluetooth &>/dev/null
@@ -393,7 +393,7 @@ setup_bluetooth()
         sudo systemctl enable bluetooth \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Enable bluetooth"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if ! systemctl is-active bluetooth &>/dev/null
@@ -402,7 +402,7 @@ setup_bluetooth()
         sudo systemctl start bluetooth \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Start bluetooth service"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if rfkill list bluetooth | grep "Soft blocked: yes" &>/dev/null
@@ -410,7 +410,7 @@ setup_bluetooth()
         sudo -v
         sudo rfkill unblock bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Remove bluetooth soft block"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     return 0
@@ -425,7 +425,7 @@ remove_setup_bluetooth()
         sudo systemctl stop bluetooth \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Stop bluetooth service"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if systemctl is-enabled bluetooth &>/dev/null
@@ -434,7 +434,7 @@ remove_setup_bluetooth()
         sudo systemctl disable bluetooth \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Disable bluetooth service"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     for package in ${packages[@]}
@@ -466,7 +466,7 @@ setup_media()
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Download and install media packages with pacman"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     return 0
@@ -505,35 +505,36 @@ setup_gaming()
     then
         sudo -v
         if ! pacman -Q ${PACKAGES[@]} &>/dev/null; then
-            yes | pacman -Sy --noconfirm ${PACKAGES[@]} \
+            yes | sudo pacman -Sy --noconfirm ${PACKAGES[@]} \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" \
                 "Download gaming related packages"
-            [[ $? -ne 0 ]] && exit 1
+            [[ $? -ne 0 ]] && return 1
         else
             printf "\r\e[34m[Skipping]\e[0m %s\n" \
                 "Gaming related packages and Flatpak already installed"
         fi
     fi
     if pacman -Q ${REQUIRED_PACKAGES[@]} &>/dev/null
+    then
         flatpak remote-add --if-not-exists --user flathub \
             https://flathub.org/repo/flathub.flatpakrepo \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Add remote source 'flathub' to flatpak"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
 
         flatpak install --noninteractive --or-update \
             --user -y ${FLATPAK_PACKAGES[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Install or update GUI apps with flatpak"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
 
         flatpak override --user --device=dri com.valvesoftware.Steam
         task_output $! "$STDERR_LOG_PATH" \
             "Enable GPU acceleration for Steam"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
 
         {
             for flatpak in ${FLATPAK_PACKAGES[@]} 
@@ -551,7 +552,7 @@ setup_gaming()
         } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Add an alias for each flatpak app to .bashrc"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     else
         printf "\r\e[31m%s\e[0m\n" \
             "[!] Must install flatpak with pacman"
@@ -562,7 +563,8 @@ setup_gaming()
 }
 remove_setup_gaming()
 {
-    PACKAGES=( flatpak btop rocm-smi-lib )
+    # Not removing flatpak as it could be used by the user
+    PACKAGES=( btop rocm-smi-lib )
 
     for package in ${packages[@]}
     do
@@ -575,4 +577,147 @@ remove_setup_gaming()
             [[ $? -ne 0 ]] && return 1
         fi
     done
+
+    return 0
+}
+
+
+setup_embedded_rust()
+{
+    if ! command -v cargo &>/dev/null
+    then
+        printf "\n\e[31m%s\e[0m\n" \
+            "[!] cargo not installed, try running \`arch install rust\` first"
+        return 1
+    fi
+
+    cargo_packages=(probe-rs-tools elf2uf2-rs)
+
+    for cargo_package in ${cargo_packages[@]}
+    do
+        cargo install $cargo_package \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Download and compile: '$cargo_package' with cargo"
+        [[ $? -ne 0 ]] && return 1
+    done
+
+    packages=(openocd)
+
+    if ! pacman -Q ${packages[@]} &>/dev/null; then
+        sudo -v
+        yes | sudo pacman -Sy ${packages[@]} --noconfirm \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Install debugging package(s) with pacman"
+        [[ $? -ne 0 ]] && return 1
+    fi
+
+    return 0
+}
+remove_setup_embedded_rust()
+{
+    cargo_packages=(probe-rs-tools elf2uf2-rs)
+
+    installed_cargo_packages="$(\
+        cargo install --list | grep '^[a-z]' | awk '{print $1}'\
+    )"
+
+    for cargo_package in ${cargo_packages[@]}
+    do
+        if echo "$installed_cargo_packages" \
+            | grep "^$cargo_package$" &>/dev/null
+        then
+            cargo uninstall ${cargo_package[@]} \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" \
+                "Uninstall cargo package: '$cargo_package'"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
+
+    packages=(openocd)
+
+    for package in ${packages[@]}
+    do
+        if pacman -Q $package &>/dev/null
+        then
+            sudo -v
+            yes | sudo pacman -Rs --noconfirm $package \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
+
+    return 0
+}
+
+
+setup_rust_dioxus()
+{
+    if ! command -v cargo &>/dev/null
+    then
+        printf "\n\e[31m%s\e[0m\n" \
+            "[!] cargo not installed, try running \`arch install rust\` first"
+        return 1
+    fi
+
+    pacman_packages=(\
+        webkit2gtk-4.1 base-devel curl wget file \
+        openssl appmenu-gtk-module libappindicator-gtk3 \
+        librsvg xdotool \
+    )
+
+    cargo_packages=(dioxus-cli)
+
+    if ! pacman -Q ${pacman_packages[@]} &>/dev/null; then
+        sudo -v
+        yes | sudo pacman -S ${pacman_packages[@]} --noconfirm \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Download and install dioxus related tools"
+        [[ $? -ne 0 ]] && return 1
+    fi
+
+    for cargo_package in ${cargo_packages[@]}
+    do
+        cargo install $cargo_package \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Download and compile: '$cargo_package' with cargo"
+        [[ $? -ne 0 ]] && return 1
+    done
+
+    return 0
+}
+remove_setup_rust_dioxus()
+{
+    if ! command -v cargo &>/dev/null
+    then
+        printf "\n\e[31m%s\e[0m\n" \
+            "[!] cargo not installed, try running \`arch install rust\` first"
+        return 1
+    fi
+
+    cargo_packages=(dioxus-cli)
+
+    installed_cargo_packages="$(\
+        cargo install --list | grep '^[a-z]' | awk '{print $1}'\
+    )"
+
+    for cargo_package in ${cargo_packages[@]}
+    do
+        if echo "$installed_cargo_packages" \
+            | grep "^$cargo_package$" &>/dev/null
+        then
+            cargo uninstall ${cargo_package[@]} \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" \
+                "Uninstall cargo package: '$cargo_package'"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
+
+    return 0
 }

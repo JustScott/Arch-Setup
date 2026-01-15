@@ -22,6 +22,11 @@
 #  make the process of installing software and having them automatically
 #  configured to my setup much easier.
 #
+
+# TODO: remove-setup, how to know whether to remove packages or not?
+#   - for example, if the user setups gaming, and flatpak is installed,
+#     how do I know they haven't started using flatpak now?
+
 PROJECT_NAME="Arch-Setup"
 SCRIPT_NAME="arch"
 
@@ -29,17 +34,17 @@ REQUIRED_PACKAGES=( \
     bash pacman \
     usermod gpasswd groups \
     grep cat \
-    rfkill \
+    rfkill command \
 )
 
 INSTALLABLE_PACKAGES="\
-    yay qutebrowser librewolf docker rust python \
+    yay qutebrowser librewolf docker rust python flatpak \
 "
 SETUP_OPTIONS="\
     security user-scripts audio bluetooth \
     river gnome dwm dwl \
     gaming media qemu \
-    embedded dioxus \
+    embedded-rust rust-dioxus \
 "
 
 PACKAGE_INSTALLATION_LIBRARY=package_installation_library.sh
@@ -130,7 +135,7 @@ add_to_path() {
         then
             if ln -s "$(pwd)/$SCRIPT_NAME" $HOME/.bin/ &>/dev/null
             then
-                printf "\n\e[32m%s\e[0m" \
+                printf "\n\e[32m%s\e[0m\n" \
                     "Created softlink to '$SCRIPT_NAME' in $HOME/.bin"
             else
                 printf "\n\e[31m%s\e[0m\n" \
@@ -258,8 +263,6 @@ display_help() {
     printf "\n  %-3s %-1s" "8" "Command run from the wrong directory"
 }
 
-
-
 install() {
     local \
         packages_to_install \
@@ -372,6 +375,13 @@ install() {
                 then
                     printf "\n\e[31m%s\e[0m\n" \
                         "[!] Failed to install rust"
+                fi
+            ;;
+            "flatpak")
+                if ! install_flatpak
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to install flatpak"
                 fi
             ;;
             *)
@@ -528,6 +538,13 @@ uninstall() {
                         "[!] Failed to uninstall rust"
                 fi
             ;;
+            "flatpak")
+                if ! uninstall_flatpak
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to uninstall flatpak"
+                fi
+            ;;
             *)
                 printf "\n\e[31m%s %s\e[0m\n" \
                     "[!] Chosen packages did not match uninstall case statement." \
@@ -570,7 +587,7 @@ setup() {
 
     if ((FLAG_list_setups))
     then
-        printf "\nAvailable Setup Options:"
+        printf "\nAvailable Setup Options:\n"
         for setup_name in $SETUP_OPTIONS
         do
             echo "  - $setup_name"
@@ -656,6 +673,20 @@ setup() {
                 then
                     printf "\n\e[31m%s\e[0m\n" \
                         "[!] Failed to setup media"
+                fi
+            ;;
+            "embedded-rust")
+                if ! setup_embedded_rust
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to setup embedded-rust"
+                fi
+            ;;
+            "rust-dioxus")
+                if ! setup_rust_dioxus
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to setup rust-dioxus"
                 fi
             ;;
             *)
@@ -761,6 +792,20 @@ remove_setup() {
                         "[!] Failed to remove setup: media"
                 fi
             ;;
+            "embedded-rust")
+                if ! remove_setup_embedded_rust
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to remove setup: embedded-rust"
+                fi
+            ;;
+            "rust-dioxus")
+                if ! remove_setup_rust_dioxus
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to remove setup: rust-dioxus"
+                fi
+            ;;
             *)
                 printf "\n\e[31m%s %s\e[0m\n" \
                     "[!] Chosen setup did not match remove setup case statement." \
@@ -770,6 +815,7 @@ remove_setup() {
         esac
     done
 }
+
 case $1 in
     "add-to-path")         add_to_path ${@:2};exit ;exit 00;;
 esac

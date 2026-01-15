@@ -38,7 +38,7 @@ install_yay() {
         task_output $! "$STDERR_LOG_PATH" "Clone yay from the AUR"
         [[ $? -ne 0 ]] && {
             rm -rf yay
-            exit 1
+            return 1
         }
 
         {
@@ -49,7 +49,7 @@ install_yay() {
         [[ $? -ne 0 ]] && {
             cd ..
             rm -rf yay
-            exit 1
+            return 1
         }
         cd ..
     else
@@ -162,7 +162,7 @@ install_docker() {
             sudo systemctl enable docker \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Enable the docker service"
-            [[ $? -ne 0 ]] && exit 1
+            [[ $? -ne 0 ]] && return 1
         fi
 
         if ! systemctl is-active docker &>/dev/null
@@ -171,7 +171,7 @@ install_docker() {
             sudo systemctl start docker \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Start the docker service"
-            [[ $? -ne 0 ]] && exit 1
+            [[ $? -ne 0 ]] && return 1
         fi
         
         if ! groups $USER | grep "docker" &>/dev/null
@@ -180,7 +180,7 @@ install_docker() {
             sudo usermod -aG docker $USER \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Add '$USER' to the 'docker' group"
-            [[ $? -ne 0 ]] && exit 1
+            [[ $? -ne 0 ]] && return 1
         fi
 
         if [[ -f $HOME/.bashrc ]]; then
@@ -191,7 +191,7 @@ install_docker() {
                     echo -e "export COMPOSE_DOCKER_CLI_BUILD=1\n" >> $HOME/.bashrc
             } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Append docker variables to .bashrc if needed"
-            [[ $? -ne 0 ]] && exit 1
+            [[ $? -ne 0 ]] && return 1
         fi
     else
         printf "\r\e[33m[skipping...]\e[0m %s" "docker already already installed"
@@ -208,7 +208,7 @@ uninstall_docker() {
         sudo systemctl stop docker \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Stop the docker service"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
     if systemctl is-enabled docker &>/dev/null
     then
@@ -216,7 +216,7 @@ uninstall_docker() {
         sudo systemctl disable docker \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Disable the docker service"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if groups $USER | grep "docker" &>/dev/null
@@ -225,7 +225,7 @@ uninstall_docker() {
             sudo usermod -rG docker $USER \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Remove '$USER' from the 'docker' group"
-            [[ $? -ne 0 ]] && exit 1
+            [[ $? -ne 0 ]] && return 1
         fi
 
     if pacman -Q ${packages[@]} &>/dev/null
@@ -309,14 +309,14 @@ install_rust() {
     then
         rustup default stable >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Set the default toolchain to stable"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     if ! cat $HOME/.bashrc | grep "export PATH=\"\$PATH:\$HOME/.cargo/bin\"" &>/dev/null
     then
         echo -e "\nexport PATH=\"\$PATH:\$HOME/.cargo/bin\"" >> $HOME/.bashrc
         task_output $! "$STDERR_LOG_PATH" "Add cargo binaries to PATH (in .bashrc)"
-        [[ $? -ne 0 ]] && exit 1
+        [[ $? -ne 0 ]] && return 1
     fi
 
     return 0
@@ -336,12 +336,50 @@ uninstall_rust() {
     fi
 
 
-    if cat $HOME/.bashrc | grep "export PATH=\"\$PATH:\$HOME/.cargo/bin\"" &>/dev/null
+    if cat $HOME/.bashrc \
+        | grep "export PATH=\"\$PATH:\$HOME/.cargo/bin\"" &>/dev/null
     then
         sed -i '/export PATH="$PATH:$HOME\/.cargo\/bin"/d' $HOME/.bashrc
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Remove cargo binaries from PATH (in .bashrc)"
         [[ $? -ne 0 ]] && return 1 
+    fi
+
+    return 0
+}
+
+install_flatpak()
+{
+    if ! pacman -Q flatpak &>/dev/null; then
+        sudo -v
+        yes | sudo pacman -Sy --noconfirm flatpak \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Download flatpak with pacman"
+        [[ $? -ne 0 ]] && return 1
+    fi
+
+    if command -v flatpak &>/dev/null
+    then
+        flatpak remote-add --if-not-exists --user flathub \
+            https://flathub.org/repo/flathub.flatpakrepo \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Add remote source 'flathub' to flatpak"
+        [[ $? -ne 0 ]] && return 1
+    fi
+
+    return 0
+}
+uninstall_flatpak()
+{
+    if pacman -Q flatpak &>/dev/null; then
+        sudo -v
+        yes | sudo pacman -Rs --noconfirm flatpak \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Remove flatpak"
+        [[ $? -ne 0 ]] && return 1
     fi
 
     return 0
