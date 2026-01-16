@@ -52,6 +52,8 @@ SETUP_INSTALLATION_LIBRARY=setup_installation_library.sh
 
 PRETTY_OUTPUT_LIBRARY=pretty_output_library.sh
 
+CONFIG_INSTALL_SCRIPT=install_configurations.sh
+
 if ! echo "$@" | grep "add-to-path" &>/dev/null
 then
     if ! [[ -d $arch_setup_directory ]]
@@ -218,6 +220,8 @@ display_help() {
     printf "\n  %-15s %-1s" "uninstall" "Cleanly uninstall supported software"
     printf "\n  %-15s %-1s" "setup" "Setup the system in specific ways"
     printf "\n  %-15s %-1s" "remove-setup" "Remove a setup"
+    printf "\n  %-15s %-1s" "add-configs" \
+        "Add config files to \$HOME/.config for supported software (runs automatically, you rarely need to run this command)"
     printf "\n  %-15s %-1s" "version" "Returns version information"
 
     printf "\n\n%s" \
@@ -826,10 +830,11 @@ check_packages
 check_library_files_exist
 
 case $1 in
-    "install")             install ${@:2};;
-    "uninstall")           uninstall ${@:2};;
-    "setup")               setup ${@:2};;
-    "remove-setup")        remove_setup ${@:2};;
+    "install")             install ${@:2};bash ./$CONFIG_INSTALL_SCRIPT;;
+    "uninstall")           uninstall ${@:2};bash ./$CONFIG_INSTALL_SCRIPT;;
+    "setup")               setup ${@:2};bash ./$CONFIG_INSTALL_SCRIPT;;
+    "remove-setup")        remove_setup ${@:2};bash ./$CONFIG_INSTALL_SCRIPT;;
+    "add-configs")         bash ./$CONFIG_INSTALL_SCRIPT;;
     "version"|"--version") echo "0.1.0";;
     "--help"|"-h") display_help;;
     *) 
@@ -838,3 +843,5 @@ case $1 in
         exit 1
         ;;
 esac
+
+

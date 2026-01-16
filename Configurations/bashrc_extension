@@ -1,0 +1,725 @@
+#!/bin/bash
+#
+# bashrc_extension - part of the Arch-Setup project
+# Copyright (C) 2024-2026, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# Meant to be sourced by the $HOME/.bashrc file. This allows you to keep
+#  private information in your .bashrc, and non-private information in here.
+
+# if in a tty
+[[ -z "$DISPLAY" && -z "$WAYLAND_DISPLAY" ]] && {
+    alias samsung_tty="stty rows 33 cols 120 &>/dev/null"
+    alias laptop_tty="stty rows 47 cols 141 &>/dev/null"
+
+    # enable color
+    export TERM=xterm-256color
+}
+
+
+export PAGER="bat --paging=always --style=plain"
+export EDITOR=nvim
+alias e=$EDITOR
+export CALCURSE_PAGER="bat --paging=always --style=plain --language=markdown"
+
+alias grep='grep --color=auto'
+alias ls='ls --color=auto'
+
+alias gl='in_git_repo && git log --pretty=format:"%C(yellow)%h%Creset    %C(green)%D%Creset %n    %s%n"'
+alias gla='in_git_repo && git log --pretty=format:"%C(yellow)%h%Creset    %C(green)%D%Creset %n    %s%n%n%b%n"'
+alias nb='in_git_repo && git checkout $(git branch | tr -d " " | grep -v "*" | fzf)'
+
+export HISTFILESIZE=10000
+export HISTSIZE=10000
+alias ehist='history -a;eval "$(hist_fzf)"'
+alias hist="history -a;hist_fzf"
+
+alias up='ping quad9.net -c 4'
+alias newsboat='newsboat -c ~/.config/newsboat/cache.db'
+alias dlynx="lynx -cfg=$HOME/.config/lynx/lynx.cfg"
+
+alias sroot="sudo snapper -c root"
+alias shome="sudo snapper -c home"
+
+alias mf="man \$(ls /usr/share/man/man1 | awk -F. '{print \$1}' | fzf --reverse) 2>/dev/null"
+
+alias service="ls /lib/systemd/system/ | fzf --reverse --preview 'systemctl status {}' --preview-window '70%'"
+
+alias term=nvim_term;
+
+if command -v qutebrowser &>/dev/null;
+then
+    export BROWSER=qutebrowser
+fi
+
+
+if which bemenu &>/dev/null; then
+    alias bemenu-run="bemenu-run --fn 'monospace [14]' -w"
+    alias bemenu="bemenu --fn 'monospace [14]' -w"
+fi
+
+
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+    if which wlr-randr &>/dev/null
+    then
+        alias laptop_display=disconnect-external-displays
+        alias office_monitor=external_display_only
+        alias 2monitors="wlr-randr --output eDP-1 --off --output DP-10 --on --pos 2256,0 --output DP-9 --on --pos 4176,0"
+        alias 3monitors="wlr-randr --output eDP-1 --on --pos 0,0 --output DP-10 --on --pos 2256,0 --output DP-9 --on --pos 4176,0"
+        
+        if uname -r | grep "pinetab2" &>/dev/null
+        then
+            if wlr-randr | grep "HDMI-A-1" &>/dev/null; then
+                alias 1monitor="wlr-randr --output DSI-1 --off --output HDMI-A-1 --on --pos 0,0"
+                alias 2monitors="wlr-randr --output DSI-1 --on --transform 270 --pos 0,1280 --output HDMI-A-1 --on --pos 0,0"
+                alias 2monitors_other="wlr-randr --output DSI-1 --on --transform 270 --pos 0,1075 --output HDMI-A-1 --on --pos 1280,0"
+        fi
+    fi
+fi
+
+elif which dwm &>/dev/null; then
+    main_monitor="eDP-1"
+    middle_monitor="DP-2-2"
+    right_monitor="DP-2-1"
+    home_monitor="DP-2-2"
+
+    alias 3monitors="set-monitors $main_monitor $middle_monitor $right_monitor"
+    alias 2monitors="set-monitors $middle_monitor $right_monitor;xrandr --output $main_monitor --off"
+    alias 1monitor="set-monitors $main_monitor;xrandr --output $middle_monitor --off --output $right_monitor --off --output $home_monitor --off"
+
+    alias 2home_monitors="set-monitors $main_monitor $home_monitor"
+    alias 1home_monitor="set-monitors $home_monitor; xrandr --output $main_monitor --off"
+fi
+
+
+
+# pacman/yay + fzf
+if which pacman &>/dev/null; then
+    # Package list : list all installed packages
+    alias pl="pacman -Qq | fzf --preview 'pacman -Qi {}' --layout=reverse --preview-window '70%'"
+    # Package search (find) : list all packages   ( 'ps' is taken by system utility )
+    alias pf="pacman -Slq | fzf --preview 'pacman -Si {}' --layout=reverse --preview-window '70%'"
+fi
+if which yay &>/dev/null; then
+    # Package list : list all installed packages
+    alias yl="yay -Qq | fzf --preview 'yay -Qi {}' --layout=reverse --preview-window '70%'"
+    # Package search (find) : list all packages
+    alias yf="yay -Slq | fzf --preview 'yay -Si {}' --layout=reverse --preview-window '70%'"
+fi
+
+# Saves any running VirtualMachines before shutting down
+safe_shutdown() {
+    { which calcurse || type calcurse; } &>/dev/null && {
+        [[ -f $HOME/.local/share/calcurse/.calcurse.pid ]] && {
+            echo "You need to quit calcurse first.">&2
+            return 1
+        }
+    }
+
+    if { which virsh || type virsh; } &>/dev/null
+    then
+        { which vm || type vm; } &>/dev/null && {
+            vm save --all
+        }
+    fi
+
+    return 0
+}
+
+shutdown_wrapper() {
+    safe_shutdown || return 1
+
+    # Gives the user so many seconds to cancel the shutdown 
+    for i in {5..1}; do
+        echo -ne "\rShutting Down In: $i"
+        sleep 1
+    done
+    echo -e "\n"
+
+    shutdown $@ 
+}
+
+alias shutdown=shutdown_wrapper
+
+reboot_wrapper() {
+    safe_shutdown || return 1
+
+    # Gives the user so many seconds to cancel the shutdown 
+    for i in {5..1}; do
+        echo -ne "\rRebooting In: $i"
+        sleep 1
+    done
+    echo -e "\n"
+
+    reboot $@
+}
+
+alias reboot=reboot_wrapper
+
+hist_fzf() {
+    # Removes duplicates using the hashmap
+    declare -A hist_hashmap
+
+    echo "$(tac $HOME/.bash_history | while IFS= read -r line
+    do
+        [[ -n "$line" ]] && {
+            [[ -v hist_hashmap["$line"] ]] || {
+                echo $line
+                hist_hashmap["$line"]=""
+            }
+        }
+    done | fzf --reverse)"
+}
+
+dump() {
+    mkdir -p $HOME/notes
+    $EDITOR $HOME/notes/Dump.md
+}
+
+wttr() {
+    if [[ -n "$LOCATION" ]]
+    then
+        curl -s wttr.in/$LOCATION?u
+    else
+        echo "Must set the \$LOCATION variable first!"
+        return 1
+    fi
+}
+
+htmd() {
+    { which html2text || type html2text; } &>/dev/null \
+        && bat --language=md <(html2text <(curl -L --silent "$1")) \
+        || exit 1
+}
+
+spell() {
+    word=$(echo $1 | tr '[:upper:]' '[:lower:]')
+    html=$(curl -L --silent "https://duckduckgo.com/?q=spell+$word&ia=answer")
+
+    echo $html | grep "appears to be spelled correctly" &>/dev/null && {
+        echo "Spelled Correctly"; return 0; 
+    } || { 
+        alternatives=$(echo $html | sed -n 's/.*Suggestions:<\/i>\(.*\)<\/a>.*/\1/p' | sed 's/<[^>]*>//g')
+
+        echo "Spelled wrong, possible alternative spellings: $alternatives" >&2
+
+        return 1
+    }
+}
+
+define() {
+    word=$(echo $1 | tr '[:upper:]' '[:lower:]')
+    spell "$word" >/dev/null && {
+        uppercase_word=$(echo $word | tr '[:lower:]' '[:upper:]' )
+        URL="https://www.merriam-webster.com/dictionary/$word"
+
+        definition=$(curl -L --silent "$URL" \
+            | grep --ignore-case "the meaning of $word is" | grep -o 'content=".*"' \
+            | sed "s/content=//; s/The meaning of $uppercase_word is //; s/. How to use $word in a sentence.//" \
+            | sed 's/"$//; s/"//' | sed 's/ Did you know?//')
+
+        [[ -n "$definition" ]] && {
+            echo "$definition"
+            return 0 
+        } || {
+            echo "Spell right, but no definition found." >&2
+            return 1
+        }
+    }
+
+    return 1
+}
+
+# Easy daily journal stored in notes by date
+j() {
+    months_directory=$HOME/notes/Writing/Journal/$(date +"%Y")/$(date +"%B")
+    mkdir -p $months_directory 2>/dev/null
+    $EDITOR $months_directory/$(date +"%d").md
+}
+
+# TODO: Place blogs in future website github directory
+blog() {
+    blog_directory=$HOME/notes/Writing/Blog
+    mkdir -p $blog_directory 2>/dev/null
+    lf $blog_directory || {
+        echo "Failed to open blog... is lf installed?"
+        (exit 1)
+    }
+}
+
+plan() {
+    DIRECTORY="$HOME/notes"
+    FILE_PATH="$DIRECTORY/plan.md"
+
+    if ! [[ -d "$DIRECTORY" ]]
+    then
+        mkdir -p "$DIRECTORY" &>/dev/null
+    fi
+
+    $EDITOR "$FILE_PATH"
+}
+
+view_plan() {
+    FILE_PATH="$HOME/notes/plan.md"
+
+    if [[ -f "$FILE_PATH" ]]
+    then
+        bat "$FILE_PATH"
+    else
+        printf "\e[31m%s\e[0m" "File '$FILE_PATH' doesn't exist"
+    fi
+}
+
+# sets wallpaper
+wp() {
+    new_wallpaper_file_path="$1"
+    wallpaper_file_path=$HOME/.wallpaper
+
+    if ! [[ -f "$new_wallpaper_file_path" ]]
+    then
+        echo "[ERROR] Specified wallpaper path doesn't exist"
+        return 1
+    fi
+
+    if [[ -n "$DISPLAY" && -z "$WAYLAND_DISPLAY" ]]
+    then
+        cp "$new_wallpaper_file_path" $wallpaper_file_path
+        feh --bg-scale $wallpaper_file_path
+    elif [[ -n "$WAYLAND_DISPLAY" ]]
+    then
+        cp "$new_wallpaper_file_path" $wallpaper_file_path
+
+        # Kill existing swaybg command
+        if [[ -f "/tmp/.swaybg_pid" ]];then
+            kill $(cat /tmp/.swaybg_pid)
+            rm /tmp/.swaybg_pid
+        fi
+
+        nohup swaybg --mode fill --image $wallpaper_file_path &>/dev/null & \
+            echo $! > /tmp/.swaybg_pid
+    else
+        echo "[ERROR] Need a graphical environment active to set wallpaper"
+        return 1
+    fi
+}
+
+wpf() {
+    [[ -z "$DISPLAY" && -z "$WAYLAND_DISPLAY" ]] && {
+        echo "[ERROR] Need a graphical environment active to set wallpaper"
+        return 1
+    }
+
+    WALLPAPER_DIRECTORY=$HOME/Pictures/Wallpapers
+    mkdir -p $WALLPAPER_DIRECTORY &>/dev/null
+
+    [[ -f "$HOME/.wallpaper" ]] && cp $HOME/.wallpaper $HOME/.old_wallpaper
+
+    if [[ -n "$WAYLAND_DISPLAY" ]]; then
+        new_wallpaper=$( \
+            find $WALLPAPER_DIRECTORY -type f \
+            | fzf --reverse\
+                --preview="swaybg --mode fill --image {}" \
+                --preview-window=0% \
+        )
+    elif which dwm &>/dev/null; then
+        new_wallpaper=$( \
+            find $WALLPAPER_DIRECTORY -type f \
+            | fzf --reverse\
+                --preview="feh --bg-scale {}" \
+                --preview-window=0% \
+        )
+    fi
+
+
+    if [[ -n "$new_wallpaper" ]]
+    then
+        wp $new_wallpaper
+    else
+        wp $HOME/.old_wallpaper
+    fi
+}
+
+presnap() {
+    description="$1"
+    configs=($(sudo snapper list-configs | awk 'NR>2 {print $1}'))
+    for config in ${configs[@]}
+    do
+        sudo snapper -c $config create -d "$description" -t pre
+    done
+}
+
+postsnap() {
+    description="$1"
+    configs=($(sudo snapper list-configs | awk 'NR>2 {print $1}'))
+    for config in ${configs[@]}
+    do
+        pre_number=$(sudo snapper -c $config list | grep "pre" | grep "$description" | awk '{print $1}')
+        sudo snapper -c $config create -d "$description" -t post --pre-number "$pre_number"
+    done
+}
+
+deletesnap() {
+    description="$1"
+    configs=($(sudo snapper list-configs | awk 'NR>2 {print $1}'))
+    for config in ${configs[@]}
+    do
+        pre_number=$(sudo snapper -c $config list | grep "pre" | grep "$description" | awk '{print $1}')
+        snap_number=$(sudo snapper -c $config list | grep "$pre_number" | grep "$description" | awk -F '|' '{print $1}')
+        sudo snapper -c $config delete $snap_number
+    done
+}
+
+batt() {
+    if ls /sys/class/power_supply/*/capacity &>/dev/null
+    then
+        for capacity_path in $(ls /sys/class/power_supply/*/capacity)
+        do
+            batt_path=$(dirname $(ls $capacity_path))
+            batt_name=$(basename $batt_path)
+            batt_percentage=$(cat $capacity_path)
+            [[ "$(cat $batt_path/status 2> /dev/null)" == "Charging" ]] \
+                && charging="+" \
+                || charging="-"
+            [[ $batt_percentage -gt 99 ]] && { batt_percentage=100; unset charging; } 
+            echo "$(basename $batt_name): $charging$batt_percentage%"
+        done
+    else 
+        echo "No Batteries Found">&2
+        return 1
+    fi
+}
+
+f() {
+    fzf_path=$(find . -type d -o -type f | fzf --reverse)
+
+    [[ -d $fzf_path ]] && lf "$fzf_path"
+    [[ -f $fzf_path ]] && nvim "$fzf_path" -c "cd $(dirname "$fzf_path")"
+}
+
+p() {
+    pass_command=$1
+
+    copy=false
+    if [[ "$pass_command" == "c" ]]; then
+        copy=true
+    fi
+
+    ORIGINAL_PWD="$PWD"
+    [[ -n "$PASSWORD_STORE_DIR" ]] \
+        && cd $PASSWORD_STORE_DIR \
+        || cd $HOME/.password-store
+
+    fzf_password=$(find . -type f -name "*.gpg" | sed 's/^\.\///; s/\.gpg$//' | fzf --reverse)
+    cd "$ORIGINAL_PWD"
+
+    if [[ -n "$fzf_password" ]]
+    then
+        case $pass_command in
+            "")
+                pass show "$fzf_password"
+                return 0
+            ;;
+            "c")
+                password=$(pass "$fzf_password")
+            ;;
+            *)
+                pass $pass_command "$fzf_password"
+                return 0                
+            ;;
+        esac
+
+    fi
+
+    if $copy; then
+        if [[ -n "$WAYLAND_DISPLAY" ]] && echo $password | wl-copy; then
+            echo "Copied with wl-copy! Clearing in 20 seconds"
+            (sleep 20 && echo "" | wl-copy &) &>/dev/null
+        elif which xclip &>/dev/null && echo $password | xclip -selection clipboard; then
+            echo "Copied with xclip! Clearing in 20 seconds"
+            (sleep 20 && echo "" | xclip -selection clipboard &) &>/dev/null
+        else
+            echo "Failed to copy with wl-copy or xclip"
+        fi
+    else
+        [[ -n "$password" ]] && echo "$password"
+    fi
+}
+
+space() {
+    filesystem_type=$(stat -f -c "%T" /)
+
+    [[ "$filesystem_type" == "btrfs" ]] && {
+        size=$(btrfs filesystem usage / 2>/dev/null | grep "Device size:" | awk '{print $3}')
+        used=$(btrfs filesystem usage / 2>/dev/null | grep "Device allocated:" | awk '{print $3}')
+        available=$(btrfs filesystem usage / 2>/dev/null | grep "Device unallocated:" | awk '{print $3}')
+
+        printf "  %-12s %-12s %-12s\n" "Size" "Used" "Avail"
+        printf "%-12s %-12s %-12s\n" "$size" "$used" "$available"
+    } || {
+        [[ "$filesystem_type" == "ext4" || "$filesystem_type" == "ext2/ext3" ]] \
+            && df -h / \
+            || echo "Unsupported filesystem type: '$filesystem_type'"
+    }
+}
+
+change_timezone() {
+    new_timezone=$(timedatectl list-timezones | fzf --reverse)
+    if [[ -n "$new_timezone" ]]; then
+        sudo ln -sf /usr/share/zoneinfo/$new_timezone /etc/localtime
+        sudo systemctl restart systemd-timesyncd
+    fi
+}
+
+nvim_term() {
+    if command -v nvim &>/dev/null && [[ $INSIDE_NVIM_TERM != true ]];
+    then
+        export INSIDE_NVIM_TERM=true
+        exec nvim +'term' '+set nonumber norelativenumber' '+set laststatus=0' '+startinsert'
+    fi
+}
+
+chat()
+{
+    ollama serve &>/dev/null &
+    OLLAMA_PID=$!
+    clear
+
+    # Add cleanup function
+    cleanup() {
+        kill $OLLAMA_PID 2>/dev/null
+        wait $OLLAMA_PID 2>/dev/null
+    }
+
+    # Ensure cleanup happens on exit
+    trap cleanup EXIT SIGINT SIGTERM
+
+    printf "\n\e[36m%s\e[0m\n" "Starting Ollama Server..."
+    sleep 3 # Give server time to start
+
+    models="$(ollama list | awk 'NR > 1 {print $1}')"
+
+    if [[ -z "$models" ]]
+    then
+        printf "\n\e[31m%s\e[0m\n" "[!] No models available"
+        cleanup
+        return 1
+    fi
+
+    model="$(echo "$models" | fzf)"
+
+    if [[ -z "$model" ]]
+    then
+        printf "\n\e[33m%s\e[0m\n" "No model chosen... Goodbye"
+        cleanup
+        return 1
+    fi
+
+    printf "\n\e[36m%s\e[0m\n" "Starting chat with $model..."
+    ollama run $model
+
+    cleanup
+}
+
+theme() {
+    if ! [ -d $HOME/themes ]
+    then
+        echo "No themes directory in $HOME"
+        return 1
+    fi
+
+
+    if { which river || type river; } &>/dev/null
+    then
+        chosen_theme=$(ls $HOME/themes/river | fzf --reverse)
+        cp $HOME/themes/river/$chosen_theme/foot.ini $HOME/.config/foot/foot.ini
+        cp $HOME/themes/river/$chosen_theme/creek.flags $HOME/.river_creek_theme \
+            && restart-creek
+        cp $HOME/themes/river/$chosen_theme/terminal_prompt_theme $HOME/.terminal_prompt_theme
+        wp $HOME/themes/river/$chosen_theme/wallpaper.*
+
+        if { which qutebrowser || type qutebrowser; } &>/dev/null
+        then
+            cp $HOME/themes/river/$chosen_theme/qutebrowser_config.py \
+                ~/.config/qutebrowser/config.py
+            qutebrowser :config-source
+        fi
+
+        clear
+        newgrp
+    fi
+}
+
+change_pkg_version() {
+    sudo -v
+
+    package_name="$(ls /var/cache/pacman/pkg/ | grep -v "zst.sig" | fzf -i)"
+
+    if [[ -n $package_name ]]
+    then
+        sudo pacman -U /var/cache/pacman/pkg/$package_name
+    fi
+}
+
+# Turn off laptop display and turn on external display
+external_display_only() {
+    if [[ -n "$WAYLAND_LAPTOP_DISPLAY_NAME" ]]
+    then
+        display_names=($(wlr-randr | grep -v "^[[:space:]]" | awk '{print $1}'))
+
+        if [[ "${#display_names[@]}" -gt 2 ]]
+        then
+            echo "Too many displays connected"
+            return 1
+        fi
+
+        if echo "${display_names[@]}" | grep "$WAYLAND_LAPTOP_DISPLAY_NAME" &>/dev/null
+        then
+            echo "Turn off all displays"
+            for display in ${display_names[@]}
+            do
+                wlr-randr --output $display --off
+            done
+            for display in ${display_names[@]}
+            do
+                if [[ "$display" != "$WAYLAND_LAPTOP_DISPLAY_NAME" ]]
+                then
+                    echo "Turn on external display: $display"
+                    wlr-randr \
+                        --output "$WAYLAND_LAPTOP_DISPLAY_NAME" --off \
+                        --output $display --on --pos 0,0 &>/dev/null
+                    if { which creek || type creek; } &>/dev/null
+                    then
+                        echo "Restart creek"
+                        restart-creek &>/dev/null
+                    fi
+                    return 0
+                fi
+            done
+        fi
+    else
+        echo "\$WAYLAND_LAPTOP_DISPLAY_NAME variable not set"
+        return 1
+    fi
+}
+
+update_arch_iso() {
+    PREVIOUS_DIRECTORY=$PWD
+    ISO_DIRECTORY="$HOME/Documents/ISOs"
+    ISO_URL="https://mirror.arizona.edu/archlinux/iso/latest/archlinux-x86_64.iso"
+    ISO_FILENAME="archlinux-x86_64.iso"
+    ISO_SHA_URL="https://mirror.umd.edu/archlinux/iso/latest/sha256sums.txt"
+    ISO_SHA_FILENAME="arch_iso_sha256sums.txt"
+
+    mkdir -p "$ISO_DIRECTORY" &>/dev/null
+    cd "$ISO_DIRECTORY"
+
+    printf "\n\e[36mDownloading the latest sha256sum file...\e[0m"
+    if ! curl -L "$ISO_SHA_URL" -o $ISO_SHA_FILENAME &>/dev/null
+    then
+        cd $PREVIOUS_DIRECTORY
+        return 1
+    fi
+    printf "\r\e[32mSuccessfully downloaded the latest sha256sum file.\n\e[0m"
+
+    if [[ -f "$ISO_FILENAME" ]] && sha256sum --ignore-missing -c "$ISO_SHA_FILENAME" &>/dev/null
+    then
+        printf "\n\e[36mArch ISO is up-to-date\n\e[0m"
+    else
+        printf "\n\e[36mDownloading the latest ISO...\n\e[0m"
+        if curl -L "$ISO_URL" -o $ISO_FILENAME
+        then
+            if sha256sum --ignore-missing -c $ISO_SHA_FILENAME
+            then
+                printf "\e[32mISO Downloaded and verified!\n\e[0m"
+            else
+                printf "\e[31m[!] Failed to verify ISO, may have failed to download entirely.\n\e[0m"
+                cd $PREVIOUS_DIRECTORY
+                return 1
+            fi
+        fi
+    fi
+
+    cd $PREVIOUS_DIRECTORY
+}
+
+help_cli() {
+    FILE_PATH="$HOME/notes/Resources/Linux/cli.md"
+
+    if [[ -f "$FILE_PATH" ]]
+    then
+        bat "$FILE_PATH"
+    else
+        printf "\e[31m%s\e[0m" "File '$FILE_PATH' doesn't exist"
+    fi
+}
+
+edit_help_cli() {
+    DIRECTORY="$HOME/notes/Resources/Linux"
+    FILE_PATH="$DIRECTORY/cli.md"
+
+    if ! [[ -d "$DIRECTORY" ]]
+    then
+        mkdir -p "$DIRECTORY" &>/dev/null
+    fi
+
+    $EDITOR "$FILE_PATH"
+}
+
+help_bash() {
+    FILE_PATH="$HOME/notes/Resources/Linux/bash.md"
+
+    if [[ -f "$FILE_PATH" ]]
+    then
+        bat "$FILE_PATH"
+    else
+        printf "\e[31m%s\e[0m" "File '$FILE_PATH' doesn't exist"
+    fi
+}
+
+edit_help_bash() {
+    DIRECTORY="$HOME/notes/Resources/Linux"
+    FILE_PATH="$DIRECTORY/bash.md"
+
+    if ! [[ -d "$DIRECTORY" ]]
+    then
+        mkdir -p "$DIRECTORY" &>/dev/null
+    fi
+
+    $EDITOR "$FILE_PATH"
+}
+
+help_rust() {
+    FILE_PATH="$HOME/notes/Resources/Development/Languages/rust.md"
+
+    if [[ -f "$FILE_PATH" ]]
+    then
+        bat "$FILE_PATH"
+    else
+        printf "\e[31m%s\e[0m" "File '$FILE_PATH' doesn't exist"
+    fi
+}
+
+edit_help_rust() {
+    DIRECTORY="$HOME/notes/Resources/Development/Languages"
+    FILE_PATH="$DIRECTORY/rust.md"
+
+    if ! [[ -d "$DIRECTORY" ]]
+    then
+        mkdir -p "$DIRECTORY" &>/dev/null
+    fi
+
+    $EDITOR "$FILE_PATH"
+}
+
