@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # arch - part of the Arch-Setup project
-# Copyright (C) 2025, JustScott, development@justscott.me
+# Copyright (C) 2025-2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -43,7 +43,7 @@ INSTALLABLE_PACKAGES="\
 SETUP_OPTIONS="\
     security user-scripts audio bluetooth \
     river gnome dwm dwl \
-    gaming media qemu \
+    gaming media qemu 3d-printing \
     embedded-rust rust-dioxus \
 "
 
@@ -250,6 +250,7 @@ display_help() {
     printf "\n  \`$SCRIPT_NAME setup river bluetooth\`"
     printf "\n  \`$SCRIPT_NAME setup security user-scripts\`"
     printf "\n  \`$SCRIPT_NAME remove-setup rust\`"
+    printf "\n  \`$SCRIPT_NAME add-configs\`"
 
     printf "\n\nError Codes:"
     printf "\n  %-3s %-1s" "1" "Invalid command"
@@ -634,63 +635,70 @@ setup() {
                 if ! setup_user_scripts
                 then
                     printf "\n\e[31m%s\e[0m\n" \
-                        "[!] Failed to setup user-scripts"
+                        "[!] Failed to setup: user-scripts"
                 fi
             ;;
             "qemu")
                 if ! setup_qemu
                 then
                     printf "\n\e[31m%s\e[0m\n" \
-                        "[!] Failed to setup qemu"
+                        "[!] Failed to setup: qemu"
                 fi
             ;;
             "gaming")
                 if ! setup_gaming
                 then
                     printf "\n\e[31m%s\e[0m\n" \
-                        "[!] Failed to setup gaming"
+                        "[!] Failed to setup: gaming"
                 fi
             ;;
             "security")
                 if ! setup_security
                 then
                     printf "\n\e[31m%s\e[0m\n" \
-                        "[!] Failed to setup security"
+                        "[!] Failed to setup: security"
                 fi
             ;;
             "audio")
                 if ! setup_audio
                 then
                     printf "\n\e[31m%s\e[0m\n" \
-                        "[!] Failed to setup audio"
+                        "[!] Failed to setup: audio"
                 fi
             ;;
             "bluetooth")
                 if ! setup_bluetooth
                 then
                     printf "\n\e[31m%s\e[0m\n" \
-                        "[!] Failed to setup bluetooth"
+                        "[!] Failed to setup: bluetooth"
                 fi
             ;;
             "media")
                 if ! setup_media
                 then
                     printf "\n\e[31m%s\e[0m\n" \
-                        "[!] Failed to setup media"
+                        "[!] Failed to setup: media"
                 fi
             ;;
             "embedded-rust")
                 if ! setup_embedded_rust
                 then
                     printf "\n\e[31m%s\e[0m\n" \
-                        "[!] Failed to setup embedded-rust"
+                        "[!] Failed to setup: embedded-rust"
                 fi
             ;;
             "rust-dioxus")
                 if ! setup_rust_dioxus
                 then
                     printf "\n\e[31m%s\e[0m\n" \
-                        "[!] Failed to setup rust-dioxus"
+                        "[!] Failed to setup: rust-dioxus"
+                fi
+            ;;
+            "3d-printing")
+                if ! setup_3d_printing
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to setup: 3d-printing"
                 fi
             ;;
             *)
@@ -810,6 +818,13 @@ remove_setup() {
                         "[!] Failed to remove setup: rust-dioxus"
                 fi
             ;;
+            "3d-printing")
+                if ! remove_setup_3d_printing
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to remove setup: 3d-printing"
+                fi
+            ;;
             *)
                 printf "\n\e[31m%s %s\e[0m\n" \
                     "[!] Chosen setup did not match remove setup case statement." \
@@ -838,7 +853,7 @@ case $1 in
     "version"|"--version") echo "0.1.0";;
     "--help"|"-h") display_help;;
     *) 
-        printf "\n\n - [ERROR] Invalid use of the \`arch\` command -";
+        printf "\n\n - [ERROR] Invalid use of the \`$SCRIPT_NAME\` command -";
         display_help
         exit 1
         ;;

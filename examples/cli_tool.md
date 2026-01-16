@@ -1,8 +1,8 @@
 ```bash
 #!/bin/bash
 #
-# arch - part of the Arch-Setup project
-# Copyright (C) 2025, JustScott, development@justscott.me
+# tool - part of the My-Project project
+# Copyright (C) 2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -19,65 +19,43 @@
 
 
 #
-# CLI tool to replace Arch-Setup and Arch-Configurations. It will
-#  make the process of installing software and having them automatically
-#  configured to my setup much easier.
+# Explain your tool
 #
 
 
 display_help() {
-    echo -e "\nUsage: arch [COMMAND]"
-    echo -e "\nSimplifies Arch-Setup and Arch-Configurations into a single"
-    echo -e " CLI tool with many more automated features.\n"
+    echo -e "\nUsage: tool [COMMAND]"
+    echo -e "\nDoes something\n"
 
     echo "Commands:"
-    printf "\t%-15s %-1s\n" "install" "Install supported software"
-    printf "\t%-15s %-1s\n" "uninstall" "Cleanly uninstall supported software"
-    printf "\t%-15s %-1s\n" "setup" "Setup groups of software packages"
-    printf "\t%-15s %-1s\n" "preset" "Pre-setup the system in a specifc way"
+    printf "\t%-15s %-1s\n" "command" "This command does something"
     printf "\t%-15s %-1s\n" "version" "Returns version information"
 
     echo -e "\nCommand Flags:\n"
-    echo -e "\tinstall:"
-    printf "\t    %-20s\t %-1s\n" "-l | --list" "List installable software"
-    echo -e "\tuninstall:"
-    printf "\t    %-20s\t %-1s\n" "-l | --list" "List installed software"
-    echo -e "\tsetup:"
-    printf "\t    %-20s\t %-1s\n" "-u | --undo" "Cleanly remove the setup"
-    echo -e "\tpreset:"
-    printf "\t    %-20s\t %-1s\n" "-u | --undo" "Cleanly remove the preset"
+    echo -e "\tcommand:"
+    printf "\t    %-20s\t %-1s\n" "-l | --list" "List command stuff"
     
     echo -e "\nExamples:"
-    echo -e "\t\`arch install --list\`"
-    echo -e "\t\`arch uninstall --list\`"
-    echo -e "\t\`arch install qutebrowser\`"
-    echo -e "\t\`arch install user-scripts\`"
-    echo -e "\t\`arch uninstall qutebrowser\`"
-    echo -e "\t\`arch setup river rust bluetooth\`"
-    echo -e "\t\`arch setup security\`"
-    echo -e "\t\`arch setup --undo rust\`"
-    echo -e "\t\`arch preset base host base_vm\`"
-    echo -e "\t\`arch preset --undo base_vm\`"
+    echo -e "\t\`command --list\`"
 
     echo -e "\nError Codes:"
     printf "\t%-3s %-1s\n" "1" "Invalid command"
-    printf "\t%-3s %-1s\n" "2" "Can't be uninstalled or removed as it doesn't exist"
 }
 
-install() {
+command() {
     local \
-        packages_to_install \
-        FLAG_list_packages
+        commands_to_run \
+        FLAG_list_commands
 
     for arg in $@
     do
         case $arg in
             "-l" | "--list")
-                [[ -n "$FLAG_list_packages" ]] && {
-                    echo -e "\n - [ERROR] duplicated the list packages flag - \n"
+                [[ -n "$FLAG_list_commands" ]] && {
+                    echo -e "\n - [ERROR] duplicated the list commands flag - \n"
                     exit 1
                 }
-                FLAG_list_packages=1
+                FLAG_list_commands=1
             ;;
             *)
                 # Support flags starting with '-' or "--" shouldn't reach
@@ -87,19 +65,19 @@ install() {
                     echo "The '$arg' flag isn't supported"
                     exit 1
                 fi
-                packages_to_install+=($arg)
+                commands_to_run+=($arg)
             ;;
         esac
     done
 
-    if ((FLAG_list_packages))
+    if ((FLAG_list_commands))
     then
         echo "List flag on"
     else
         echo "List flag off"
     fi
 
-    echo "PACKAGES: ${packages_to_install[@]}"
+    echo "PACKAGES: ${commands_to_run[@]}"
 }
 
 place_holder() {
@@ -107,13 +85,12 @@ place_holder() {
 }
 
 case $1 in
-    "install")      install ${@:2};;
-    "setup")        place_holder ${@:2};;
-    "preset")       place_holder ${@:2};;
-    "version"|"--version") echo "0.1.0";;
-    "--help"|"-h") display_help;;
+    "command")              command ${@:2};;
+    "future_command")       place_holder ${@:2};;
+    "version"|"--version")  echo "0.1.0";;
+    "--help"|"-h")          display_help;;
     *) 
-        echo -e "\n - [ERROR] Invalid use of the \`arch\` command -";
+        printf "\n\n - [ERROR] Invalid use of the \`command\` command -";
         display_help
         exit 1
         ;;

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # setup_installation_library.sh - part of the Arch-Setup project
-# Copyright (C) 2025, JustScott, development@justscott.me
+# Copyright (C) 2025-2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -559,6 +559,17 @@ setup_gaming()
         return 1
     fi
 
+    # Nvidia laptops
+    #AUR_PACKAGES+=(optimus-manager-git libgdm-prime gdm-prime)
+    #optimus-manager --switch nvidia --noconfirm
+
+    # Mod manager for lethal company
+    #AUR_PACKAGES+=( r2modman-bin )
+    #
+    # Edit /usr/share/applications/r2modman.desktop, adding --no-sandbox to
+    #  the exec command, before the %U
+    #
+
     return 0
 }
 remove_setup_gaming()
@@ -901,6 +912,40 @@ remove_setup_rust_dioxus()
     task_output $! "$STDERR_LOG_PATH" \
         "Remove android-sdk from PATH in .bashrc"
     [[ $? -ne 0 ]] && return 1
+
+    return 0
+}
+
+
+setup_3d_printing()
+{
+    packages=(freecad prusa-slicer)
+
+    if ! pacman -Q ${packages[@]} &>/dev/null; then
+        sudo -v
+        sudo pacman -Sy --noconfirm ${packages[@]} \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" "Install CAD and Slicer tools"
+        [[ $? -ne 0 ]] && exit 1
+    fi
+
+    return 0
+}
+remove_setup_3d_printing()
+{
+    packages=(freecad prusa-slicer)
+
+    for package in ${packages[@]}
+    do
+        if pacman -Q $package &>/dev/null
+        then
+            sudo -v || return 1
+            yes | sudo pacman -Rs --noconfirm $package \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
 
     return 0
 }

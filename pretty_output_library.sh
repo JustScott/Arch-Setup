@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # pretty_output_library - part of the Arch-Setup project
-# Copyright (C) 2025, JustScott, development@justscott.me
+# Copyright (C) 2025-2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
