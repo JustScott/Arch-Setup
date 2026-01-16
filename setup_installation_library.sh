@@ -82,7 +82,7 @@ setup_qemu()
 
     if ! pacman -Q ${packages[@]} &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Sy --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Install qemu packages"
@@ -138,7 +138,7 @@ remove_setup_qemu()
     do
         if pacman -Q $package &>/dev/null
         then
-            sudo -v
+            sudo -v || return 1
             yes | sudo pacman -Rs --noconfirm $package \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
@@ -161,7 +161,7 @@ remove_setup_qemu()
 
 setup_security()
 {
-    sudo -v
+    sudo -v || return 1
 
     if grep -e "^# deny = " -e "^deny = " /etc/security/faillock.conf &>/dev/null
     then
@@ -202,7 +202,7 @@ setup_security()
 }
 remove_setup_security()
 {
-    sudo -v
+    sudo -v || return 1
 
     if grep "^deny = 6" /etc/security/faillock.conf &>/dev/null
     then
@@ -254,7 +254,7 @@ setup_audio()
                 "Disable and stop pulseaudio service"
         fi
 
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -R pulseaudio \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Remove pulseaudio"
@@ -262,7 +262,7 @@ setup_audio()
     fi
 
     if ! pacman -Q ${packages[@]} &>/dev/null; then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Sy ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
@@ -319,7 +319,7 @@ remove_setup_audio()
                 "Disable and stop pulseaudio service"
         fi
 
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Rs pulseaudio \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Remove pulseaudio"
@@ -330,7 +330,7 @@ remove_setup_audio()
     do
         if pacman -Q $package &>/dev/null
         then
-            sudo -v
+            sudo -v || return 1
             yes | sudo pacman -Rs --noconfirm $package \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
@@ -379,7 +379,7 @@ setup_bluetooth()
     packages=(bluez bluez-utils)
 
     if ! pacman -Q ${packages[@]} &>/dev/null; then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Sy --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
@@ -389,7 +389,7 @@ setup_bluetooth()
 
     if ! systemctl is-enabled bluetooth &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         sudo systemctl enable bluetooth \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Enable bluetooth"
@@ -398,7 +398,7 @@ setup_bluetooth()
 
     if ! systemctl is-active bluetooth &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         sudo systemctl start bluetooth \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Start bluetooth service"
@@ -407,7 +407,7 @@ setup_bluetooth()
 
     if rfkill list bluetooth | grep "Soft blocked: yes" &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         sudo rfkill unblock bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Remove bluetooth soft block"
         [[ $? -ne 0 ]] && return 1
@@ -421,7 +421,7 @@ remove_setup_bluetooth()
 
     if systemctl is-active bluetooth &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         sudo systemctl stop bluetooth \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Stop bluetooth service"
@@ -430,7 +430,7 @@ remove_setup_bluetooth()
 
     if systemctl is-enabled bluetooth &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         sudo systemctl disable bluetooth \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Disable bluetooth service"
@@ -441,7 +441,7 @@ remove_setup_bluetooth()
     do
         if pacman -Q $package &>/dev/null
         then
-            sudo -v
+            sudo -v || return 1
             yes | sudo pacman -Rs --noconfirm $package \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
@@ -461,7 +461,7 @@ setup_media()
     packages+=(jq curl ffmpeg)
 
     if ! pacman -Q ${packages[@]} &>/dev/null; then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Sy --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
@@ -482,7 +482,7 @@ remove_setup_media()
     do
         if pacman -Q $package &>/dev/null
         then
-            sudo -v
+            sudo -v || return 1
             yes | sudo pacman -Rs --noconfirm $package \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
@@ -503,7 +503,7 @@ setup_gaming()
 
     if groups | grep -E "(sudo|wheel)" &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         if ! pacman -Q ${PACKAGES[@]} &>/dev/null; then
             yes | sudo pacman -Sy --noconfirm ${PACKAGES[@]} \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
@@ -570,7 +570,7 @@ remove_setup_gaming()
     do
         if pacman -Q $package &>/dev/null
         then
-            sudo -v
+            sudo -v || return 1
             yes | sudo pacman -Rs --noconfirm $package \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
@@ -605,7 +605,7 @@ setup_embedded_rust()
     packages=(openocd)
 
     if ! pacman -Q ${packages[@]} &>/dev/null; then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Sy ${packages[@]} --noconfirm \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
@@ -642,7 +642,7 @@ remove_setup_embedded_rust()
     do
         if pacman -Q $package &>/dev/null
         then
-            sudo -v
+            sudo -v || return 1
             yes | sudo pacman -Rs --noconfirm $package \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
@@ -663,22 +663,35 @@ setup_rust_dioxus()
         return 1
     fi
 
-    pacman_packages=(\
-        webkit2gtk-4.1 base-devel curl wget file \
-        openssl appmenu-gtk-module libappindicator-gtk3 \
-        librsvg xdotool \
+    if ! command -v yay &>/dev/null
+    then
+        printf "\n\e[31m%s\e[0m\n" \
+            "[!] yay not installed, try running \`arch install yay\` first"
+        return 1
+    fi
+
+    aur_packages=(\
+        android-ndk android-sdk android-sdk-build-tools \
+        android-sdk-cmdline-tools-latest android-sdk-platform-tools \
+        android-tools android-platform android-emulator \
+        jdk21-openjdk webkit2gtk-4.1 base-devel curl wget \
+        file openssl appmenu-gtk-module libappindicator \
+        librsvg xdotool libbsd \
     )
 
     cargo_packages=(dioxus-cli)
 
-    if ! pacman -Q ${pacman_packages[@]} &>/dev/null; then
-        sudo -v
-        yes | sudo pacman -S ${pacman_packages[@]} --noconfirm \
-            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" \
-            "Download and install dioxus related tools"
-        [[ $? -ne 0 ]] && return 1
-    fi
+    for package in ${aur_packages[@]}
+    do
+        if ! yay -Q $package &>/dev/null; then
+            sudo -v || return 1
+            yes | yay -S $package --noconfirm \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" \
+                "Download and install: '$package' from the AUR"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
 
     for cargo_package in ${cargo_packages[@]}
     do
@@ -688,6 +701,113 @@ setup_rust_dioxus()
             "Download and compile: '$cargo_package' with cargo"
         [[ $? -ne 0 ]] && return 1
     done
+
+    {
+        if ! cat $HOME/.bashrc \
+            | grep "ANDROID_NDK_HOME=/opt/android-ndk$" &>/dev/null
+        then
+            echo "export ANDROID_NDK_HOME=/opt/android-ndk" >> $HOME/.bashrc
+        fi
+
+        if ! cat $HOME/.bashrc \
+            | grep "ANDROID_HOME=/opt/android-sdk$" &>/dev/null
+        then
+            echo "export ANDROID_HOME=/opt/android-sdk" >> $HOME/.bashrc
+        fi
+
+        if ! cat $HOME/.bashrc \
+            | grep "JAVA_HOME=/usr/lib/jvm/java-21-openjdk$" &>/dev/null
+        then
+            echo "export JAVA_HOME=/usr/lib/jvm/java-21-openjdk" \
+                >> $HOME/.bashrc
+        fi
+
+        if ! cat $HOME/.bashrc \
+            | grep "PATH=\$PATH:\$ANDROID_HOME/tools$" &>/dev/null
+        then
+            echo "export PATH=\$PATH:\$ANDROID_HOME/tools" \
+                >> $HOME/.bashrc
+        fi
+
+        if ! cat $HOME/.bashrc \
+            | grep "PATH=\$PATH:\$ANDROID_HOME/platform-tools$" \
+            &>/dev/null
+        then
+            echo "export PATH=\$PATH:\$ANDROID_HOME/platform-tools" \
+                >> $HOME/.bashrc
+        fi
+
+        if ! cat $HOME/.bashrc \
+            | grep "PATH=\$PATH:\$ANDROID_HOME/cmdline-tools/latest/bin$" \
+            &>/dev/null
+        then
+            echo "export PATH=\$PATH:\$ANDROID_HOME/cmdline-tools/latest/bin" \
+                >> $HOME/.bashrc
+        fi
+
+        if ! cat $HOME/.bashrc \
+            | grep "PATH=\$PATH:\$JAVA_HOME/bin$" &>/dev/null
+        then
+            echo "export PATH=\$PATH:\$JAVA_HOME/bin" >> $HOME/.bashrc
+        fi
+    } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" \
+        "Add the android-sdk to PATH in .bashrc"
+    [[ $? -ne 0 ]] && return 1
+
+    rustup target add \
+        aarch64-linux-android armv7-linux-androideabi \
+        i686-linux-android x86_64-linux-android \
+        >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" "Add android build targets with rustup"
+    [[ $? -ne 0 ]] && return 1
+
+    {
+        sudo groupadd android-sdk
+        sudo gpasswd -a $USER android-sdk
+        sudo chown -R :android-sdk /opt/android-sdk
+        sudo chmod -R g+rwx /opt/android-sdk
+    #    sudo setfacl -R -m g:android-sdk:rwx /opt/android-sdk
+    #    sudo setfacl -d -m g:android-sdk:rwX /opt/android-sdk
+    } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" \
+        "Create android-sdk group and add '$USER' to it"
+    [[ $? -ne 0 ]] && return 1
+
+newgrp android-sdk <<EOF
+cd $arch_setup_directory
+
+if ! [[ -f "./$PRETTY_OUTPUT_LIBRARY" ]]
+then
+    printf "\n\e[31m%s\e[0m\n" \
+        "[!] Cannot source library file, have you ran \`arch add-to-path\`?"
+    exit 1
+fi
+
+source ./$PRETTY_OUTPUT_LIBRARY
+
+yes | sdkmanager --licenses \
+    >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" "Accept Android SDK Licenses"
+[[ $? -ne 0 ]] && exit 1
+
+{
+    yes | sdkmanager "system-images;android-30;default;x86_64"
+    sdkmanager "emulator"
+} >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" \
+    "Install & Set-up emulator with qemu"
+[[ $? -ne 0 ]] && exit 1
+
+sudo archlinux-java set java-21-openjdk \
+    >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+task_output $! "$STDERR_LOG_PATH" \
+    "Set system java version to java-21-openjdk"
+[[ $? -ne 0 ]] && exit 1
+EOF
+
+    # avdmanager create avd -n new_avd -k "system-images;android-30;default;x86_64"
+    # emulator -avd new_avd
 
     return 0
 }
@@ -700,11 +820,41 @@ remove_setup_rust_dioxus()
         return 1
     fi
 
+    if ! command -v yay &>/dev/null
+    then
+        printf "\n\e[31m%s\e[0m\n" \
+            "[!] yay not installed, try running \`arch install yay\` first"
+        return 1
+    fi
+
+    aur_packages=(\
+        android-ndk android-sdk android-sdk-build-tools \
+        android-sdk-cmdline-tools-latest android-sdk-platform-tools \
+        android-tools android-platform android-emulator jdk21-openjdk \
+    )
+
     cargo_packages=(dioxus-cli)
 
     installed_cargo_packages="$(\
         cargo install --list | grep '^[a-z]' | awk '{print $1}'\
     )"
+
+    sudo -v || return 1
+
+    sudo gpasswd -d $USER android-sdk &>/dev/null;sleep 1;true &
+    task_output $! "$STDERR_LOG_PATH" \
+        "Remove '$USER' from the 'android-sdk' group"
+
+    sudo groupdel android-sdk &>/dev/null;sleep 1;true &
+    task_output $! "$STDERR_LOG_PATH" "Delete the 'android-sdk' group"
+
+    rustup target remove aarch64-linux-android &>/dev/null
+    rustup target remove armv7-linux-androideabi &>/dev/null
+    rustup target remove i686-linux-android &>/dev/null
+    rustup target remove x86_64-linux-android &>/dev/null
+
+    sleep 1;true &
+    task_output $! "$STDERR_LOG_PATH" "Remove android rustup targets"
 
     for cargo_package in ${cargo_packages[@]}
     do
@@ -718,6 +868,39 @@ remove_setup_rust_dioxus()
             [[ $? -ne 0 ]] && return 1
         fi
     done
+
+    for package in ${aur_packages[@]}
+    do
+        if yay -Q $package &>/dev/null
+        then
+            sudo -v || return 1
+            yes | yay -Rs --noconfirm $package \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
+
+    {
+        sed -i '/^export ANDROID_NDK_HOME=\/opt\/android-ndk$/d' \
+            $HOME/.bashrc
+        sed -i '/^export ANDROID_HOME=\/opt\/android-sdk$/d' \
+            $HOME/.bashrc
+        sed -i '/^export JAVA_HOME=\/usr\/lib\/jvm\/java-21-openjdk$/d' \
+            $HOME/.bashrc
+        sed -i '/^export PATH=$PATH:$ANDROID_HOME\/tools$/d' \
+            $HOME/.bashrc
+        sed -i '/^export PATH=$PATH:$ANDROID_HOME\/platform-tools$/d' \
+            $HOME/.bashrc
+        sed -i \
+            '/^export PATH=$PATH:$ANDROID_HOME\/cmdline-tools\/latest\/bin$/d' \
+            $HOME/.bashrc
+        sed -i '/^export PATH=$PATH:$JAVA_HOME\/bin$/d' \
+            $HOME/.bashrc
+    } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+    task_output $! "$STDERR_LOG_PATH" \
+        "Remove android-sdk from PATH in .bashrc"
+    [[ $? -ne 0 ]] && return 1
 
     return 0
 }

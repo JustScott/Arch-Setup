@@ -61,7 +61,7 @@ install_yay() {
 uninstall_yay() {
     if pacman -Q yay &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Rs --noconfirm yay \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Uninstalling yay"
@@ -76,7 +76,7 @@ uninstall_yay() {
 install_qutebrowser() {
     if ! pacman -Q qutebrowser &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Sy --noconfirm qutebrowser \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Installing qutebrowser"
@@ -90,7 +90,7 @@ install_qutebrowser() {
 uninstall_qutebrowser() {
     if pacman -Q qutebrowser &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Rs --noconfirm qutebrowser \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Uninstalling qutebrowser"
@@ -111,7 +111,7 @@ install_librewolf() {
 
     if ! yay -Q librewolf &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | yay -Sy --noconfirm librewolf \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Installing librewolf"
@@ -131,7 +131,7 @@ uninstall_librewolf() {
 
     if yay -Q librewolf &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | yay -Rs --noconfirm librewolf \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Uninstalling librewolf"
@@ -150,7 +150,7 @@ install_docker() {
 
     if ! pacman -Q ${packages[@]} &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Sy --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Installing docker"
@@ -158,7 +158,7 @@ install_docker() {
 
         if ! systemctl is-enabled docker &>/dev/null
         then
-            sudo -v
+            sudo -v || return 1
             sudo systemctl enable docker \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Enable the docker service"
@@ -167,7 +167,7 @@ install_docker() {
 
         if ! systemctl is-active docker &>/dev/null
         then
-            sudo -v
+            sudo -v || return 1
             sudo systemctl start docker \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Start the docker service"
@@ -176,7 +176,7 @@ install_docker() {
         
         if ! groups $USER | grep "docker" &>/dev/null
         then
-            sudo -v
+            sudo -v || return 1
             sudo usermod -aG docker $USER \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Add '$USER' to the 'docker' group"
@@ -204,7 +204,7 @@ uninstall_docker() {
 
     if systemctl is-active docker &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         sudo systemctl stop docker \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Stop the docker service"
@@ -212,7 +212,7 @@ uninstall_docker() {
     fi
     if systemctl is-enabled docker &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         sudo systemctl disable docker \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Disable the docker service"
@@ -221,7 +221,7 @@ uninstall_docker() {
 
     if groups $USER | grep "docker" &>/dev/null
         then
-            sudo -v
+            sudo -v || return 1
             sudo usermod -rG docker $USER \
                 >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Remove '$USER' from the 'docker' group"
@@ -230,7 +230,7 @@ uninstall_docker() {
 
     if pacman -Q ${packages[@]} &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Rs --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Uninstalling docker"
@@ -263,7 +263,7 @@ install_python() {
 
     if ! pacman -Q ${packages[@]} &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Sy --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Installing python"
@@ -279,7 +279,7 @@ uninstall_python() {
 
     if pacman -Q ${packages[@]} &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Rs --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Uninstalling python"
@@ -296,7 +296,7 @@ install_rust() {
 
     if ! pacman -Q ${packages[@]} &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Sy --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Installing rust"
@@ -326,7 +326,7 @@ uninstall_rust() {
 
     if pacman -Q ${packages[@]} &>/dev/null
     then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Rs --noconfirm ${packages[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Uninstalling rust"
@@ -351,7 +351,7 @@ uninstall_rust() {
 install_flatpak()
 {
     if ! pacman -Q flatpak &>/dev/null; then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Sy --noconfirm flatpak \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
@@ -374,7 +374,7 @@ install_flatpak()
 uninstall_flatpak()
 {
     if pacman -Q flatpak &>/dev/null; then
-        sudo -v
+        sudo -v || return 1
         yes | sudo pacman -Rs --noconfirm flatpak \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
