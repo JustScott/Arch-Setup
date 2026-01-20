@@ -1,21 +1,13 @@
 # App Blogs
 
-" "
-"--- Source Code Repositories ---"
 https://github.com/InfiniTimeOrg/InfiniTime/commits/main.atom "Commit History" "Infinitime" "~Infintime"
 
-" "
-"--- Breaking Arch Updates ---"
 # Development News
 https://archlinux.org/feeds/news/ "Breaking Arch Changes" "~Arch Linux"
 
-" "
-"--- Blogs ---"
 # Blogs
 https://lukesmith.xyz/index.xml "Blogs" "~Luke Smith"
 
-" "
-"--- Channels ---"
 # Youtube
 https://www.youtube.com/feeds/videos.xml?channel_id=UCimiUgDLbi6P17BdaCZpVbg "YouTube" "~exurb1a"
 https://www.youtube.com/feeds/videos.xml?channel_id=UCcoO-8J0EYQHGPFQqwmAzVQ "YouTube" "~exurb2a"
