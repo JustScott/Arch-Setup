@@ -215,19 +215,22 @@ display_help() {
 
     printf "\n\nCommands:"
     printf "\n  %-15s %-1s" "add-to-path" \
-        "Add the arch "
+        "Allow executing the \`arch\` script from anywhere without issue"
     printf "\n  %-15s %-1s" "install" "Install supported software"
     printf "\n  %-15s %-1s" "uninstall" "Cleanly uninstall supported software"
     printf "\n  %-15s %-1s" "setup" "Setup the system in specific ways"
     printf "\n  %-15s %-1s" "remove-setup" "Remove a setup"
-    printf "\n  %-15s %-1s" "add-configs" \
-        "Add config files to \$HOME/.config for supported software (runs automatically, you rarely need to run this command)"
+    printf "\n  %-15s %s\n\t\t  %s" "add-configs" \
+        "Add config files to \$HOME/.config for supported software" \
+        "(runs automatically, you rarely need to run this command)"
     printf "\n  %-15s %-1s" "version" "Returns version information"
 
-    printf "\n\n%s" \
-        "(\`install\` is for tools you use directly: rust, docker, qutebrowser)"
-    printf "\n%s" \
-        "(\`setup\` is for set it and forget it defaults: security, river, bluetooth)"
+    printf "\n\n%s %s" \
+        "(\`install\` is for tools you use directly:" \
+        "rust, docker, qutebrowser)"
+    printf "\n%s %s" \
+        "(\`setup\` is for set it and forget it defaults:" \
+        "security, river, bluetooth)"
 
     printf "\n\nBase Flags:"
     printf "\n  %-20s %-1s" "--version" "Returns version information"
