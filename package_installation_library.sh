@@ -305,7 +305,7 @@ install_rust() {
         printf "\r\e[33m[skipping...]\e[0m %s\n" "rust already installed"
     fi
 
-    if rustup show | grep "no active toolchain" 
+    if rustup show | grep "no active toolchain" &>/dev/null
     then
         rustup default stable >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Set the default toolchain to stable"
