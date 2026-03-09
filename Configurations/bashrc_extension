@@ -37,10 +37,6 @@ export CALCURSE_PAGER="bat --paging=always --style=plain --language=markdown"
 alias grep='grep --color=auto'
 alias ls='ls --color=auto'
 
-alias gl='in_git_repo && git log --pretty=format:"%C(yellow)%h%Creset    %C(green)%D%Creset %n    %s%n"'
-alias gla='in_git_repo && git log --pretty=format:"%C(yellow)%h%Creset    %C(green)%D%Creset %n    %s%n%n%b%n"'
-alias nb='in_git_repo && git checkout $(git branch | tr -d " " | grep -v "*" | fzf)'
-
 export HISTFILESIZE=10000
 export HISTSIZE=10000
 alias ehist='history -a;eval "$(hist_fzf)"'
@@ -723,3 +719,44 @@ edit_help_rust() {
     $EDITOR "$FILE_PATH"
 }
 
+project() {
+    PROJECTS_DIR=$HOME/notes/Projects
+
+    if ! [[ -d $PROJECTS_DIR ]]
+    then
+        printf "\n\e[31m%s\e[0m\n" \
+            "[!] Projects directory '$PROJECTS_DIR' doesn't exists"
+        return 1
+    fi
+
+    ORIGINAL_DIR=$(pwd)
+    cd $PROJECTS_DIR
+
+    available_projects="$(find * -maxdepth 0 -type d 2>/dev/null)"
+
+    if [[ $(printf "$available_projects" | wc -l) -eq 0 ]]
+    then
+        printf "\n\e[31m%s\e[0m\n" \
+            "[!] No projects exists, try creating a project directory in '$PROJECTS_DIR'"
+        return 1
+    fi
+
+    chosen_project="$(echo "$available_projects" | fzf)"
+
+    if [[ -z "$chosen_project" ]]
+    then
+        printf "\n\e[33m%s\e[0m\n" \
+            "[!] No project chosen... goodbye"
+        cd $ORIGINAL_PWD
+        return 0
+    fi
+
+    if [[ -n "$EDITOR" ]]
+    then
+        $EDITOR $PROJECTS_DIR/$chosen_project/plan.md
+    else
+        nano $PROJECTS_DIR/$chosen_project/plan.md
+    fi
+
+    cd $ORIGINAL_PWD
+}
