@@ -4,6 +4,8 @@ https://github.com/InfiniTimeOrg/InfiniTime/commits/main.atom "Commit History" "
 
 # Development News
 https://archlinux.org/feeds/news/ "Breaking Arch Changes" "~Arch Linux"
+https://www.debian.org/News/news "Debian News" "~Debian News"
+https://www.debian.org/security/dsa "Debian Security News" "~Debian Security News"
 
 # Blogs
 https://lukesmith.xyz/index.xml "Blogs" "~Luke Smith"
