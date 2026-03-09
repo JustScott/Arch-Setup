@@ -60,7 +60,7 @@ display_help() {
     printf "\t%-15s %-1s\n" "play" "play your songs"
     printf "\t%-15s %-1s\n" "download" \
         "Download songs from youtube music (including all song metadata by default)"
-    printf "\t%-15s %-1s\n" "download" \
+    printf "\t%-15s %-1s\n" "playlist" \
         "Create, delete, add to and remove songs from playlists"
     printf "\t%-15s %-1s\n" "doctor" \
         "Checks all the songs for corruption and redownloads them if necessary"
