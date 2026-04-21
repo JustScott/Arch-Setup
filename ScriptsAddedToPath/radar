@@ -1,0 +1,73 @@
+#!/bin/bash
+#
+# radar - part of the Arch-Setup project
+# Copyright (C) 2023-2026, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+# A list of stations
+#  --> https://www.weather.gov/media/tg/wsr88d-radar-list.pdf
+
+# STATION="XXXX" # Define your location here
+# export STATION="XXXX" # or in .bashrc
+
+source $HOME/.bashrc
+
+STATION_FILE="/tmp/radar_stations"
+
+if [[ -z "$STATION" ]]; then
+    if ! cat /tmp/radar_stations | grep -e "@context" -e "@id" &>/dev/null; then
+        echo "Downloading list of radar stations to '$STATION_FILE'..."
+        curl --silent https://api.weather.gov/radar/stations > /tmp/radar_stations
+    fi
+
+    station_name=$(
+        cat $STATION_FILE | grep "\"name\"" | awk -F":" '{print $2}' | \
+            awk -F'"' '{print $2}' | fzf --reverse
+    )
+
+
+    if [[ -n "$station_name" ]]; then
+        station_id=$(
+            cat $STATION_FILE | grep "\"name\": \"$station_name\"" -B1 | \
+                grep "\"id\"" | awk -F":" '{print $2}' | awk -F'"' '{print $2}'
+        )
+    fi
+
+    if [[ -n $station_id ]]; then
+        if ! cat $HOME/.bashrc | grep -e "^export STATION='$station_id'" \
+        -e "^export STATION=\"$station_id\"" &>/dev/null; then
+            echo -e "\nexport STATION='$station_id'" >> $HOME/.bashrc
+        fi
+        STATION="$station_id"
+    else
+        echo "No station chosen"
+        exit 1
+    fi
+fi
+
+if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
+    if [[ -n "$STATION" ]]; then
+        echo "Getting radar GIF for the $STATION station..."
+        mpv --loop-file=inf \
+            <(curl https://radar.weather.gov/ridge/standard/${STATION}_loop.gif --silent)
+    else
+        echo -e "\n - No station set - \n"
+        exit 1
+    fi
+else
+    echo -e "\n - Need a GUI environment to display radar - \n"
+    exit 1
+fi

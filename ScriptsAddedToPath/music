@@ -1,0 +1,630 @@
+#!/bin/bash
+#
+# music - part of the Arch-Setup project
+# Copyright (C) 2024-2026, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+#TODO: have a `music doctor` command that gets the url of broken mp3 files
+#      and automatically redownloads them
+#  1. Loop through the mp3 files checking for corruption
+#  2. if file is corrupted, get its url from the metadata
+#  3. delete the file and redownload it
+#  - place the url in a songs_to_redownload file, and remove them
+#    once the file is successfully redownloaded. This way if the
+#    process is interrupted it can start back from where it was
+
+STDOUT_LOG_PATH="/dev/null"
+STDERR_LOG_PATH="/tmp/music_errors.log"
+
+MUSIC_PATH="$HOME/Music"
+ALL_SONGS_PATH="$MUSIC_PATH/all_songs"
+PLAYLISTS_PATH="$MUSIC_PATH/playlists"
+
+TEMP_PLAYLIST_PATH="/tmp/music/temp_playlist_songs"
+TEMP_ARTIST_PATH="/tmp/music/temp_artist_songs"
+
+DEFAULT_MPV_FLAGS="--display-tags=artist,title"
+
+# Check that the required packages are installed
+check_packages() {
+    required_packages=(mpv yt-dlp fzf)
+
+    for package in ${required_packages[@]}; do 
+        if ! command -v $package &>/dev/null; then
+            printf "\e[31m%s\e[0m\n" \
+                "[Error] Required package '$package' is not installed" >&2
+            missing_packages=true
+        fi
+    done
+
+    [[ $missing_packages = true ]] && exit 2
+}
+
+display_help() {
+    echo -e "\nUsage: music [COMMAND] [FLAGS]"
+    echo -e "\nDownload songs via youtube music links. Sort them into playlists, or just play them all\n"
+
+    echo "Commands:"
+    printf "\t%-15s %-1s\n" "play" "play your songs"
+    printf "\t%-15s %-1s\n" "download" \
+        "Download songs from youtube music (including all song metadata by default)"
+    printf "\t%-15s %-1s\n" "playlist" \
+        "Create, delete, add to and remove songs from playlists"
+    printf "\t%-15s %-1s\n" "doctor" \
+        "Checks all the songs for corruption and redownloads them if necessary"
+    printf "\t%-15s %-1s\n" "version" "Returns version information"
+
+    echo -e "\nCommand Flags:\n"
+    echo -e "\tplay:"
+    printf "\t    %-20s\t %-1s\n" "-r | --random | --shuffle" \
+        "Randomly shuffle whatever songs you're playing"
+    printf "\t    %-20s\t %-1s\n" "--show-cover" \
+        "Show the song cover"
+    printf "\t    %-20s\t %-1s\n" "--playlist" \
+        "Play songs from a playlist (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "--artist" \
+        "Play songs from an artist (uses fzf)"
+    echo -e "\tplaylist:"
+    printf "\t    %-20s\t %-1s\n" "-l | --list" \
+        "List created playlists (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "-c | --create" \
+        "Create a new playlist"
+    printf "\t    %-20s\t %-1s\n" "-d | --delete" \
+        "Delete an existing playlist (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "--list-songs" \
+        "list songs from a playlist (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "--add-songs" \
+        "add songs to a playlist (uses fzf)"
+    printf "\t    %-20s\t %-1s\n" "--remove-songs" \
+        "Remove songs from a playlist (uses fzf)"
+    
+    echo -e "\nExamples (most use fzf and don't need flags or arguments):"
+    echo -e "\t\`music play --shuffle --show-cover\`"
+    echo -e "\t\`music download "url" "next_url" "another_url"\`"
+    echo -e "\t\`music play --create example\`"
+    echo -e "\t\`music play --delete\` # uses fzf for selection if not passed"
+
+    echo -e "\nError Codes:"
+    printf "\t%-3s %-1s\n" "1" "General Error"
+    printf "\t%-3s %-1s\n" "2" "Missing Packages"
+}
+
+# Function to show a spinner and handle exit status
+task_output() {
+    local pid=$1
+    local stderr_path=$2
+    local task_message="$3"
+
+    local spin_chars="/-\|"
+
+    while kill -0 "$pid" 2>/dev/null; do
+        for i in $(seq 0 3); do
+            printf "\r\e[36m[%s]\e[0m %s" "${spin_chars:$i:1}" "$task_message"
+            sleep 0.1
+        done
+    done
+
+    # Capture the exit code of the background process
+    wait $pid
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        printf "\r\e[32m[Success]\e[0m %s\n" "$task_message"
+        return 0
+    else
+        printf "\r\e[31m[Error]\e[0m %s (Exit code: %d)\n" "$task_message" "$exit_code"
+        printf "\e[31m[!] Check error log: %s\e[0m\n" "$stderr_path"
+        return 1
+    fi
+}
+
+check_paths()
+{
+    if ! [[ -d $ALL_SONGS_PATH ]]
+    then
+        mkdir -p $ALL_SONGS_PATH
+    fi
+    if ! [[ -d $PLAYLISTS_PATH ]]
+    then
+        mkdir -p $PLAYLISTS_PATH
+    fi
+    if ! [[ -d $TEMP_PLAYLIST_PATH ]]
+    then
+        mkdir -p $TEMP_PLAYLIST_PATH
+    else
+        rm -rf $TEMP_PLAYLIST_PATH/* &>/dev/null
+    fi
+    if ! [[ -d $TEMP_ARTIST_PATH ]]
+    then
+        mkdir -p $TEMP_ARTIST_PATH
+    else
+        rm -rf $TEMP_ARTIST_PATH/* &>/dev/null
+    fi
+
+}
+
+play()
+{
+    local \
+        FLAG_shuffle_songs \
+        FLAG_show_cover \
+        FLAG_play_playlist \
+        FLAG_play_artist \
+
+    for arg in $@
+    do
+        case $arg in
+            "-r" | "--random" | "--shuffle")
+                if [[ -n "$FLAG_shuffle" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the shuffle songs flag - \n"
+                    exit 1
+                fi
+                FLAG_shuffle_songs=1
+            ;;
+            "--show-cover")
+                if [[ -n "$FLAG_show_cover" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the show cover flag - \n"
+                    exit 1
+                fi
+                FLAG_show_cover=1
+            ;;
+            "--playlist")
+                if [[ -n "$FLAG_play_playlist" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the play playlist flag - \n"
+                    exit 1
+                fi
+                FLAG_play_playlist=1
+            ;;
+            "-a" | "--artist")
+                if [[ -n "$FLAG_play_artist" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the play artist flag - \n"
+                    exit 1
+                fi
+                FLAG_play_artist=1
+            ;;
+            *)
+                # Support flags starting with '-' or "--" shouldn't reach
+                # the catchall case
+                if [[ $arg =~ ^-{1,2} ]]
+                then
+                    echo "The '$arg' flag isn't supported"
+                    exit 1
+                fi
+            ;;
+        esac
+    done
+
+    if [[ -z "$(ls -A $ALL_SONGS_PATH)" ]]
+    then
+        printf "\n\e[31m[!] No songs in '$ALL_SONGS_PATH'\n  - use the \`music download\` command to download songs\e[0m\n"
+        exit 1
+    fi
+
+    mpv_hide_cover_flag="--no-audio-display"
+    if ((FLAG_show_cover))
+    then
+        unset mpv_hide_cover_flag
+    fi
+
+    declare mpv_shuffle_flag
+    if ((FLAG_shuffle_songs))
+    then
+        mpv_shuffle_flag="--shuffle"
+    fi
+
+    if ((FLAG_play_playlist))
+    then
+        chosen_playlist=$(find $PLAYLISTS_PATH \
+            -maxdepth 1 \
+            -mindepth 1 \
+            -type f \
+            -printf '%f\n' | fzf)
+
+        if ! [[ -n "$chosen_playlist" ]]
+        then
+            printf "\n\e[31m%s\e[0m\n" "[!] You must choose a playlist to play songs from"
+            exit 1
+        fi
+
+        if [[ -z "$(cat "$PLAYLISTS_PATH/$chosen_playlist")" ]]
+        then
+            printf "\n\e[31m%s\e[0m\n" "[!] No songs in '$chosen_playlist'"
+            exit 1
+        fi
+
+        while IFS= read -r line
+        do
+            ln -s "$ALL_SONGS_PATH/$line" $TEMP_PLAYLIST_PATH/ &>/dev/null
+        done < "$PLAYLISTS_PATH/$chosen_playlist"
+
+        mpv $DEFAULT_MPV_FLAGS $mpv_shuffle_flag $mpv_hide_cover_flag $TEMP_PLAYLIST_PATH/*
+        return
+    fi
+
+
+    if (( FLAG_play_artist ))
+    then
+        artists_and_titles="$(mpv \
+            --frames=0 --display-tags=Artist,Title $ALL_SONGS_PATH/*.mp3 \
+            | grep -e "Artist: " -e "Title: ")"
+        
+        if [[ -z "$artists_and_titles" ]]
+        then
+            printf "\n\e[33m%s\e[0m\n" "[!] No artist available. Goodbye."
+            return
+        fi
+
+        chosen_artist=$(echo "$artists_and_titles" \
+            | grep "Artist: " | awk -F': ' '{$1="";print $0}' \
+            | sort -u | fzf)
+
+        if [[ -z "$chosen_artist" ]]
+        then
+            printf "\n\e[33m%s\e[0m\n" "[!] No artist chosen. Goodbye."
+            return
+        fi
+
+        artists_titles="$(echo "$artists_and_titles" \
+            | grep "$chosen_artist" -A 1 --no-group-separator \
+            | grep "Title: " | awk -F': ' '{$1="";print $2}')"
+
+        while IFS= read -r title; do
+            ln -s "$ALL_SONGS_PATH/$title.mp3" $TEMP_ARTIST_PATH/ &>/dev/null
+        done <<< "$artists_titles"
+
+        echo ""
+        mpv $DEFAULT_MPV_FLAGS $mpv_shuffle_flag \
+            $mpv_hide_cover_flag $TEMP_ARTIST_PATH/*
+        return
+    fi
+
+
+    # Only reach this point if no other flags were passed, all 
+    # other if statements should return
+
+    if ((FLAG_shuffle_songs))
+    then
+        mpv $DEFAULT_MPV_FLAGS $mpv_shuffle_flag \
+            $mpv_hide_cover_flag $ALL_SONGS_PATH/*
+        return
+    fi
+
+    chosen_song=$(ls -A $ALL_SONGS_PATH | fzf)
+    if [[ -n "$chosen_song" ]]
+    then
+        mpv $DEFAULT_MPV_FLAGS $mpv_hide_cover_flag \
+            "$ALL_SONGS_PATH/$chosen_song"
+        return
+    fi
+
+    printf "\n\e[33m[!] No songs chosen or flags passed... Goodbye\e[0m\n"
+}
+
+download()
+{
+    local \
+        all_urls \
+
+    for arg in $@
+    do
+        case $arg in
+            *)
+                # Support flags starting with '-' or "--" shouldn't reach
+                # the catchall case
+                if [[ $arg =~ ^-{1,2} ]]
+                then
+                    echo "The '$arg' flag isn't supported"
+                    exit 1
+                fi
+                all_urls+=($arg)
+            ;;
+        esac
+    done
+
+
+    for url in ${all_urls[@]}
+    do
+        if [[ "$url" =~ "playlist" ]]
+        then
+            playlist_id="$(echo $url | awk -F'list=' '{print $2}')"
+
+            printf "\n\e[33m[!] Warning: The playlist task below will almost always falsely report errors. Ignore it.\n\n"
+
+            yt-dlp \
+                --extract-audio \
+                --audio-format mp3 \
+                --embed-metadata \
+                --embed-thumbnail \
+                --add-metadata \
+                --no-playlist \
+                --output "$ALL_SONGS_PATH/%(title)s.%(ext)s" \
+                "$url" >/dev/null 2>>"$STDERR_LOG_PATH" &
+                task_output $! "$STDERR_LOG_PATH" "Downloading Playlist: $playlist_id"
+        else
+            song_id="$(echo $url | awk -F'=' '{print $2}')"
+
+            yt-dlp \
+                --extract-audio \
+                --audio-format mp3 \
+                --embed-metadata \
+                --embed-thumbnail \
+                --add-metadata \
+                --no-playlist \
+                --output "$ALL_SONGS_PATH/%(title)s.%(ext)s" \
+                "$url" >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+                task_output $! "$STDERR_LOG_PATH" "Downloading Song: $song_id"
+        fi
+    done
+
+    rm $ALL_SONGS_PATH/*.webm &>/dev/null
+    rm $ALL_SONGS_PATH/*.part &>/dev/null
+}
+
+playlist()
+{
+    local \
+        playlist \
+        FLAG_list_playlists \
+        FLAG_delete_playlist \
+        FLAG_create_playlist \
+        FLAG_list_playlist_songs \
+        FLAG_playlist_add_songs \
+        FLAG_playlist_remove_songs \
+
+    for arg in $@
+    do
+        case $arg in
+            "-l" | "--list")
+                if [[ -n "$FLAG_list_playlists" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the list playlists flag - \n"
+                    exit 1
+                fi
+                FLAG_list_playlists=1
+            ;;
+            "-c" | "--create")
+                if [[ -n "$FLAG_create_playlist" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the create playlist flag - \n"
+                    exit 1
+                fi
+                FLAG_create_playlist=1
+            ;;
+            "-d" | "--delete")
+                if [[ -n "$FLAG_delete_playlist" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the delete playlist flag - \n"
+                    exit 1
+                fi
+                FLAG_delete_playlist=1
+            ;;
+            "--list-songs")
+                if [[ -n "$FLAG_playlist_list_songs" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the list playlist songs flag - \n"
+                    exit 1
+                fi
+                FLAG_list_playlist_songs=1
+            ;;
+            "--add-songs")
+                if [[ -n "$FLAG_playlist_add_songs" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the playlist add songs flag - \n"
+                    exit 1
+                fi
+                FLAG_playlist_add_songs=1
+            ;;
+            "--remove-songs")
+                if [[ -n "$FLAG_playlist_remove_songs" ]]
+                then
+                    echo -e "\n - [ERROR] duplicated the playlist remove songs flag - \n"
+                    exit 1
+                fi
+                FLAG_playlist_remove_songs=1
+            ;;
+            *)
+                # Support flags starting with '-' or "--" shouldn't reach
+                # the catchall case
+                if [[ $arg =~ ^-{1,2} ]]
+                then
+                    echo "The '$arg' flag isn't supported"
+                    exit 1
+                fi
+                playlist_name+=($arg)
+            ;;
+        esac
+    done
+
+    playlist_name="${playlist_name[@]}"
+
+    if (( FLAG_list_playlists ))
+    then
+        echo ""
+        find $PLAYLISTS_PATH -maxdepth 1 -mindepth 1 -type f -printf '%f\n'
+        return
+    fi
+
+    if (( FLAG_create_playlist ))
+    then
+        touch "$PLAYLISTS_PATH/$playlist_name"
+        return
+    fi
+
+    if (( FLAG_delete_playlist ))
+    then
+        if [[ -n "${playlist_name[@]}" ]]
+        then
+            rm "$PLAYLISTS_PATH/${playlist_name[@]}" &>/dev/null
+            echo -e "\nPlaylist '${playlist_name[@]}' deleted\n"
+            return
+        else
+            chosen_playlist=$(find $PLAYLISTS_PATH \
+                -maxdepth 1 \
+                -mindepth 1 \
+                -type f \
+                -printf '%f\n' | fzf)
+
+            if ! [[ -n "$chosen_playlist" ]]
+            then
+                printf "\n\e[31m%s\e[0m\n" "[!] You must choose a playlist to delete"
+                return
+            fi
+
+            rm "$PLAYLISTS_PATH/$chosen_playlist" &>/dev/null
+            echo -e "\nPlaylist '$chosen_playlist' deleted\n"
+            return
+        fi
+    fi
+
+    if (( FLAG_list_playlist_songs ))
+    then
+        if [[ -n "${playlist_name[@]}" ]]
+        then
+            echo ""
+            cat "$PLAYLISTS_PATH/${playlist_name[@]}"
+            echo ""
+        else
+            chosen_playlist=$(find $PLAYLISTS_PATH \
+                -maxdepth 1 \
+                -mindepth 1 \
+                -type f \
+                -printf '%f\n' | fzf)
+
+            if ! [[ -n "$chosen_playlist" ]]
+            then
+                printf "\n\e[31m%s\e[0m\n" "[!] You must choose a playlist to add songs to"
+                return
+            fi
+
+            echo ""
+            cat "$PLAYLISTS_PATH/$chosen_playlist"
+            echo ""
+        fi
+    fi
+
+    if (( FLAG_playlist_add_songs ))
+    then
+        chosen_playlist=$(find $PLAYLISTS_PATH \
+            -maxdepth 1 \
+            -mindepth 1 \
+            -type f \
+            -printf '%f\n' | fzf)
+
+        if ! [[ -n "$chosen_playlist" ]]
+        then
+            printf "\n\e[31m%s\e[0m\n" "[!] You must choose a playlist to add songs to"
+            return
+        fi
+
+        local songs_actually_added
+
+        while :
+        do
+            unset chosen_song
+            all_songs="$(find $ALL_SONGS_PATH \
+                -maxdepth 1 \
+                -mindepth 1 \
+                -type f \
+                -printf '%f\n')"
+            chosen_song=$(echo -e "done\n$all_songs" | fzf)
+
+            if [[ -n "$chosen_song" && "$chosen_song" != "done" ]]
+            then
+                if ! grep "$chosen_song" "$PLAYLISTS_PATH/$chosen_playlist"
+                then
+                    echo "$chosen_song" >> "$PLAYLISTS_PATH/$chosen_playlist"
+                    songs_actually_added=1
+                fi
+            else
+                break
+            fi
+        done
+
+        if ((songs_actually_added))
+        then
+            echo -e "\nSongs have been added to '$chosen_playlist'\n"
+        else
+            echo -e "\nNo songs added to '$chosen_playlist'\n"
+        fi
+
+        return
+    fi
+
+    if (( FLAG_playlist_remove_songs ))
+    then
+        chosen_playlist=$(find $PLAYLISTS_PATH \
+            -maxdepth 1 \
+            -mindepth 1 \
+            -type f \
+            -printf '%f\n' | fzf)
+
+        if ! [[ -n "$chosen_playlist" ]]
+        then
+            printf "\n\e[31m%s\e[0m\n" "[!] You must choose a playlist to remove songs from"
+            return
+        fi
+
+        local songs_actually_removed
+
+        while :
+        do
+            unset chosen_song
+            playlist_songs="$(cat "$PLAYLISTS_PATH/$chosen_playlist")"
+            chosen_song=$(echo -e "done\n$playlist_songs" | fzf)
+
+            if [[ -n "$chosen_song" && "$chosen_song" != "done" ]]
+            then
+                if grep "$chosen_song" "$PLAYLISTS_PATH/$chosen_playlist"
+                then
+                    playlist_without_removed_song="$(cat "$PLAYLISTS_PATH/$chosen_playlist" \
+                        | grep -v "$chosen_song")"
+                    echo "$playlist_without_removed_song" > "$PLAYLISTS_PATH/$chosen_playlist"
+
+                    songs_actually_removed=1
+                fi
+            else
+                break
+            fi
+        done
+
+        if ((songs_actually_removed))
+        then
+            echo -e "\nSongs have been removed from '$chosen_playlist'\n"
+        else
+            echo -e "\nNo songs removed from '$chosen_playlist'\n"
+        fi
+
+        return
+    fi
+}
+
+check_paths
+
+case $1 in
+    "play")         check_packages;play ${@:2};;
+    "download")     check_packages;download ${@:2};;
+    "playlist")     check_packages;playlist ${@:2};;
+    "version"|"--version") echo "0.1.0";;
+    "--help"|"-h") display_help;;
+    *) 
+        echo -e "\n - [ERROR] Invalid use of the \`music\` command -";
+        display_help
+        exit 1
+        ;;
+esac

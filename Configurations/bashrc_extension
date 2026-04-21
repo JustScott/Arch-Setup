@@ -28,7 +28,6 @@
     export TERM=xterm-256color
 }
 
-
 export PAGER="bat --paging=always --style=plain"
 export EDITOR=nvim
 alias e=$EDITOR
@@ -42,12 +41,7 @@ export HISTSIZE=10000
 alias ehist='history -a;eval "$(hist_fzf)"'
 alias hist="history -a;hist_fzf"
 
-alias up='ping quad9.net -c 4'
 alias newsboat='newsboat -c ~/.config/newsboat/cache.db'
-alias dlynx="lynx -cfg=$HOME/.config/lynx/lynx.cfg"
-
-alias sroot="sudo snapper -c root"
-alias shome="sudo snapper -c home"
 
 alias mf="man \$(ls /usr/share/man/man1 | awk -F. '{print \$1}' | fzf --reverse) 2>/dev/null"
 
@@ -60,55 +54,14 @@ then
     export BROWSER=qutebrowser
 fi
 
-
-if which bemenu &>/dev/null; then
-    alias bemenu-run="bemenu-run --fn 'monospace [14]' -w"
-    alias bemenu="bemenu --fn 'monospace [14]' -w"
-fi
-
-
-if [[ -n "$WAYLAND_DISPLAY" ]]; then
-    if which wlr-randr &>/dev/null
-    then
-        alias laptop_display=disconnect-external-displays
-        alias office_monitor=external_display_only
-        alias 2monitors="wlr-randr --output eDP-1 --off --output DP-10 --on --pos 2256,0 --output DP-9 --on --pos 4176,0"
-        alias 3monitors="wlr-randr --output eDP-1 --on --pos 0,0 --output DP-10 --on --pos 2256,0 --output DP-9 --on --pos 4176,0"
-        
-        if uname -r | grep "pinetab2" &>/dev/null
-        then
-            if wlr-randr | grep "HDMI-A-1" &>/dev/null; then
-                alias 1monitor="wlr-randr --output DSI-1 --off --output HDMI-A-1 --on --pos 0,0"
-                alias 2monitors="wlr-randr --output DSI-1 --on --transform 270 --pos 0,1280 --output HDMI-A-1 --on --pos 0,0"
-                alias 2monitors_other="wlr-randr --output DSI-1 --on --transform 270 --pos 0,1075 --output HDMI-A-1 --on --pos 1280,0"
-        fi
-    fi
-fi
-
-elif which dwm &>/dev/null; then
-    main_monitor="eDP-1"
-    middle_monitor="DP-2-2"
-    right_monitor="DP-2-1"
-    home_monitor="DP-2-2"
-
-    alias 3monitors="set-monitors $main_monitor $middle_monitor $right_monitor"
-    alias 2monitors="set-monitors $middle_monitor $right_monitor;xrandr --output $main_monitor --off"
-    alias 1monitor="set-monitors $main_monitor;xrandr --output $middle_monitor --off --output $right_monitor --off --output $home_monitor --off"
-
-    alias 2home_monitors="set-monitors $main_monitor $home_monitor"
-    alias 1home_monitor="set-monitors $home_monitor; xrandr --output $main_monitor --off"
-fi
-
-
-
 # pacman/yay + fzf
-if which pacman &>/dev/null; then
+if command -v pacman &>/dev/null; then
     # Package list : list all installed packages
     alias pl="pacman -Qq | fzf --preview 'pacman -Qi {}' --layout=reverse --preview-window '70%'"
     # Package search (find) : list all packages   ( 'ps' is taken by system utility )
     alias pf="pacman -Slq | fzf --preview 'pacman -Si {}' --layout=reverse --preview-window '70%'"
 fi
-if which yay &>/dev/null; then
+if command -v yay &>/dev/null; then
     # Package list : list all installed packages
     alias yl="yay -Qq | fzf --preview 'yay -Qi {}' --layout=reverse --preview-window '70%'"
     # Package search (find) : list all packages
@@ -117,18 +70,22 @@ fi
 
 # Saves any running VirtualMachines before shutting down
 safe_shutdown() {
-    { which calcurse || type calcurse; } &>/dev/null && {
-        [[ -f $HOME/.local/share/calcurse/.calcurse.pid ]] && {
-            echo "You need to quit calcurse first.">&2
-            return 1
-        }
-    }
-
-    if { which virsh || type virsh; } &>/dev/null
+    if command -v calcurse &>/dev/null
     then
-        { which vm || type vm; } &>/dev/null && {
+        if [[ -f $HOME/.local/share/calcurse/.calcurse.pid ]]
+        then
+            printf "\n\e[31m%s\e[0m %s\n" "[Error]" \
+                "You need to close calcurse first.">&2
+            return 1
+    fi
+    fi
+
+    if command -v virsh &>/dev/null
+    then
+        if command -v vm &>/dev/null
+        then
             vm save --all
-        }
+        fi
     fi
 
     return 0
@@ -137,12 +94,12 @@ safe_shutdown() {
 shutdown_wrapper() {
     safe_shutdown || return 1
 
+    echo ""
     # Gives the user so many seconds to cancel the shutdown 
     for i in {5..1}; do
-        echo -ne "\rShutting Down In: $i"
+        printf "\r%s \e[1;36m%s\e[0m" "Shutting Down In:" "$i"
         sleep 1
     done
-    echo -e "\n"
 
     shutdown $@ 
 }
@@ -152,12 +109,12 @@ alias shutdown=shutdown_wrapper
 reboot_wrapper() {
     safe_shutdown || return 1
 
-    # Gives the user so many seconds to cancel the shutdown 
+    echo ""
+    # Gives the user so many seconds to cancel the reboot 
     for i in {5..1}; do
-        echo -ne "\rRebooting In: $i"
+        printf "\r%s \e[1;36m%s\e[0m" "Rebooting In:" "$i"
         sleep 1
     done
-    echo -e "\n"
 
     reboot $@
 }
@@ -179,11 +136,6 @@ hist_fzf() {
     done | fzf --reverse)"
 }
 
-dump() {
-    mkdir -p $HOME/notes
-    $EDITOR $HOME/notes/Dump.md
-}
-
 wttr() {
     if [[ -n "$LOCATION" ]]
     then
@@ -192,12 +144,6 @@ wttr() {
         echo "Must set the \$LOCATION variable first!"
         return 1
     fi
-}
-
-htmd() {
-    { which html2text || type html2text; } &>/dev/null \
-        && bat --language=md <(html2text <(curl -L --silent "$1")) \
-        || exit 1
 }
 
 spell() {
@@ -276,105 +222,6 @@ view_plan() {
     else
         printf "\e[31m%s\e[0m" "File '$FILE_PATH' doesn't exist"
     fi
-}
-
-# sets wallpaper
-wp() {
-    new_wallpaper_file_path="$1"
-    wallpaper_file_path=$HOME/.wallpaper
-
-    if ! [[ -f "$new_wallpaper_file_path" ]]
-    then
-        echo "[ERROR] Specified wallpaper path doesn't exist"
-        return 1
-    fi
-
-    if [[ -n "$DISPLAY" && -z "$WAYLAND_DISPLAY" ]]
-    then
-        cp "$new_wallpaper_file_path" $wallpaper_file_path
-        feh --bg-scale $wallpaper_file_path
-    elif [[ -n "$WAYLAND_DISPLAY" ]]
-    then
-        cp "$new_wallpaper_file_path" $wallpaper_file_path
-
-        # Kill existing swaybg command
-        if [[ -f "/tmp/.swaybg_pid" ]];then
-            kill $(cat /tmp/.swaybg_pid)
-            rm /tmp/.swaybg_pid
-        fi
-
-        nohup swaybg --mode fill --image $wallpaper_file_path &>/dev/null & \
-            echo $! > /tmp/.swaybg_pid
-    else
-        echo "[ERROR] Need a graphical environment active to set wallpaper"
-        return 1
-    fi
-}
-
-wpf() {
-    [[ -z "$DISPLAY" && -z "$WAYLAND_DISPLAY" ]] && {
-        echo "[ERROR] Need a graphical environment active to set wallpaper"
-        return 1
-    }
-
-    WALLPAPER_DIRECTORY=$HOME/Pictures/Wallpapers
-    mkdir -p $WALLPAPER_DIRECTORY &>/dev/null
-
-    [[ -f "$HOME/.wallpaper" ]] && cp $HOME/.wallpaper $HOME/.old_wallpaper
-
-    if [[ -n "$WAYLAND_DISPLAY" ]]; then
-        new_wallpaper=$( \
-            find $WALLPAPER_DIRECTORY -type f \
-            | fzf --reverse\
-                --preview="swaybg --mode fill --image {}" \
-                --preview-window=0% \
-        )
-    elif which dwm &>/dev/null; then
-        new_wallpaper=$( \
-            find $WALLPAPER_DIRECTORY -type f \
-            | fzf --reverse\
-                --preview="feh --bg-scale {}" \
-                --preview-window=0% \
-        )
-    fi
-
-
-    if [[ -n "$new_wallpaper" ]]
-    then
-        wp $new_wallpaper
-    else
-        wp $HOME/.old_wallpaper
-    fi
-}
-
-presnap() {
-    description="$1"
-    configs=($(sudo snapper list-configs | awk 'NR>2 {print $1}'))
-    for config in ${configs[@]}
-    do
-        sudo snapper -c $config create -d "$description" -t pre
-    done
-}
-
-postsnap() {
-    description="$1"
-    configs=($(sudo snapper list-configs | awk 'NR>2 {print $1}'))
-    for config in ${configs[@]}
-    do
-        pre_number=$(sudo snapper -c $config list | grep "pre" | grep "$description" | awk '{print $1}')
-        sudo snapper -c $config create -d "$description" -t post --pre-number "$pre_number"
-    done
-}
-
-deletesnap() {
-    description="$1"
-    configs=($(sudo snapper list-configs | awk 'NR>2 {print $1}'))
-    for config in ${configs[@]}
-    do
-        pre_number=$(sudo snapper -c $config list | grep "pre" | grep "$description" | awk '{print $1}')
-        snap_number=$(sudo snapper -c $config list | grep "$pre_number" | grep "$description" | awk -F '|' '{print $1}')
-        sudo snapper -c $config delete $snap_number
-    done
 }
 
 batt() {
@@ -526,88 +373,6 @@ chat()
     ollama run $model
 
     cleanup
-}
-
-theme() {
-    if ! [ -d $HOME/themes ]
-    then
-        echo "No themes directory in $HOME"
-        return 1
-    fi
-
-
-    if { which river || type river; } &>/dev/null
-    then
-        chosen_theme=$(ls $HOME/themes/river | fzf --reverse)
-        cp $HOME/themes/river/$chosen_theme/foot.ini $HOME/.config/foot/foot.ini
-        cp $HOME/themes/river/$chosen_theme/creek.flags $HOME/.river_creek_theme \
-            && restart-creek
-        cp $HOME/themes/river/$chosen_theme/terminal_prompt_theme $HOME/.terminal_prompt_theme
-        wp $HOME/themes/river/$chosen_theme/wallpaper.*
-
-        if { which qutebrowser || type qutebrowser; } &>/dev/null
-        then
-            cp $HOME/themes/river/$chosen_theme/qutebrowser_config.py \
-                ~/.config/qutebrowser/config.py
-            qutebrowser :config-source
-        fi
-
-        clear
-        newgrp
-    fi
-}
-
-change_pkg_version() {
-    sudo -v
-
-    package_name="$(ls /var/cache/pacman/pkg/ | grep -v "zst.sig" | fzf -i)"
-
-    if [[ -n $package_name ]]
-    then
-        sudo pacman -U /var/cache/pacman/pkg/$package_name
-    fi
-}
-
-# Turn off laptop display and turn on external display
-external_display_only() {
-    if [[ -n "$WAYLAND_LAPTOP_DISPLAY_NAME" ]]
-    then
-        display_names=($(wlr-randr | grep -v "^[[:space:]]" | awk '{print $1}'))
-
-        if [[ "${#display_names[@]}" -gt 2 ]]
-        then
-            echo "Too many displays connected"
-            return 1
-        fi
-
-        if echo "${display_names[@]}" | grep "$WAYLAND_LAPTOP_DISPLAY_NAME" &>/dev/null
-        then
-            echo "Turn off all displays"
-            for display in ${display_names[@]}
-            do
-                wlr-randr --output $display --off
-            done
-            for display in ${display_names[@]}
-            do
-                if [[ "$display" != "$WAYLAND_LAPTOP_DISPLAY_NAME" ]]
-                then
-                    echo "Turn on external display: $display"
-                    wlr-randr \
-                        --output "$WAYLAND_LAPTOP_DISPLAY_NAME" --off \
-                        --output $display --on --pos 0,0 &>/dev/null
-                    if { which creek || type creek; } &>/dev/null
-                    then
-                        echo "Restart creek"
-                        restart-creek &>/dev/null
-                    fi
-                    return 0
-                fi
-            done
-        fi
-    else
-        echo "\$WAYLAND_LAPTOP_DISPLAY_NAME variable not set"
-        return 1
-    fi
 }
 
 update_arch_iso() {

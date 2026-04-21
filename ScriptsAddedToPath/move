@@ -1,0 +1,392 @@
+#!/bin/bash
+#
+# move - part of the Arch-Setup project
+# Copyright (C) 2024-2026, JustScott, development@justscott.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+#
+# move is a simple and reliable way to backup and restore your system
+#
+
+BACKUP_FILE_BASENAME=packed_system
+
+DATA_DIRECTORY="${HOME}/.config/move"
+BACKUP_PATHS_FILE="${DATA_DIRECTORY}/backup_paths"
+
+REQUIRED_COMMANDS=(\
+    mkdir grep printf \
+    openssl tar gzip gunzip \
+)
+
+ensure_commands_installed()
+{
+    for cmd in ${REQUIRED_COMMANDS[@]}
+    do
+        if ! command -v $cmd &>/dev/null
+        then
+            printf "\n\n\e[31m%s %s\e[0m\n\n" \
+                "[!] Missing required command: '$cmd'."
+            exit 1
+        fi
+    done
+}
+
+ensure_commands_installed
+
+display_help()
+{
+    printf "\nUsage: move [COMMAND]"
+    printf "\n%s\n" \
+        "Move or backup all your important files in an encrypted .tar.gz.aes archive"
+
+    printf "\nCommands:"
+    printf "\n  %-12s %s" "init" \
+        "creates '$BACKUP_PATHS_FILE' and adds some helpful boilerplate"
+    printf "\n  %-12s %s" "edit" \
+        "opens '$BACKUP_PATHS_FILE' in your \$EDITOR"
+    printf "\n  %-12s %s" "pack" \
+        "'packs' all your files into a single directory or compressed file, ready for moving"
+    printf "\n  %-12s %s" "unpack" \
+        "'unpacks' all your files and places them around the system"
+    printf "\n  %-12s %s" "version" \
+        "Returns version information"
+
+    printf "\n\nExamples:"
+    printf "\n  \`move init\`"
+    printf "\n  \`move edit\`"
+    printf "\n  \`move pack\`"
+    printf "\n  \`move unpack\`\n"
+}
+
+write_boilerplate_backup_file()
+{
+cat << EOF > "$BACKUP_PATHS_FILE"
+# Paths must all be relative from your \$HOME directory ($HOME)
+#  * You can add directories or files
+#  * Create your own (uncommented) paths array to get started
+#
+# Example:
+#
+#paths=(
+#  my_file.txt
+#  Documents/Taxes
+#  Pictures
+#  Desktop/resume.jpg
+#)
+EOF
+}
+
+init()
+{
+    if ! [[ -f "$BACKUP_PATHS_FILE" ]]
+    then
+        if [[ -d "$DATA_DIRECTORY" ]]
+        then
+            if ! mkdir -p "$DATA_DIRECTORY" &>/dev/null
+            then
+                printf "\n\e[31m%s\e[0m %s %s\n" "[Error]" \
+                    "Failed to create config directory: '$DATA_DIRECTORY'," \
+                    "this shouldn't happen...stopping"
+                exit 1
+            fi
+        fi
+
+        if write_boilerplate_backup_file &>/dev/null
+        then
+            printf "\n\e[32m%s\e[0m %s \e[36m%s\e[0m %s\n" "[Success]" \
+                "Created $BACKUP_PATHS_FILE, open it in any editor or run" \
+                "\`move edit\`" "to get started."
+            return 0
+        else
+            printf "\n\e[31m%s\e[0m %s %s\n" "[Error]" \
+                "Failed to write boilerplate example to $BACKUP_PATHS_FILE," \
+                "this shouldn't happen...stopping"
+            exit 1
+        fi
+    else
+        printf "\n\e[33m%s\e[0m %s\n" "[Skipped]" \
+            "'$BACKUP_PATHS_FILE' exists, remove/delete it to initialize a new file"
+        return 0
+    fi
+}
+
+edit()
+{
+    if [[ -z "$EDITOR" ]]
+    then
+        if command -v nvim &>/dev/null
+        then
+            EDITOR=nvim
+        elif command -v vim &>/dev/null
+        then
+            EDITOR=vim
+        elif command -v nano &>/dev/null
+        then
+            EDITOR=nano
+        else
+            printf "\n\e[31m%s\e[0m %s\n" "[Error]" \
+                "No \$EDITOR set. Stopping." \
+            exit 1
+        fi
+    fi
+
+    if [[ -f "$BACKUP_PATHS_FILE" ]]
+    then
+        $EDITOR "$BACKUP_PATHS_FILE"
+    else
+        printf "\n\e[31m%s\e[0m %s %s\n" "[Error]" \
+            "$BACKUP_PATHS_FILE doesn't exist, this shouldn't happen. Stopping"
+    fi
+}
+
+encrypt()
+{
+    filename="$1"
+
+    for attempt in {1..5}
+    do
+        if [[ $attempt -ne 1 ]]
+        then
+            printf "\n%s \e[36m%s\e[0m %s\n" "Attempt" "$attempt" "of 5"
+        fi
+        openssl enc \
+            -a -aes-256-cbc -pbkdf2 --iter 1000000 \
+            -in "$filename.tar.gz" -out "${filename}.tar.gz.aes" 2> /dev/null
+
+        # Only exit the loop if the encryption succeeds
+        if [[ $? == 0 ]]
+        then
+            return 0
+        else
+            printf "\n\n\e[31m%s\e[0m %s\n\n" "[Error]" \
+                "Encryption keys don't match... try again"
+        fi
+    done
+
+    return 1
+}
+
+calcurse_pack()
+{
+    if command -v calcurse &>/dev/null
+    then
+        if calcurse --export > "${HOME}/calcurse.ical" 2>/dev/null
+        then    
+            printf "\n\e[32m%s\e[0m %s\n" "[Success]" \
+                "Exported calcurse data to include in encrypted archive"
+        else
+            printf "\n\e[33m%s\e[0m %s %s\n" "[Skipping]" \
+                "Failed to export calcurse data. Calcurse data won't be" \
+                "included in encrypted archive"
+        fi
+    fi
+}
+
+pack()
+{
+    if ! [[ -f "$BACKUP_PATHS_FILE" ]]
+    then
+        printf "\n\e[31m%s\e[0m %s %s\n" "[Error]" \
+            "$BACKUP_PATHS_FILE doesn't exist. Create and populate" \
+            "the file before trying to pack again."
+        exit 1
+    fi
+
+    # Save backup of existing packed file incase the current pack fails
+    if [[ -f "${BACKUP_FILE_BASENAME}.tar.aes.gz" ]] \
+    then
+        cp "${BACKUP_FILE_BASENAME}.tar.aes.gz" \
+            "${BACKUP_FILE_BASENAME}.tar.aes.gz.bak" &>/dev/null
+    fi
+
+    source $BACKUP_PATHS_FILE # imports the 'paths' array
+
+    if calcurse_pack
+    then
+        paths+=(calcurse.ical)
+    fi
+
+    ORIGINAL_PWD="$(pwd)"
+    cd "$HOME" # Ensure the user provided full paths from root
+    # Verify all paths exist
+    for path in ${paths[@]}
+    do
+        if ! [[ -d $path || -f $path ]]
+        then
+            printf "\n\e[31m%s\e[0m %s %s\n" "[Error]" \
+                "'$path' from 'backup_paths' doesn't exist (must provide" \
+                "relative path from \$HOME)"
+            exit 1
+        fi
+    done
+    cd "$ORIGINAL_PWD"
+
+    if tar --create --gzip --directory="$HOME" \
+        --file="${BACKUP_FILE_BASENAME}.tar.gz" ${paths[@]} &>/dev/null
+    then
+        printf "\n\e[36m%s\e[0m %s\n" "Encrypting compressed backup file..."
+        if encrypt "${BACKUP_FILE_BASENAME}"
+        then
+            rm "${BACKUP_FILE_BASENAME}.tar.gz"
+            printf "\n\e[32m%s\e[0m %s\n" "[Success]" \
+                "File packed to: ${BACKUP_FILE_BASENAME}.tar.gz.aes"
+            return 0
+        else
+            printf "\n\e[31m%s\e[0m %s\n" "[Error]" \
+                "Couldn't encrypt compressed file: '${BACKUP_FILE_BASENAME}.tar.gz'"
+        fi
+    else
+        printf "\n\e[31m%s\e[0m %s \e[36m%s\e[0m %s\n" "[Error]" \
+            "Compression failed... make sure you aren't running" \
+            "\`move pack\`" "in a backup directory from backup_paths"
+    fi
+
+    if [[ -f "${BACKUP_FILE_BASENAME}.tar.aes.gz.bak" ]]
+    then
+        cp "${BACKUP_FILE_BASENAME}.tar.aes.gz.bak" \
+            "${BACKUP_FILE_BASENAME}.tar.aes.gz" &>/dev/null
+    fi
+    return 1
+}
+
+decrypt()
+{
+    filename="$1"
+
+    for attempt in {1..5}
+    do
+        if [[ $attempt -ne 1 ]]
+        then
+            printf "\n%s \e[36m%s\e[0m %s\n" "Attempt" "$attempt" "of 5"
+        fi
+
+        openssl enc -d -a -aes-256-cbc -pbkdf2 --iter 1000000 \
+            -in "${filename}.tar.gz.aes" \
+            -out "${filename}.tar.gz" 2> /dev/null
+
+        if tar --list --file="${HOME}/${BACKUP_FILE_BASENAME}.tar.gz" &>/dev/null
+        then
+            return 0
+        else
+            printf "\n\e[31m%s\e[0m %s\n" "[Error]" \
+                "Incorrect decryption key... try again"
+        fi
+    done
+        
+    return 1
+}
+
+calcurse_unpack()
+{
+    if command -v calcurse &>/dev/null
+    then
+        if [[ -f "${HOME}/calcurse.ical" ]]
+        then
+            if ! mkdir -p "${HOME}/.config/calcurse" &>/dev/null
+            then
+                printf "\n\e[31m%s\e[0m %s %s\n" "[Error]" \
+                    "Failed to create config directory: '${HOME}/.config/calcurse'," \
+                    "this shouldn't happen. Stopping"
+                exit 1
+            fi
+            # Create a new backup on every unpack, as to not lose any data by accident
+            calcurse_backup_file_path="${HOME}/.config/calcurse/calcurse-$(date +"%B-%e_%H-%M-%S").ical.bak"
+            if calcurse --export > "$calcurse_backup_file_path" 2>/dev/null
+            then
+                printf "\n\e[32m%s\e[0m %s %s\n" "[Success]" \
+                    "Created a backup of your existing calcurse" \
+                    "ical data at: '$calcurse_backup_file_path'"
+
+                if [[ -d "${HOME}/.local/share/calcurse" ]]
+                then
+                    if ! rm -rf "${HOME}/.local/share/calcurse/*" &>/dev/null
+                    then
+                        printf "\n\e[31m%s\e[0m %s %s\n" "[Error]" \
+                            "Failed to remove existing calcurse data." \
+                            "Stopping to prevent data duplication."
+                    fi
+                fi
+            fi
+
+            if calcurse --import "${HOME}/calcurse.ical" &>/dev/null
+            then
+                printf "\n\e[32m%s\e[0m %s\n" "[Success]" \
+                    "Packed calcurse.ical file imported!"
+                return 0
+            else
+                printf "\n\e[31m%s\e[0m %s %s\n" "[Error]" \
+                    "Failed to import calcurse ical data stored at:" \
+                    "'${HOME}/calcurse.ical'"
+                return 1
+            fi
+        fi
+    fi
+}
+
+unpack()
+{
+    if ! [[ -f "${BACKUP_FILE_BASENAME}.tar.gz.aes" ]]
+    then
+        printf "\n\n\e[31m%s\e[0m %s\n\n" "[Error]" \
+            "No '${BACKUP_FILE_BASENAME}.tar.gz.aes' file found, exiting..."
+        return 1
+    fi
+
+    printf "\n\e[36m%s\e[0m %s\n" "Decrypting backup file..."
+    if decrypt "${BACKUP_FILE_BASENAME}"
+    then
+        printf "\n\e[32m%s\e[0m %s\n" "[Success]" \
+            "File decrypted to ${BACKUP_FILE_BASENAME}.tar.gz"
+    else
+        printf "\n\e[31m%s\e[0m %s\n" "[Error]" \
+            "Couldn't decrypt file: '${BACKUP_FILE_BASENAME}.tar.gz.aes'"
+        exit 1
+    fi
+
+    if tar --extract --directory="$HOME" \
+        --file="${BACKUP_FILE_BASENAME}.tar.gz" &>/dev/null
+    then
+        rm "${BACKUP_FILE_BASENAME}.tar.gz" &>/dev/null
+        printf "\n\e[32m%s\e[0m %s\n" "[Success]" \
+            "Unpacked: '$BACKUP_FILE_BASENAME.tar.gz'"
+
+        calcurse_unpack
+
+        return 0
+    else
+        printf "\n\e[31m%s\e[0m %s \e[36m%s %s %s %s\e[0m\n" "[Error]" \
+            "Failed to decompress the unencrypted '${BACKUP_FILE_BASENAME}.tar.gz' file." \
+            "If your \$HOME directory (your username) has changed since you've" \
+            "created ${BACKUP_FILE_BASENAME}.tar.gz.aes, consider changing your" \
+            "users home directory temporarily for the unpack. You can then run" \
+            "'move pack' to create a new pack file with your current \$HOME directory."
+        return 1
+    fi
+}
+
+case $1 in
+    "init")          init;;
+    "edit")          edit;;
+    "pack")          pack;;
+    "unpack")        unpack;;
+    "version"|"--version") echo "0.1.0";;
+    ""|"--help"|"-h") display_help;;
+    *) 
+        printf "\n\e[31m%s\e[0m %s\n" "[Error]" \
+            "Invalid use of the \`move\` command"
+        display_help
+        exit 1
+        ;;
+esac

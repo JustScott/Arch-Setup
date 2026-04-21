@@ -21,14 +21,13 @@
 #  throughout the system.
 #
 
-PRETTY_OUTPUT_LIBRARY=pretty_output_library.sh
+PRETTY_OUTPUT_LIBRARY="./GeneralLibraries/pretty_output_library.sh"
 
-if ! source ./$PRETTY_OUTPUT_LIBRARY &>/dev/null
+if ! source "$PRETTY_OUTPUT_LIBRARY" &>/dev/null
 then
-    printf "\n\e[31m%s\n%s\e[0m\n\n" \
-        "[!] Cannot source library, this shouldn't happen." \
-        "    Avoid running install_configurations.sh directly."
-    exit 4
+    printf "\n\e[31m%s\e[0m %s\n" "[Error]" \
+        "Could'nt source '$PRETTY_OUTPUT_LIBRARY', this shouldn't happen. Stopping."
+    exit 1
 fi
 
 CONFIGS_DIRECTORY="$(pwd)/Configurations"
@@ -113,52 +112,6 @@ then
     fi
 fi
 
-# We can presume X to be running if wayland isnt, and the
-# $DISPLAY variable has value
-if [[ -z $WAYLAND_DISPLAY && $DISPLAY ]]
-then
-    if ! [[ -L "$HOME/.xinitrc" ]]
-    then
-        ln -sf $CONFIGS_DIRECTORY/.xinitrc $HOME/.xinitrc \
-            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" \
-            "Create soft link to '\$HOME/.xinitrc'"
-    fi
-fi
-
-if { which river || type river; } &>/dev/null
-then
-    if ! [[ -d "$HOME/.config/river" && -L "$HOME/.config/river/init" ]]
-    then
-        {
-            mkdir -p $HOME/.config/river
-            ln -sf $CONFIGS_DIRECTORY/river/init $HOME/.config/river/
-        } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" \
-            "Create soft link to '\$HOME/.config/river/init'"
-    fi
-
-    if ! [[ -d "$HOME/themes" ]]
-    then
-        ln -sf $CONFIGS_DIRECTORY/themes $HOME/themes \
-            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Install river themes"
-    fi
-fi
-
-if { which foot || type foot; } &>/dev/null
-then
-    if ! [[ -d "$HOME/.config/foot" && -L "$HOME/.config/foot/foot.ini" ]]
-    then
-        {
-            mkdir -p $HOME/.config/foot
-            ln -sf $CONFIGS_DIRECTORY/foot/foot.ini $HOME/.config/foot/
-        } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" \
-            "Create soft link to '\$HOME/.config/foot/foot.ini'"
-    fi
-fi
-
 if { which lf || type lf; } &>/dev/null
 then
     if ! [[ \
@@ -176,19 +129,6 @@ then
     fi
 fi
 
-if { which lynx || type lynx; } &>/dev/null
-then
-    if ! [[ -d "$HOME/.config/lynx" && -L "$HOME/.config/lynx/lynx.cfg" ]]
-    then
-        {
-            mkdir -p $HOME/.config/lynx
-            ln -sf $CONFIGS_DIRECTORY/lynx/lynx.cfg $HOME/.config/lynx/
-        } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" \
-            "Create soft link to '\$HOME/.config/lynx/lynx.cfg'"
-    fi
-fi
-
 if { which calcurse || type calcurse; } &>/dev/null
 then
     if ! [[ -d "$HOME/.config/calcurse" && -L "$HOME/.config/calcurse/conf" ]]
@@ -199,19 +139,6 @@ then
         } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Create soft link to '\$HOME/.config/calcurse/conf'"
-    fi
-fi
-
-if { which picom || type picom; } &>/dev/null
-then
-    if ! [[ -d "$HOME/.config/picom" && -L "$HOME/.config/picom/picom.conf" ]]
-    then
-        {
-            mkdir -p $HOME/.config/picom
-            ln -sf $CONFIGS_DIRECTORY/picom/picom.conf $HOME/.config/picom
-        } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" \
-            "Create soft link to '\$HOME/.config/picom/picom.conf'"
     fi
 fi
 
