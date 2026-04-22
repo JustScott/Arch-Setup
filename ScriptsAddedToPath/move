@@ -92,7 +92,7 @@ init()
 {
     if ! [[ -f "$BACKUP_PATHS_FILE" ]]
     then
-        if [[ -d "$DATA_DIRECTORY" ]]
+        if ! [[ -d "$DATA_DIRECTORY" ]]
         then
             if ! mkdir -p "$DATA_DIRECTORY" &>/dev/null
             then
