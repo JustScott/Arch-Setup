@@ -27,7 +27,7 @@ BACKUP_PATHS_FILE="${DATA_DIRECTORY}/backup_paths"
 
 REQUIRED_COMMANDS=(\
     mkdir grep printf \
-    openssl tar gzip gunzip \
+    age tar gzip gunzip \
 )
 
 ensure_commands_installed()
@@ -49,7 +49,7 @@ display_help()
 {
     printf "\nUsage: move [COMMAND]"
     printf "\n%s\n" \
-        "Move or backup all your important files in an encrypted .tar.gz.aes archive"
+        "Move or backup all your important files in an encrypted .tar.gz.age archive"
 
     printf "\nCommands:"
     printf "\n  %-12s %s" "init" \
@@ -161,9 +161,8 @@ encrypt()
         then
             printf "\n%s \e[36m%s\e[0m %s\n" "Attempt" "$attempt" "of 5"
         fi
-        openssl enc \
-            -a -aes-256-cbc -pbkdf2 --iter 1000000 \
-            -in "$filename.tar.gz" -out "${filename}.tar.gz.aes" 2> /dev/null
+
+        age --passphrase "${filename}.tar.gz" > "${filename}.tar.gz.age"
 
         # Only exit the loop if the encryption succeeds
         if [[ $? == 0 ]]
@@ -171,7 +170,7 @@ encrypt()
             return 0
         else
             printf "\n\n\e[31m%s\e[0m %s\n\n" "[Error]" \
-                "Encryption keys don't match... try again"
+                "Encryption failed... try again"
         fi
     done
 
@@ -205,10 +204,10 @@ pack()
     fi
 
     # Save backup of existing packed file incase the current pack fails
-    if [[ -f "${BACKUP_FILE_BASENAME}.tar.aes.gz" ]] \
+    if [[ -f "${BACKUP_FILE_BASENAME}.tar.gz.age" ]] \
     then
-        cp "${BACKUP_FILE_BASENAME}.tar.aes.gz" \
-            "${BACKUP_FILE_BASENAME}.tar.aes.gz.bak" &>/dev/null
+        cp "${BACKUP_FILE_BASENAME}.tar.gz.age" \
+            "${BACKUP_FILE_BASENAME}.tar.gz.age.bak" &>/dev/null
     fi
 
     source $BACKUP_PATHS_FILE # imports the 'paths' array
@@ -241,7 +240,7 @@ pack()
         then
             rm "${BACKUP_FILE_BASENAME}.tar.gz"
             printf "\n\e[32m%s\e[0m %s\n" "[Success]" \
-                "File packed to: ${BACKUP_FILE_BASENAME}.tar.gz.aes"
+                "File packed to: ${BACKUP_FILE_BASENAME}.tar.gz.age"
             return 0
         else
             printf "\n\e[31m%s\e[0m %s\n" "[Error]" \
@@ -253,10 +252,10 @@ pack()
             "\`move pack\`" "in a backup directory from backup_paths"
     fi
 
-    if [[ -f "${BACKUP_FILE_BASENAME}.tar.aes.gz.bak" ]]
+    if [[ -f "${BACKUP_FILE_BASENAME}.tar.gz.age.bak" ]]
     then
-        cp "${BACKUP_FILE_BASENAME}.tar.aes.gz.bak" \
-            "${BACKUP_FILE_BASENAME}.tar.aes.gz" &>/dev/null
+        cp "${BACKUP_FILE_BASENAME}.tar.gz.age.bak" \
+            "${BACKUP_FILE_BASENAME}.tar.gz.age" &>/dev/null
     fi
     return 1
 }
@@ -272,9 +271,7 @@ decrypt()
             printf "\n%s \e[36m%s\e[0m %s\n" "Attempt" "$attempt" "of 5"
         fi
 
-        openssl enc -d -a -aes-256-cbc -pbkdf2 --iter 1000000 \
-            -in "${filename}.tar.gz.aes" \
-            -out "${filename}.tar.gz" 2> /dev/null
+        age --decrypt "${filename}.tar.gz.age" > "${filename}.tar.gz"
 
         if tar --list --file="${HOME}/${BACKUP_FILE_BASENAME}.tar.gz" &>/dev/null
         then
@@ -337,10 +334,10 @@ calcurse_unpack()
 
 unpack()
 {
-    if ! [[ -f "${BACKUP_FILE_BASENAME}.tar.gz.aes" ]]
+    if ! [[ -f "${BACKUP_FILE_BASENAME}.tar.gz.age" ]]
     then
         printf "\n\n\e[31m%s\e[0m %s\n\n" "[Error]" \
-            "No '${BACKUP_FILE_BASENAME}.tar.gz.aes' file found, exiting..."
+            "No '${BACKUP_FILE_BASENAME}.tar.gz.age' file found, exiting..."
         return 1
     fi
 
@@ -351,7 +348,7 @@ unpack()
             "File decrypted to ${BACKUP_FILE_BASENAME}.tar.gz"
     else
         printf "\n\e[31m%s\e[0m %s\n" "[Error]" \
-            "Couldn't decrypt file: '${BACKUP_FILE_BASENAME}.tar.gz.aes'"
+            "Couldn't decrypt file: '${BACKUP_FILE_BASENAME}.tar.gz.age'"
         exit 1
     fi
 
@@ -369,7 +366,7 @@ unpack()
         printf "\n\e[31m%s\e[0m %s \e[36m%s %s %s %s\e[0m\n" "[Error]" \
             "Failed to decompress the unencrypted '${BACKUP_FILE_BASENAME}.tar.gz' file." \
             "If your \$HOME directory (your username) has changed since you've" \
-            "created ${BACKUP_FILE_BASENAME}.tar.gz.aes, consider changing your" \
+            "created ${BACKUP_FILE_BASENAME}.tar.gz.age, consider changing your" \
             "users home directory temporarily for the unpack. You can then run" \
             "'move pack' to create a new pack file with your current \$HOME directory."
         return 1
