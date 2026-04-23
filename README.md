@@ -15,11 +15,15 @@ For installing specific packages that may require more setup than a single
 pacman command
 
 ```bash
-# You can now run
+# So you can run:
 arch install docker
 
-# Instead of 
-bash docker.sh
+# Instead of:
+#
+# sudo pacman -Sy docker docker-compose
+# sudo systemctl enable --now docker
+# sudo usermod -aG docker $USER
+#
 ```
 You can list available packages with:
 ```bash
@@ -28,7 +32,7 @@ arch install --list
 But the best feature of arch in my opinion, is the ability to cleanly remove
 these packages from your system:
 ```bash
-arch uninstall qemu
+arch uninstall docker
 ```
 
 ### `arch` setup
