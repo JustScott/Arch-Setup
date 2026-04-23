@@ -66,17 +66,17 @@ add_to_path() {
     then
         bashrc_line="export arch_setup_directory=\"$(pwd)\""
 
-        if ! [[ -f "$HOME/.bashrc" ]]
+        if ! [[ -f "${HOME}/.bashrc" ]]
         then
-            if touch $HOME/.bashrc &>/dev/null
+            if touch "${HOME}/.bashrc" &>/dev/null
             then
                 printf "\n\e[32m%s\e[0m\n" \
-                    "Created the file $HOME/.bashrc"
+                    "Created the file ${HOME}/.bashrc"
             else
                 printf "\n\e[31m%s\n%s\n%s\e[0m\n" \
                     "[!] Your user doesn't have a .bashrc in there \$HOME" \
                     "    directory, and attempts at creating one failed. A" \
-                    "    $HOME/.bashrc file is required for this script."
+                    "    ${HOME}/.bashrc file is required for this script."
                 exit 7
             fi
         fi
@@ -89,11 +89,11 @@ add_to_path() {
                 's,export arch_setup_directory=".*\/Arch-Setup"$,'"$bashrc_line"',' \
                 $HOME/.bashrc
         else
-            echo -e "\n$bashrc_line" >> $HOME/.bashrc
+            echo -e "\n$bashrc_line" >> "${HOME}/.bashrc"
         fi
 
         # Check that the line was added without issue
-        if grep "$bashrc_line" $HOME/.bashrc &>/dev/null
+        if grep "$bashrc_line" "${HOME}/.bashrc" &>/dev/null
         then
             printf "\n\e[32m%s\e[0m\n" \
                 "Added '$PROJECT_NAME' directory path to '.bashrc'"
@@ -105,54 +105,52 @@ add_to_path() {
         fi
 
         # Create a .bin directory in $HOME for the arch script
-        if ! [[ -f "./$SCRIPT_NAME" ]]
+        if ! [[ -f "./${SCRIPT_NAME}" ]]
         then
             printf "\n\e[31m%s\n%s\e[0m\n" \
-                "[!] './$SCRIPT_NAME' not found. Move to the '$PROJECT_NAME'" \
+                "[!] './${SCRIPT_NAME}' not found. Move to the '$PROJECT_NAME'" \
                 "    directory containing the '$SCRIPT_NAME' script and try again"
             exit 8
         fi
 
-        chmod u+x "./$SCRIPT_NAME"
+        chmod u+x "./${SCRIPT_NAME}"
 
-        if ! [[ -d $HOME/.bin ]]
+        if ! [[ -d "${HOME}/.bin" ]]
         then
-            printf "\n\e[33m%s\e[0m" "[!] $HOME/.bin directory doesn't exit"
-
-            if mkdir -p $HOME/.bin &>/dev/null
+            if mkdir -p "${HOME}/.bin" &>/dev/null
             then
-                printf "\n\e[32m%s\e[0m" "Created $HOME/.bin"
+                printf "\n\e[32m%s\e[0m" "Created ${HOME}/.bin"
             else
-                printf "\n\e[31m%s\e[0m\n" "[!] Failed to create $HOME/.bin"
+                printf "\n\e[31m%s\e[0m\n" "[!] Failed to create ${HOME}/.bin"
                 exit 7
             fi
         fi
 
-        if ! [[ -L "$HOME/.bin/$SCRIPT_NAME" ]]
+        if ! cat "${HOME}/.bin/${SCRIPT_NAME}" &>/dev/null
         then
-            if ln -s "$(pwd)/$SCRIPT_NAME" $HOME/.bin/ &>/dev/null
+            if ln -sf "$(pwd)/${SCRIPT_NAME}" "${HOME}/.bin/" &>/dev/null
             then
                 printf "\n\e[32m%s\e[0m\n" \
-                    "Created softlink to '$SCRIPT_NAME' in $HOME/.bin"
+                    "Created softlink to '$SCRIPT_NAME' in ${HOME}/.bin"
             else
                 printf "\n\e[31m%s\e[0m\n" \
-                    "[!] Failed to create softlink to '$SCRIPT_NAME' in $HOME/.bin"
+                    "[!] Failed to create softlink to '$SCRIPT_NAME' in ${HOME}/.bin"
                 exit 7
             fi
         fi
 
-        path_modification="export PATH=\"\$PATH:$HOME/.bin\""
+        path_modification="export PATH=\"\$PATH:\$HOME/.bin\""
 
-        if ! grep "^$path_modification$" $HOME/.bashrc &>/dev/null
+        if ! grep "^$path_modification$" "${HOME}/.bashrc" &>/dev/null
         then
-            echo -e "\n$path_modification" >> $HOME/.bashrc
+            echo -e "\n$path_modification" >> "${HOME}/.bashrc"
         fi
 
         # Check that the line was added without issue
-        if ! grep "$path_modification" $HOME/.bashrc &>/dev/null
+        if ! grep "$path_modification" "${HOME}/.bashrc" &>/dev/null
         then
             printf "\n\e[31m%s\n%s\e[0m\n" \
-                "[!] Could not edit path in '$HOME/.bashrc'..." \
+                "[!] Could not edit path in '${HOME}/.bashrc'..." \
                 "    Check the files permissions and try again"
             exit 7
         fi

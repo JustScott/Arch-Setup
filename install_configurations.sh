@@ -32,6 +32,25 @@ fi
 
 CONFIGS_DIRECTORY="$(pwd)/Configurations"
 
+REQUIRED_COMMANDS=(mkdir grep printf curl)
+
+ensure_commands_installed()
+{
+    for cmd in ${REQUIRED_COMMANDS[@]}
+    do
+        if ! command -v $cmd &>/dev/null
+        then
+            printf "\n\n\e[31m%s %s\e[0m\n\n" \
+                "[!] Missing required command: '$cmd'."
+            return 1
+        fi
+    done
+
+    return 0
+}
+
+ensure_commands_installed || exit $?
+
 configure_bashrc_extension()
 {
     local extension_path="${CONFIGS_DIRECTORY}/bashrc_extension"
@@ -42,6 +61,17 @@ configure_bashrc_extension()
             "Source bashrc_extension in ${HOME}/.bashrc"
     fi
 } 
+
+configure_bashrc_secrets()
+{
+    local secrets_path="\$HOME/.bashrc_secrets"
+    if ! grep "^source $secrets_path$" "${HOME}/.bashrc" &>/dev/null
+    then
+        echo "source $secrets_path" >> "${HOME}/.bashrc" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Source bashrc_extension in ${HOME}/.bashrc"
+    fi
+}
 
 configure_vim()
 {
@@ -158,6 +188,7 @@ configure_tool newsboat config urls
 configure_tool qutebrowser blocked-hosts quickmarks
 
 configure_bashrc_extension
+configure_bashrc_secrets
 configure_vim
 configure_vim_plug
 configure_git

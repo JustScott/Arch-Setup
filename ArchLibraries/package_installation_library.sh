@@ -327,10 +327,13 @@ install_rust()
         [[ $? -ne 0 ]] && return 1
     fi
 
-    if ! cat $HOME/.bashrc | grep "export PATH=\"\$PATH:\$HOME/.cargo/bin\"" &>/dev/null
+    if ! cat "${HOME}/.bashrc" \
+        | grep "export PATH=\"\$PATH:\$HOME/.cargo/bin\"" &>/dev/null
     then
-        echo -e "\nexport PATH=\"\$PATH:\$HOME/.cargo/bin\"" >> $HOME/.bashrc
-        task_output $! "$STDERR_LOG_PATH" "Add cargo binaries to PATH (in .bashrc)"
+        echo "export PATH=\"\$PATH:\$HOME/.cargo/bin\"" \
+            >> "${HOME}/.bashrc"
+        task_output $! "$STDERR_LOG_PATH" \
+            "Add cargo binaries to PATH (in .bashrc)"
         [[ $? -ne 0 ]] && return 1
     fi
 
