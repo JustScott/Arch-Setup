@@ -259,6 +259,12 @@ pack()
         cp "${BACKUP_FILE_BASENAME}.tar.gz.age.bak" \
             "${BACKUP_FILE_BASENAME}.tar.gz.age" &>/dev/null
     fi
+
+    if [[ -f "{$HOME}/calcurse.ical" ]]
+    then
+        rm "{$HOME}/calcurse.ical" &>/dev/null
+    fi
+
     return 0
 }
 
@@ -360,10 +366,6 @@ unpack()
         rm "${BACKUP_FILE_BASENAME}.tar.gz" &>/dev/null
         printf "\n\e[32m%s\e[0m %s\n" "[Success]" \
             "Unpacked: '$BACKUP_FILE_BASENAME.tar.gz'"
-
-        calcurse_unpack
-
-        return 0
     else
         printf "\n\e[31m%s\e[0m %s \e[36m%s %s %s %s\e[0m\n" "[Error]" \
             "Failed to decompress the unencrypted '${BACKUP_FILE_BASENAME}.tar.gz' file." \
@@ -373,6 +375,13 @@ unpack()
             "'move pack' to create a new pack file with your current \$HOME directory."
         return 1
     fi
+
+    if calcurse_unpack
+    then
+        rm "${HOME}/calcurse.ical" &>/dev/null
+    fi
+
+    return 0
 }
 
 case $1 in
