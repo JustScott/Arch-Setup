@@ -254,49 +254,25 @@ f() {
 p() {
     pass_command=$1
 
-    copy=false
-    if [[ "$pass_command" == "c" ]]; then
-        copy=true
+    if [[ -n "$2" ]]
+    then
+        printf "\e[31m%s\e[0m %s %s" "[Error]" \
+            "\`p\` is a simple fzf wrapper. For multi word commands," \
+            "use \`pass\`." >&2
+        return 1
     fi
 
-    ORIGINAL_PWD="$PWD"
-    [[ -n "$PASSWORD_STORE_DIR" ]] \
-        && cd $PASSWORD_STORE_DIR \
-        || cd $HOME/.password-store
-
-    fzf_password=$(find . -type f -name "*.gpg" | sed 's/^\.\///; s/\.gpg$//' | fzf --reverse)
-    cd "$ORIGINAL_PWD"
+    fzf_password=$(find "${HOME}/.password-store/" \
+        -type f -name "*.gpg" -printf '%P\n' \
+        | sed 's/^\.\///; s/\.gpg$//' | fzf --reverse)
 
     if [[ -n "$fzf_password" ]]
     then
-        case $pass_command in
-            "")
-                pass show "$fzf_password"
-                return 0
-            ;;
-            "c")
-                password=$(pass "$fzf_password")
-            ;;
-            *)
-                pass $pass_command "$fzf_password"
-                return 0                
-            ;;
-        esac
-
-    fi
-
-    if $copy; then
-        if [[ -n "$WAYLAND_DISPLAY" ]] && echo $password | wl-copy; then
-            echo "Copied with wl-copy! Clearing in 20 seconds"
-            (sleep 20 && echo "" | wl-copy &) &>/dev/null
-        elif which xclip &>/dev/null && echo $password | xclip -selection clipboard; then
-            echo "Copied with xclip! Clearing in 20 seconds"
-            (sleep 20 && echo "" | xclip -selection clipboard &) &>/dev/null
-        else
-            echo "Failed to copy with wl-copy or xclip"
+        if [[ "$pass_command" == 'c' ]]
+        then
+            pass_command="-c"
         fi
-    else
-        [[ -n "$password" ]] && echo "$password"
+        pass $pass_command "$fzf_password"
     fi
 }
 
