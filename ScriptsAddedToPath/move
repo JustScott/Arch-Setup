@@ -316,7 +316,7 @@ calcurse_unpack()
 
                 if [[ -d "${HOME}/.local/share/calcurse" ]]
                 then
-                    if ! rm -rf "${HOME}/.local/share/calcurse/*" &>/dev/null
+                    if ! rm -rf ${HOME}/.local/share/calcurse/* &>/dev/null
                     then
                         printf "\n\e[31m%s\e[0m %s %s\n" "[Error]" \
                             "Failed to remove existing calcurse data." \
@@ -329,6 +329,7 @@ calcurse_unpack()
             then
                 printf "\n\e[32m%s\e[0m %s\n" "[Success]" \
                     "Packed calcurse.ical file imported!"
+                rm -rf "${HOME}/calcurse.ical"
                 return 0
             else
                 printf "\n\e[31m%s\e[0m %s %s\n" "[Error]" \
@@ -376,10 +377,7 @@ unpack()
         return 1
     fi
 
-    if calcurse_unpack
-    then
-        rm "${HOME}/calcurse.ical" &>/dev/null
-    fi
+    calcurse_unpack
 
     return 0
 }
