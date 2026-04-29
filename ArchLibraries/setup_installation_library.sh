@@ -123,13 +123,18 @@ setup_user_scripts()
 }
 remove_setup_user_scripts()
 {
-    if sed -i \
-        '/export PATH=".*Arch-Setup\/ScriptsAddedToPath"/d' $HOME/.bashrc
+    if grep "export PATH=".*Arch-Setup\/ScriptsAddedToPath"" \
+        $HOME.bashrc &>/dev/null
     then
-        printf "\n\e[32m%s\e[0m %s\n" "[Success]" "Remove user_scripts from path"
-    else
-        printf "\n\e[31m%s\e[0m\n" \
-            "[!] Cannot remove user scripts from \$PATH... this shouldn't happen"
+        if sed -i \
+            '/export PATH=".*Arch-Setup\/ScriptsAddedToPath"/d' $HOME/.bashrc
+        then
+            printf "\n\e[32m%s\e[0m %s\n" "[Success]" \
+                "Remove user_scripts from path"
+        else
+            printf "\n\e[31m%s\e[0m\n" \
+                "[!] Cannot remove user-scripts from \$PATH. This shouldn't happen."
+        fi
     fi
 
     return 0
@@ -943,8 +948,8 @@ THREE_D_PRINTING_PACKAGES=(freecad prusa-slicer)
 setup_3d_printing()
 {
     if ! pacman -Q ${THREE_D_PRINTING_PACKAGES[@]} &>/dev/null; then
-        sudo -v
-        sudo pacman -Sy --noconfirm ${THREE_D_PRINTING_PACKAGES[@]} \
+        sudo -v || return 1
+        yes | sudo pacman -Sy --noconfirm ${THREE_D_PRINTING_PACKAGES[@]} \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Install CAD and Slicer tools"
         [[ $? -ne 0 ]] && exit 1
