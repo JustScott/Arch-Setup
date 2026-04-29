@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# package_installation_library.sh - part of the Arch-Setup project
+# package_installation_library.sh - part of the Linux-Setup project
 # Copyright (C) 2025-2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-PROJECT_NAME="Arch-Setup"
+PROJECT_NAME="Linux-Setup"
 SCRIPT_NAME="please"
 
 PRETTY_OUTPUT_LIBRARY="./GeneralLibraries/pretty_output_library.sh"

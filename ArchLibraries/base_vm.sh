@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# base_vm.sh - part of the Arch-Setup project
+# base_vm.sh - part of the Linux-Setup project
 # Copyright (C) 2023-2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 if [[ $(basename $PWD) != "MachinePresets" ]]
 then
     printf "\e[31m%s\e[0m\n" \
-        "[Error] Please run script from the Arch-Setup/MachinePresets directory"
+        "[Error] Please run script from the Linux-Setup/MachinePresets directory"
     exit 1
 fi
 

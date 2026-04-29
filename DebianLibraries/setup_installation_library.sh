@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# setup_installation_library.sh - part of the Arch-Setup project
+# setup_installation_library.sh - part of the Linux-Setup project
 # Copyright (C) 2025-2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -97,7 +97,7 @@ remove_setup_host_packages()
 
 setup_user_scripts()
 {
-    scripts_dir="$arch_setup_directory/ScriptsAddedToPath"
+    scripts_dir="$linux_setup_directory/ScriptsAddedToPath"
     bashrc_line="export PATH=\"\$PATH:$scripts_dir\""
 
     if ! grep "$bashrc_line" $HOME/.bashrc &>/dev/null
@@ -112,8 +112,8 @@ setup_user_scripts()
 }
 remove_setup_user_scripts()
 {
-    if grep "export PATH=".*Arch-Setup\/ScriptsAddedToPath"" \
-        $HOME.bashrc &>/dev/null
+    if grep "export PATH=".*${PROJECT_NAME}\/ScriptsAddedToPath"" \
+        "${HOME}/.bashrc" &>/dev/null
     then
         if sed -i \
             "/export PATH=\".*${PROJECT_NAME}\/ScriptsAddedToPath/d" \

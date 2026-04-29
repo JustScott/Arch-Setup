@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# install.sh - part of the Arch-Setup project
+# install.sh - part of the Linux-Setup project
 # Copyright (C) 2023-2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify

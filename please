@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# please - part of the Arch-Setup project
+# please - part of the Linux-Setup project
 # Copyright (C) 2025-2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,12 +17,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #
-# CLI tool to replace Arch-Setup and Arch-Configurations. It will
-#  make the process of installing software and having them automatically
-#  configured to my setup much easier.
+# A CLI tool for making the process of setting up your system repeatable
+#  and reversible.
 #
 
-PROJECT_NAME="Arch-Setup"
+PROJECT_NAME="Linux-Setup"
 SCRIPT_NAME="please"
 
 REQUIRED_PACKAGES=(
@@ -84,10 +83,10 @@ CONFIG_INSTALL_SCRIPT=./install_configurations.sh
 
 if ! echo "$@" | grep "add-to-path" &>/dev/null
 then
-    if ! [[ -d $arch_setup_directory ]]
+    if ! [[ -d "$linux_setup_directory" ]]
     then
         printf "\n\e[31m%s\n%s\n%s\e[0m\n" \
-            "[!] '\$arch_setup_directory' variable not set, or not set to" \
+            "[!] '\$linux_setup_directory' variable not set, or not set to" \
             "    the correct directory path. Either way, \`cd\` into the" \
             "    '$PROJECT_NAME' directory and run \`$SCRIPT_NAME add-to-path\`."
         exit $4
@@ -97,7 +96,7 @@ fi
 add_to_path() {
     if [[ $(basename $(pwd)) == "$PROJECT_NAME" ]]
     then
-        bashrc_line="export arch_setup_directory=\"$(pwd)\""
+        bashrc_line="export linux_setup_directory=\"$(pwd)\""
 
         if ! [[ -f "${HOME}/.bashrc" ]]
         then
@@ -114,11 +113,11 @@ add_to_path() {
             fi
         fi
 
-        if grep "export arch_setup_directory=\"" "${HOME}/.bashrc" \
+        if grep "export linux_setup_directory=\"" "${HOME}/.bashrc" \
             | grep "/$PROJECT_NAME\"$" &>/dev/null
         then
             sed -i \
-                "/^export arch_setup_directory=\".*/c\\${bashrc_line}" \
+                "/^export linux_setup_directory=\".*/c\\${bashrc_line}" \
                 "${HOME}/.bashrc"
         else
             echo -e "\n$bashrc_line" >> "${HOME}/.bashrc"
@@ -243,13 +242,13 @@ check_packages()
 
 display_help() {
     printf "\nUsage: $SCRIPT_NAME [COMMAND]"
-    printf "\n\n  %s\n  %s" \
-        "Simplifies Arch-Setup and Arch-Configurations into a single" \
-        "CLI tool with many more automated features."
+    printf "\n\n  %s %s" \
+        "A CLI tool for making the process of setting up your system" \
+        "repeatable and reversible."
 
     printf "\n\nCommands:"
     printf "\n  %-15s %-1s" "add-to-path" \
-        "Allow executing the \`arch\` script from anywhere without issue"
+        "Allow executing the \`please\` script from anywhere without issue"
     printf "\n  %-15s %-1s" "install" "Install supported software"
     printf "\n  %-15s %-1s" "uninstall" "Cleanly uninstall supported software"
     printf "\n  %-15s %-1s" "setup" "Setup the system in specific ways"
@@ -856,32 +855,32 @@ case $1 in
     "add-to-path")         add_to_path ${@:2};exit ;exit 00;;
 esac
 
-cd $arch_setup_directory
+cd $linux_setup_directory
 check_library_files_exist
 
 case $1 in
     "install")
         check_packages || exit $?
         install ${@:2}
-        cd $arch_setup_directory
+        cd $linux_setup_directory
         bash $CONFIG_INSTALL_SCRIPT
     ;;
     "uninstall")
         check_packages || exit $?
         uninstall ${@:2}
-        cd $arch_setup_directory
+        cd $linux_setup_directory
         bash $CONFIG_INSTALL_SCRIPT
     ;;
     "setup")
         check_packages || exit $?
         setup ${@:2}
-        cd $arch_setup_directory
+        cd $linux_setup_directory
         bash $CONFIG_INSTALL_SCRIPT
     ;;
     "remove-setup")
         check_packages || exit $?
         remove_setup ${@:2}
-        cd $arch_setup_directory
+        cd $linux_setup_directory
         bash $CONFIG_INSTALL_SCRIPT
     ;;
     "add-configs")

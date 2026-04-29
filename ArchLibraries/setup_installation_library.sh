@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# setup_installation_library.sh - part of the Arch-Setup project
+# setup_installation_library.sh - part of the Linux-Setup project
 # Copyright (C) 2025-2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-PROJECT_NAME="Arch-Setup"
+PROJECT_NAME="Linux-Setup"
 SCRIPT_NAME="please"
 
 PRETTY_OUTPUT_LIBRARY="./GeneralLibraries/pretty_output_library.sh"
@@ -102,16 +102,16 @@ remove_setup_host_packages()
 
 setup_user_scripts()
 {
-    if ! [[ -d "$arch_setup_directory" ]]
+    if ! [[ -d "$linux_setup_directory" ]]
     then
         printf "\n\e[31m%s\n%s\n%s\e[0m\n" \
-            "[!] '\$arch_setup_directory' variable not set, or not set to" \
+            "[!] '\$linux_setup_directory' variable not set, or not set to" \
             "    the correct directory path. Either way, \`cd\` into the" \
             "    '$PROJECT_NAME' directory and run \`$SCRIPT_NAME add-to-path\`."
         exit $4
     fi
 
-    scripts_dir="$arch_setup_directory/ScriptsAddedToPath"
+    scripts_dir="$linux_setup_directory/ScriptsAddedToPath"
     bashrc_line="export PATH=\"\$PATH:$scripts_dir\""
 
     if ! grep "$bashrc_line" ${HOME}/.bashrc &>/dev/null
@@ -646,7 +646,7 @@ setup_embedded_rust()
     if ! command -v cargo &>/dev/null
     then
         printf "\n\e[31m%s\e[0m\n" \
-            "[!] cargo not installed, try running \`arch install rust\` first"
+            "[!] cargo not installed, try running \`please install rust\` first"
         return 1
     fi
 
@@ -720,14 +720,14 @@ setup_rust_dioxus()
     if ! command -v cargo &>/dev/null
     then
         printf "\n\e[31m%s\e[0m\n" \
-            "[!] cargo not installed, try running \`arch install rust\` first"
+            "[!] cargo not installed, try running \`please install rust\` first"
         return 1
     fi
 
     if ! command -v yay &>/dev/null
     then
         printf "\n\e[31m%s\e[0m\n" \
-            "[!] yay not installed, try running \`arch install yay\` first"
+            "[!] yay not installed, try running \`please install yay\` first"
         return 1
     fi
 
@@ -825,12 +825,12 @@ setup_rust_dioxus()
     [[ $? -ne 0 ]] && return 1
 
 newgrp android-sdk <<EOF
-cd $arch_setup_directory
+cd $linux_setup_directory
 
 if ! [[ -f "./$PRETTY_OUTPUT_LIBRARY" ]]
 then
     printf "\n\e[31m%s\e[0m\n" \
-        "[!] Cannot source library file, have you ran \`arch add-to-path\`?"
+        "[!] Cannot source library file, have you ran \`please add-to-path\`?"
     exit 1
 fi
 
@@ -866,14 +866,14 @@ remove_setup_rust_dioxus()
     if ! command -v cargo &>/dev/null
     then
         printf "\n\e[31m%s\e[0m\n" \
-            "[!] cargo not installed, try running \`arch install rust\` first"
+            "[!] cargo not installed, try running \`please install rust\` first"
         return 1
     fi
 
     if ! command -v yay &>/dev/null
     then
         printf "\n\e[31m%s\e[0m\n" \
-            "[!] yay not installed, try running \`arch install yay\` first"
+            "[!] yay not installed, try running \`please install yay\` first"
         return 1
     fi
 

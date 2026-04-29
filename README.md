@@ -1,4 +1,4 @@
-Arch-Setup provides an easy to use `please` CLI tool for installing and
+Linux-Setup provides an easy to use `please` CLI tool for installing and
 configuring packages or entire system configurations in a single command.
 
 ## Instructions
@@ -47,19 +47,13 @@ And to cleanly undo everything that sets up, just run:
 please remove-setup gaming
 ```
 
-### Replaces the Arch-Configurations repo
-The Arch-Configurations installation script and directories have been moved
-into and updated to work with Arch-Setup.
-
-The installation is now ran after nearly every `please <command>` call, but it
-can also be manually called:
-```bash
-please add-configs
-```
-The script that `add-configs` calls is much smarter than what Arch-Configurations
-had. It now only runs steps that haven't already been ran. So most of the time it
-will have no output.
+### Package configuration files automatically installed/setup
+A command like: `please install base_packages` will automatically create a soft
+link to the lfrc config file under `./Configurations/lf/lfrc` to `$HOME/.config/lf/lfrc`
+since lf is installed among other packages from that command. Or, you can run
+`please add-configs` to manually configure all installed packages, although
+this shouldn't ever be necessary.
 
 ## Errors
-* All error logs will be written to `/tmp/archsetuperrors.log` (which will be 
+* All error logs will be written to `/tmp/linuxsetuperrors.log` (which will be 
   deleted at reboot)

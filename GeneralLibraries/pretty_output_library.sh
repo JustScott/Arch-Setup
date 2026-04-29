@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# pretty_output_library - part of the Arch-Setup project
+# pretty_output_library - part of the Linux-Setup project
 # Copyright (C) 2025-2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 STDOUT_LOG_PATH="/dev/null"
-STDERR_LOG_PATH="/tmp/archsetuperrors.log"
+STDERR_LOG_PATH="/tmp/linuxsetuperrors.log"
 
 # Function to show a spinner and handle exit status
 task_output() {
