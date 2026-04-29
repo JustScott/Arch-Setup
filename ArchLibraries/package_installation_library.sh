@@ -115,50 +115,6 @@ uninstall_qutebrowser()
 }
 
 
-install_librewolf()
-{
-    if ! command -v yay &>/dev/null
-    then
-        printf "\n\r\e[31m[Error]\e[0m %s\n" "yay must be installed first as librewolf is only available in the aur"
-        exit 5
-    fi
-
-    if ! yay -Q librewolf &>/dev/null
-    then
-        sudo -v || return 1
-        yes | yay -Sy --noconfirm librewolf \
-            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Installing librewolf"
-        [[ $? -ne 0 ]] && return 1 
-    else
-        printf "\r\e[33m[skipping...]\e[0m %s\n" "librewolf already installed"
-    fi
-
-    return 0
-}
-uninstall_librewolf()
-{
-    if ! command -v yay &>/dev/null
-    then
-        printf "\n\r\e[31m[Error]\e[0m %s\n" "Cannot uninstall librewolf without yay being installed, as yay manages aur packages"
-        exit 5
-    fi
-
-    if yay -Q librewolf &>/dev/null
-    then
-        sudo -v || return 1
-        yes | yay -Rs --noconfirm librewolf \
-            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Uninstalling librewolf"
-        [[ $? -ne 0 ]] && return 1 
-    else
-        printf "\r\e[33m[skipping...]\e[0m %s\n" "librewolf not installed"
-    fi
-
-    return 0
-}
-
-
 DOCKER_PACKAGES=(docker docker-compose)
 install_docker()
 {
