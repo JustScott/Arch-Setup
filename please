@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# arch - part of the Arch-Setup project
+# please - part of the Arch-Setup project
 # Copyright (C) 2025-2026, JustScott, development@justscott.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,27 +23,60 @@
 #
 
 PROJECT_NAME="Arch-Setup"
-SCRIPT_NAME="arch"
+SCRIPT_NAME="please"
 
-REQUIRED_PACKAGES=( \
-    bash pacman \
-    usermod gpasswd groups groupadd groupdel \
-    grep cat \
-    rfkill command uname \
+REQUIRED_PACKAGES=(
+    which bash grep cat rfkill uname
+    usermod gpasswd groups groupadd groupdel
 )
 
-INSTALLABLE_PACKAGES="\
-    yay qutebrowser librewolf docker rust python flatpak \
-"
-SETUP_OPTIONS="\
-    base_packages host_packages \
-    security user-scripts audio bluetooth \
-    gnome gaming media qemu 3d-printing \
-    embedded-rust rust-dioxus \
-"
+ARCH_SYSTEM=0
+DEBIAN_SYSTEM=0
 
-PACKAGE_INSTALLATION_LIBRARY=./ArchLibraries/package_installation_library.sh
-SETUP_INSTALLATION_LIBRARY=./ArchLibraries/setup_installation_library.sh
+if command -v pacman &>/dev/null
+then
+    ARCH_SYSTEM=1
+    DEBIAN_SYSTEM=0
+elif command -v apt-get &>/dev/null
+then
+    DEBIAN_SYSTEM=1
+    ARCH_SYSTEM=0
+else
+    printf "\n\e[31m%s\e[0m%s %s\n" "[Error]" \
+        "No package manager detected. Only pacman and apt-get are" \
+        "supported. Stopping."
+    exit 1
+fi
+
+INSTALLABLE_PACKAGES=(
+    qutebrowser rust python flatpak
+)
+SETUP_OPTIONS=(
+    base_packages host_packages user-scripts media gnome
+)
+
+if ((ARCH_SYSTEM))
+then
+    INSTALLABLE_PACKAGES+=(
+        yay docker
+    )
+    SETUP_OPTIONS+=(
+        security audio bluetooth
+        gaming qemu 3d-printing
+        embedded-rust rust-dioxus
+    )
+
+    PACKAGE_INSTALLATION_LIBRARY=./ArchLibraries/package_installation_library.sh
+    SETUP_INSTALLATION_LIBRARY=./ArchLibraries/setup_installation_library.sh
+elif ((DEBIAN_SYSTEM))
+then
+    PACKAGE_INSTALLATION_LIBRARY=./DebianLibraries/package_installation_library.sh
+    SETUP_INSTALLATION_LIBRARY=./DebianLibraries/setup_installation_library.sh
+else
+    printf "\n\e[31m%s\e[0m%s\n" "[Error]" \
+        "Distro not detected properly, this shouldn't happen. Stopping."
+    exit 1
+fi
 
 PRETTY_OUTPUT_LIBRARY=./GeneralLibraries/pretty_output_library.sh
 
@@ -81,13 +114,12 @@ add_to_path() {
             fi
         fi
 
-        if grep "export arch_setup_directory=\"" $HOME/.bashrc \
+        if grep "export arch_setup_directory=\"" "${HOME}/.bashrc" \
             | grep "/$PROJECT_NAME\"$" &>/dev/null
         then
-            # Replace existing variable with this new one
             sed -i \
-                's,export arch_setup_directory=".*\/Arch-Setup"$,'"$bashrc_line"',' \
-                $HOME/.bashrc
+                "/^export arch_setup_directory=\".*/c\\${bashrc_line}" \
+                "${HOME}/.bashrc"
         else
             echo -e "\n$bashrc_line" >> "${HOME}/.bashrc"
         fi
@@ -104,7 +136,7 @@ add_to_path() {
             exit 7
         fi
 
-        # Create a .bin directory in $HOME for the arch script
+        # Create a .bin directory in $HOME for the script
         if ! [[ -f "./${SCRIPT_NAME}" ]]
         then
             printf "\n\e[31m%s\n%s\e[0m\n" \
@@ -189,14 +221,23 @@ check_packages()
     do
         if ! command -v $tool &>/dev/null
         then
-            printf "\n\e[31m%s\e[0m\n" "[!] Must install '$tool' for $SCRIPT_NAME to work"
-            tools_not_installed=1
+            if ! sudo -n true &>/dev/null
+            then
+                printf "\n\e[36m%s\e[0m\n" \
+                    "sudo is needed to ensure required packages are installed..."
+            fi
+            sudo -v || return 1
+            if ! sudo which $tool &>/dev/null
+            then
+                printf "\n\e[31m%s\e[0m\n" "[!] Must install '$tool' for $SCRIPT_NAME to work"
+                tools_not_installed=1
+            fi
         fi
     done
 
     if ((tools_not_installed))
     then
-        exit 6
+        return 6
     fi
 }
 
@@ -232,14 +273,11 @@ display_help() {
     printf "\n\nCommand Flags:"
     printf "\n  install:"
     printf "\n    %-20s %-1s" "-l | --list" "List installable software"
-    printf "\n  uninstall:"
-    printf "\n    %-20s %-1s" "-l | --list" "List installed software"
     printf "\n  setup:"
     printf "\n    %-20s %-1s" "-l | --list" "List available setup options"
     
     printf "\n\nExamples:"
     printf "\n  \`$SCRIPT_NAME install --list\`"
-    printf "\n  \`$SCRIPT_NAME uninstall --list\`"
     printf "\n  \`$SCRIPT_NAME install qutebrowser\`"
     printf "\n  \`$SCRIPT_NAME install rust qemu docker\`"
     printf "\n  \`$SCRIPT_NAME uninstall qutebrowser\`"
@@ -298,7 +336,7 @@ install() {
     if ((FLAG_list_packages))
     then
         printf "\nPackages Available to Install:\n"
-        for package_name in $INSTALLABLE_PACKAGES
+        for package_name in ${INSTALLABLE_PACKAGES[@]}
         do
             echo "  - $package_name"
         done
@@ -317,11 +355,11 @@ install() {
 
     for package_name in ${packages_to_install[@]}
     do
-        if ! echo "$INSTALLABLE_PACKAGES" | grep "$package_name" &>/dev/null
+        if ! echo "${INSTALLABLE_PACKAGES[*]}" | grep "$package_name" &>/dev/null
         then
             printf "\n\e[31m%s\n%s\e[0m\n" \
                 "[!] '$package_name' is not a supported package" \
-                " - TIP: run \`arch install --list\` to see supported packages"
+                " - TIP: run \`$SCRIPT_NAME install --list\` to see supported packages"
             exit 2
         fi
     done
@@ -338,7 +376,6 @@ install() {
     for package_name in ${packages_to_install[@]}
     do
         case $package_name in
-            
             "yay")
                 if ! install_yay
                 then
@@ -352,14 +389,6 @@ install() {
                 then
                     printf "\n\e[31m%s\e[0m\n" \
                         "[!] Failed to install qutebrowser"
-                    exit 1
-                fi
-            ;;
-            "librewolf")
-                if ! install_librewolf
-                then
-                    printf "\n\e[31m%s\e[0m\n" \
-                        "[!] Failed to install librewolf"
                     exit 1
                 fi
             ;;
@@ -403,25 +432,15 @@ install() {
             ;;
         esac
     done
-
 }
 
 uninstall() {
     local \
         packages_to_uninstall \
-        FLAG_list_packages
 
     for arg in $@
     do
         case $arg in
-            "-l" | "--list")
-                [[ -n "$FLAG_list_packages" ]] && {
-                    printf "\n\e[31m%s\e[0m\n" \
-                        "[!] duplicated the list installed packages flag"
-                    exit 1
-                }
-                FLAG_list_packages=1
-            ;;
             *)
                 # Support flags starting with '-' or "--" shouldn't reach
                 # the catchall case
@@ -436,63 +455,13 @@ uninstall() {
         esac
     done
 
-    if ((FLAG_list_packages))
-    then
-        printf "\nInstalled Packages:\n"
-        for package_name in $INSTALLABLE_PACKAGES
-        do
-            if ! command -v yay &>/dev/null
-            then
-                if yay -Q $package_name &>/dev/null
-                then
-                    echo "  - $package_name"
-                fi
-            else
-                if pacman -Q $package_name &>/dev/null
-                then
-                    echo "  - $package_name"
-                fi
-            fi
-        done
-        echo ""
-        
-        if [[ -n $packages_to_uninstall ]]
-        then
-            printf "\n\e[31m%s\e[0m" \
-                "[!] Cannot list and uninstall packages in the same command"
-            exit 1
-        fi
-
-        exit 0
-    fi
-
     for package_name in ${packages_to_uninstall[@]}
     do
-        if ! echo "$INSTALLABLE_PACKAGES" | grep "$package_name" &>/dev/null
+        if ! echo "${INSTALLABLE_PACKAGES[*]}" | grep "$package_name" &>/dev/null
         then
             printf "\n\e[31m%s\n%s\e[0m\n" \
                 "[!] '$package_name' is not a supported package" \
-                " - TIP: run \`arch uninstall --list\` to see supported packages"
-            exit 3
-        fi
-
-
-        if ! command -v yay &>/dev/null
-        then
-            if ! yay -Q $package_name &>/dev/null
-            then
-                printf "\n\e[31m%s\n%s %s\e[0m\n" \
-                    "[!] '$package_name' is not installed" \
-                    " - TIP: run \`arch uninstall --list\` to see" \
-                    "installed packages"
-                exit 3
-            fi
-        fi
-
-        if ! pacman -Q $package_name &>/dev/null
-        then
-            echo -e "\n'$package_name' is not installed"
-            echo -e "\nTIP: run \`arch uninstall --list\` to see installed packages"
+                " - TIP: run \`$SCRIPT_NAME install --list\` to see supported packages"
             exit 3
         fi
     done
@@ -521,13 +490,6 @@ uninstall() {
                 then
                     printf "\n\e[31m%s\e[0m\n" \
                         "[!] Failed to uninstall qutebrowser"
-                fi
-            ;;
-            "librewolf")
-                if ! uninstall_librewolf
-                then
-                    printf "\n\e[31m%s\e[0m\n" \
-                        "[!] Failed to uninstall librewolf"
                 fi
             ;;
             "docker")
@@ -601,7 +563,7 @@ setup() {
     if ((FLAG_list_setups))
     then
         printf "\nAvailable Setup Options:\n"
-        for setup_name in $SETUP_OPTIONS
+        for setup_name in ${SETUP_OPTIONS[@]}
         do
             echo "  - $setup_name"
         done
@@ -619,11 +581,11 @@ setup() {
 
     for setup_name in ${setups_chosen[@]}
     do
-        if ! echo "$SETUP_OPTIONS" | grep "$setup_name" &>/dev/null
+        if ! echo "${SETUP_OPTIONS[*]}" | grep "$setup_name" &>/dev/null
         then
             printf "\n\n\e[31m%s\n\t%s\e[0m\n" \
                 "[!] '$setup_name' is not a supported setup" \
-                " - TIP: run \`arch setup --list\` to see supported setups"
+                " - TIP: run \`$SCRIPT_NAME setup --list\` to see supported setups"
             exit 2
         fi
     done
@@ -766,11 +728,11 @@ remove_setup() {
 
     for setup_name in ${setups_chosen[@]}
     do
-        if ! echo "$SETUP_OPTIONS" | grep "$setup_name" &>/dev/null
+        if ! echo "${SETUP_OPTIONS[*]}" | grep "$setup_name" &>/dev/null
         then
             printf "\n\e[31m%s\n%s\e[0m\n" \
                 "[!] '$setup_name' is not a supported setup option" \
-                " - TIP: run \`arch setup --list\` to see supported setup options"
+                " - TIP: run \`$SCRIPT_NAME setup --list\` to see supported setup options"
             exit 3
         fi
     done
@@ -895,34 +857,39 @@ case $1 in
 esac
 
 cd $arch_setup_directory
-
-check_packages
 check_library_files_exist
 
 case $1 in
     "install")
+        check_packages || exit $?
         install ${@:2}
         cd $arch_setup_directory
         bash $CONFIG_INSTALL_SCRIPT
     ;;
     "uninstall")
+        check_packages || exit $?
         uninstall ${@:2}
         cd $arch_setup_directory
         bash $CONFIG_INSTALL_SCRIPT
     ;;
     "setup")
+        check_packages || exit $?
         setup ${@:2}
         cd $arch_setup_directory
         bash $CONFIG_INSTALL_SCRIPT
     ;;
     "remove-setup")
+        check_packages || exit $?
         remove_setup ${@:2}
         cd $arch_setup_directory
         bash $CONFIG_INSTALL_SCRIPT
     ;;
-    "add-configs")         bash $CONFIG_INSTALL_SCRIPT;;
+    "add-configs")
+        check_packages || exit $?
+        bash $CONFIG_INSTALL_SCRIPT
+    ;;
     "version"|"--version") echo "0.1.0";;
-    "--help"|"-h") display_help;;
+    "--help"|"-h"|"") display_help;;
     *) 
         printf "\n\e[31m%s\e[0m %s\n" "[Error]" \
             "Invalid use of the \`$SCRIPT_NAME\` command"

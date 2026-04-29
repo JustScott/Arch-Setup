@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+PROJECT_NAME="Arch-Setup"
+SCRIPT_NAME="please"
+
 PRETTY_OUTPUT_LIBRARY="./GeneralLibraries/pretty_output_library.sh"
 
 SSH_CONFIG_FILE_PATH="/etc/ssh/sshd_config.d/99‑disable‑root.conf"
@@ -111,9 +114,9 @@ setup_user_scripts()
     scripts_dir="$arch_setup_directory/ScriptsAddedToPath"
     bashrc_line="export PATH=\"\$PATH:$scripts_dir\""
 
-    if ! grep "$bashrc_line" $HOME/.bashrc &>/dev/null
+    if ! grep "$bashrc_line" ${HOME}/.bashrc &>/dev/null
     then
-        echo -e "\n$bashrc_line" >> $HOME/.bashrc 2>>"$STDERR_LOG_PATH" &
+        echo -e "\n$bashrc_line" >> ${HOME}/.bashrc 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" \
             "Add the user scripts directory to \$PATH in .bashrc"
         [[ $? -ne 0 ]] && return 1
@@ -123,11 +126,12 @@ setup_user_scripts()
 }
 remove_setup_user_scripts()
 {
-    if grep "export PATH=".*Arch-Setup\/ScriptsAddedToPath"" \
-        $HOME.bashrc &>/dev/null
+    if grep "export PATH=".*${PROJECT_NAME}\/ScriptsAddedToPath"" \
+        "${HOME}/.bashrc" &>/dev/null
     then
         if sed -i \
-            '/export PATH=".*Arch-Setup\/ScriptsAddedToPath"/d' $HOME/.bashrc
+            "/export PATH=\".*${PROJECT_NAME}\/ScriptsAddedToPath/d" \
+            "${HOME}/.bashrc"
         then
             printf "\n\e[32m%s\e[0m %s\n" "[Success]" \
                 "Remove user_scripts from path"
@@ -459,7 +463,7 @@ setup_bluetooth()
         [[ $? -ne 0 ]] && return 1
     fi
 
-    if rfkill list bluetooth | grep "Soft blocked: yes" &>/dev/null
+    if sudo rfkill list bluetooth | grep "Soft blocked: yes" &>/dev/null
     then
         sudo -v || return 1
         sudo rfkill unblock bluetooth >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
@@ -586,11 +590,11 @@ setup_gaming()
                 flatpak_name=$(echo $flatpak | awk -F'.' '{print $NF}' \
                     | tr '[:upper:]' '[:lower:]')
 
-                bashrc_line="alias $flatpak_name=\"\$HOME/.local/share/flatpak/exports/bin/$flatpak\""
+                bashrc_line="alias $flatpak_name=\"\$HOME/.local/share/flatpak/exports/bin/${flatpak}\""
  
-                if ! grep "$bashrc_line" $HOME/.bashrc &>/dev/null 
+                if ! grep "$bashrc_line" "${HOME}/.bashrc" &>/dev/null 
                 then
-                    echo "$bashrc_line" >> $HOME/.bashrc
+                    echo "$bashrc_line" >> "${HOME}/.bashrc"
                 fi
             done
         } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
@@ -749,52 +753,52 @@ setup_rust_dioxus()
     done
 
     {
-        if ! cat $HOME/.bashrc \
+        if ! cat "${HOME}/.bashrc" \
             | grep "ANDROID_NDK_HOME=/opt/android-ndk$" &>/dev/null
         then
-            echo "export ANDROID_NDK_HOME=/opt/android-ndk" >> $HOME/.bashrc
+            echo "export ANDROID_NDK_HOME=/opt/android-ndk" >> "${HOME}/.bashrc"
         fi
 
-        if ! cat $HOME/.bashrc \
+        if ! cat "${HOME}/.bashrc" \
             | grep "ANDROID_HOME=/opt/android-sdk$" &>/dev/null
         then
-            echo "export ANDROID_HOME=/opt/android-sdk" >> $HOME/.bashrc
+            echo "export ANDROID_HOME=/opt/android-sdk" >> "${HOME}/.bashrc"
         fi
 
-        if ! cat $HOME/.bashrc \
+        if ! cat "${HOME}/.bashrc" \
             | grep "JAVA_HOME=/usr/lib/jvm/java-21-openjdk$" &>/dev/null
         then
             echo "export JAVA_HOME=/usr/lib/jvm/java-21-openjdk" \
-                >> $HOME/.bashrc
+                >> "${HOME}/.bashrc"
         fi
 
-        if ! cat $HOME/.bashrc \
+        if ! cat "${HOME}/.bashrc" \
             | grep "PATH=\$PATH:\$ANDROID_HOME/tools$" &>/dev/null
         then
             echo "export PATH=\$PATH:\$ANDROID_HOME/tools" \
-                >> $HOME/.bashrc
+                >> "${HOME}/.bashrc"
         fi
 
-        if ! cat $HOME/.bashrc \
+        if ! cat "${HOME}/.bashrc" \
             | grep "PATH=\$PATH:\$ANDROID_HOME/platform-tools$" \
             &>/dev/null
         then
             echo "export PATH=\$PATH:\$ANDROID_HOME/platform-tools" \
-                >> $HOME/.bashrc
+                >> "${HOME}/.bashrc"
         fi
 
-        if ! cat $HOME/.bashrc \
+        if ! cat "${HOME}/.bashrc" \
             | grep "PATH=\$PATH:\$ANDROID_HOME/cmdline-tools/latest/bin$" \
             &>/dev/null
         then
             echo "export PATH=\$PATH:\$ANDROID_HOME/cmdline-tools/latest/bin" \
-                >> $HOME/.bashrc
+                >> "${HOME}/.bashrc"
         fi
 
-        if ! cat $HOME/.bashrc \
+        if ! cat "${HOME}/.bashrc" \
             | grep "PATH=\$PATH:\$JAVA_HOME/bin$" &>/dev/null
         then
-            echo "export PATH=\$PATH:\$JAVA_HOME/bin" >> $HOME/.bashrc
+            echo "export PATH=\$PATH:\$JAVA_HOME/bin" >> "${HOME}/.bashrc"
         fi
     } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" \
@@ -921,20 +925,20 @@ remove_setup_rust_dioxus()
 
     {
         sed -i '/^export ANDROID_NDK_HOME=\/opt\/android-ndk$/d' \
-            $HOME/.bashrc
+            "${HOME}/.bashrc"
         sed -i '/^export ANDROID_HOME=\/opt\/android-sdk$/d' \
-            $HOME/.bashrc
+            "${HOME}/.bashrc"
         sed -i '/^export JAVA_HOME=\/usr\/lib\/jvm\/java-21-openjdk$/d' \
-            $HOME/.bashrc
+            "${HOME}/.bashrc"
         sed -i '/^export PATH=$PATH:$ANDROID_HOME\/tools$/d' \
-            $HOME/.bashrc
+            "${HOME}/.bashrc"
         sed -i '/^export PATH=$PATH:$ANDROID_HOME\/platform-tools$/d' \
-            $HOME/.bashrc
+            "${HOME}/.bashrc"
         sed -i \
             '/^export PATH=$PATH:$ANDROID_HOME\/cmdline-tools\/latest\/bin$/d' \
-            $HOME/.bashrc
+            "${HOME}/.bashrc"
         sed -i '/^export PATH=$PATH:$JAVA_HOME\/bin$/d' \
-            $HOME/.bashrc
+            "${HOME}/.bashrc"
     } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
     task_output $! "$STDERR_LOG_PATH" \
         "Remove android-sdk from PATH in .bashrc"

@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+PROJECT_NAME="Arch-Setup"
+SCRIPT_NAME="please"
+
 PRETTY_OUTPUT_LIBRARY="./GeneralLibraries/pretty_output_library.sh"
 
 if ! source "$PRETTY_OUTPUT_LIBRARY" &>/dev/null
@@ -29,7 +32,7 @@ install_yay()
 {
     if ! command -v yay &>/dev/null
     then
-        cd $HOME
+        cd "$HOME"
 
         if [[ -d "./yay" ]]
         then
@@ -37,7 +40,7 @@ install_yay()
         fi
         git clone https://aur.archlinux.org/yay.git \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
-        task_output $! "$STDERR_LOG_PATH" "Clone yay from the AUR (under $HOME/yay)"
+        task_output $! "$STDERR_LOG_PATH" "Clone yay from the AUR (under ${HOME}/yay)"
         [[ $? -ne 0 ]] && {
             rm -rf yay &>/dev/null
             return 1
@@ -153,12 +156,12 @@ install_docker()
             [[ $? -ne 0 ]] && return 1
         fi
 
-        if [[ -f $HOME/.bashrc ]]; then
+        if [[ -f "${HOME}/.bashrc" ]]; then
             {
-                cat $HOME/.bashrc | grep "export DOCKER_BUILDKIT=1" &>/dev/null || \
-                    echo -e "\nexport DOCKER_BUILDKIT=1" >> $HOME/.bashrc
-                cat $HOME/.bashrc | grep "export COMPOSE_DOCKER_CLI_BUILD=1" &>/dev/null || \
-                    echo -e "export COMPOSE_DOCKER_CLI_BUILD=1\n" >> $HOME/.bashrc
+                cat "${HOME}/.bashrc" | grep "export DOCKER_BUILDKIT=1" &>/dev/null || \
+                    echo -e "\nexport DOCKER_BUILDKIT=1" >> "${HOME}/.bashrc"
+                cat "${HOME}/.bashrc" | grep "export COMPOSE_DOCKER_CLI_BUILD=1" &>/dev/null || \
+                    echo -e "export COMPOSE_DOCKER_CLI_BUILD=1\n" >> "${HOME}/.bashrc"
             } >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
             task_output $! "$STDERR_LOG_PATH" "Append docker variables to .bashrc if needed"
             [[ $? -ne 0 ]] && return 1
@@ -208,17 +211,17 @@ uninstall_docker()
         printf "\r\e[33m[skipping...]\e[0m %s\n" "docker not installed"
     fi
      
-    if cat $HOME/.bashrc | grep "export COMPOSE_DOCKER_CLI_BUILD=" &>/dev/null
+    if cat "${HOME}/.bashrc" | grep "export COMPOSE_DOCKER_CLI_BUILD=" &>/dev/null
     then
-        sed -i '/export COMPOSE_DOCKER_CLI_BUILD=/d' $HOME/.bashrc \
+        sed -i '/export COMPOSE_DOCKER_CLI_BUILD=/d' "${HOME}/.bashrc" \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Remove docker cli build variable from .bashrc"
         [[ $? -ne 0 ]] && return 1
     fi
 
-    if cat $HOME/.bashrc | grep "export DOCKER_BUILDKIT=" &>/dev/null
+    if cat "${HOME}/.bashrc" | grep "export DOCKER_BUILDKIT=" &>/dev/null
     then
-        sed -i '/export DOCKER_BUILDKIT=/d' $HOME/.bashrc \
+        sed -i '/export DOCKER_BUILDKIT=/d' "${HOME}/.bashrc" \
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Remove docker buildkit variable from .bashrc"
         [[ $? -ne 0 ]] && return 1
@@ -309,10 +312,10 @@ uninstall_rust()
         fi
     done
 
-    if cat $HOME/.bashrc \
+    if cat "${HOME}/.bashrc" \
         | grep "export PATH=\"\$PATH:\$HOME/.cargo/bin\"" &>/dev/null
     then
-        sed -i '/export PATH="$PATH:$HOME\/.cargo\/bin"/d' $HOME/.bashrc
+        sed -i '/export PATH="$PATH:$HOME\/.cargo\/bin"/d' "${HOME}/.bashrc"
             >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
         task_output $! "$STDERR_LOG_PATH" "Remove cargo binaries from PATH (in .bashrc)"
         [[ $? -ne 0 ]] && return 1 
