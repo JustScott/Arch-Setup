@@ -374,6 +374,21 @@ configure_tool()
     fi 
 }
 
+add_cargo_binaries_to_path()
+{
+    bashrc_line="export PATH=\"\$PATH:${HOME}/.cargo/bin\""
+
+    if ! grep "$bashrc_line" ${HOME}/.bashrc &>/dev/null
+    then
+        echo -e "\n$bashrc_line" >> ${HOME}/.bashrc 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Add .cargo/bin to \$PATH in .bashrc"
+        [[ $? -ne 0 ]] && return 1
+    fi
+
+    return 0
+}
+
 configure_tool nvim init.vim
 configure_tool bat config
 configure_tool mpv mpv.conf
@@ -390,3 +405,5 @@ configure_vim_plug
 configure_git
 configure_gnome
 configure_bat
+
+add_cargo_binaries_to_path
