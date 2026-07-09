@@ -265,6 +265,43 @@ remove_setup_gaming()
     return 1
 }
 
+BEVY_GAME_DEV_PACKAGES=(
+    g++ pkg-config libx11-dev libasound2-dev libudev-dev
+    libxkbcommon-x11-0 libwayland-dev mesa-vulkan-drivers
+)
+setup_bevy_game_development()
+{
+    if ! dpkg -s ${BEVY_GAME_DEV_PACKAGES[@]} &>/dev/null; then
+        sudo -v || return 1
+        sudo apt-get install --yes ${BEVY_GAME_DEV_PACKAGES[@]} \
+            >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+        task_output $! "$STDERR_LOG_PATH" \
+            "Download and install bevy game dev packages"
+        [[ $? -ne 0 ]] && return 1
+    fi
+
+    return 0
+}
+BEVY_GAME_DEV_PACKAGES_TO_REMOVE=(
+    pkg-config libx11-dev libasound2-dev libudev-dev libwayland-dev
+)
+remove_setup_bevy_game_development()
+{
+    for package in ${BEVY_GAME_DEV_PACKAGES_TO_REMOVE[@]}
+    do
+        if dpkg -s $package &>/dev/null
+        then
+            sudo -v || return 1
+            sudo apt-get remove --yes $package \
+                >>"$STDOUT_LOG_PATH" 2>>"$STDERR_LOG_PATH" &
+            task_output $! "$STDERR_LOG_PATH" "Uninstalling package: $package"
+            [[ $? -ne 0 ]] && return 1
+        fi
+    done
+
+    return 0
+}
+
 
 CARGO_PACKAGES=(probe-rs-tools elf2uf2-rs)
 EMBEDDED_RUST_PACKAGES=(openocd)

@@ -84,6 +84,10 @@ then
         librewolf mullvad-vpn
     )
 
+    SETUP_OPTIONS+=(
+        setup_bevy_game_development
+    )
+
     PACKAGE_INSTALLATION_LIBRARY=./DebianLibraries/package_installation_library.sh
     SETUP_INSTALLATION_LIBRARY=./DebianLibraries/setup_installation_library.sh
 else
@@ -734,6 +738,13 @@ setup() {
                         "[!] Failed to setup: media"
                 fi
             ;;
+            "bevy_game_development")
+                if ! setup_bevy_game_development
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to setup: bevy_game_development"
+                fi
+            ;;
             "embedded-rust")
                 if ! setup_embedded_rust
                 then
@@ -879,6 +890,13 @@ remove_setup() {
                 then
                     printf "\n\e[31m%s\e[0m\n" \
                         "[!] Failed to remove setup: media"
+                fi
+            ;;
+            "bevy_game_development")
+                if ! setup_bevy_game_development
+                then
+                    printf "\n\e[31m%s\e[0m\n" \
+                        "[!] Failed to remove setup: bevy_game_development"
                 fi
             ;;
             "embedded-rust")
